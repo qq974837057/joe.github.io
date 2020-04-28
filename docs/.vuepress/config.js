@@ -1,6 +1,6 @@
 module.exports = {
-  title: '元气首页', // 显示在左上角的网页名称以及首页在浏览器标签显示的title名称
-  description: '元气的前端记录', // meta 中的描述文字，用于SEO
+  title: '元气Blog', // 显示在左上角的网页名称以及首页在浏览器标签显示的title名称
+  description: '元气Joe的前端世界', // meta 中的描述文字，用于SEO
   // 注入到当前页面的 HTML <head> 中的标签
   head: [
       ['link', 
@@ -21,12 +21,12 @@ module.exports = {
           text: '分类',  //默认显示        
           ariaLabel: '分类',   //用于识别的label
           items: [
-              { text: '文章', link: '/pages/folder1/test1.md' },  
+              { text: '文章', link: '/pages/folder1/html.md' },  
               //点击标签会跳转至link的markdown文件生成的页面
               { text: '随笔', link: '/pages/folder2/test4.md' },
           ]
       },
-      { text: '功能演示', link: '/pages/folder1/test3.md' },
+      { text: '功能演示', link: '/pages/folder2/test5.md' },
 
       //格式三：跳转至外部网页，需http/https前缀
       { text: 'Github', link: 'https://github.com/qq974837057' },
@@ -36,19 +36,20 @@ module.exports = {
     sidebar: {
       '/pages/folder1/':[         
           {
-              title: '测试菜单1',   // 一级菜单名称
+              title: '前端基础',   // 一级菜单名称
               collapsable: false, // false为默认展开菜单, 默认值true是折叠,
               sidebarDepth: 1,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
               children: [
-                  ['test1.md', '子菜单1'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
-                  ['test3.md', '子菜单2']
+                  ['html.md', 'HTML'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
+									['css.md', 'CSS'],
+									['js.md', 'JS'],
               ]
           },
           {
               title: '测试菜单2',
               collapsable: false, 
               children: [
-                  ['test2.md', '子菜单1']
+                  ['browser.md', '浏览器']
               ]
           }
       ],

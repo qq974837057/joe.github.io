@@ -1,10 +1,10 @@
 ---
 home: true
 heroImage: /wind.png
-heroText: 元气的前端记录
+heroText: 元气的前端世界
 tagline: 向上生长 享受快乐
 actionText: 开始徜徉 →
-actionLink: /pages/folder1/test1.md
+actionLink: /pages/folder1/html.md
 features:
 - title: 简洁至上
   details: 以 Markdown 为中心的项目结构，以最少的配置帮助你专注于写作。
