@@ -38,18 +38,24 @@ module.exports = {
           {
               title: '前端基础',   // 一级菜单名称
               collapsable: false, // false为默认展开菜单, 默认值true是折叠,
-              sidebarDepth: 1,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
+              sidebarDepth: 2,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
               children: [
                   ['html.md', 'HTML'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
 									['css.md', 'CSS'],
-									['js.md', 'JS'],
+                  ['js.md', 'JS'],
+                  ['frame.md', '框架'],
+                  ['browser.md', 'HTTP与浏览器'],
+                  ['webpack.md', 'Webpack与工程化'],
+                  ['performance.md', '性能优化'],
               ]
           },
           {
-              title: '测试菜单2',
+              title: '前端进阶',
               collapsable: false, 
               children: [
-                  ['browser.md', '浏览器']
+                  ['algorithm.md', '数据结构和算法'],
+                  ['writeapi.md', '手写API实现'],
+                  ['nodejs.md', 'NodeJS'],
               ]
           }
       ],
@@ -57,7 +63,7 @@ module.exports = {
 			//...可添加多个不同的侧边栏，不同页面会根据路径显示不同的侧边栏
 			'/pages/folder2/':[         
 				{
-						title: '测试菜单3',   // 一级菜单名称
+						title: '日常思考',   // 一级菜单名称
 						collapsable: false, // false为默认展开菜单, 默认值true是折叠,
 						sidebarDepth: 1,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
 						children: [
@@ -65,7 +71,7 @@ module.exports = {
 						]
 				},
 				{
-						title: '测试菜单4',
+						title: '日常记录',
 						collapsable: false, 
 						children: [
 								['test5.md', '子菜单5']
