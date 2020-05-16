@@ -10,6 +10,7 @@ module.exports = {
   ],
   //下面涉及到的md文件和其他文件的路径下一步再详细解释
   themeConfig: {
+    sidebarDepth:2,
     logo: '/wind.png',  //网页顶端导航栏左上角的图标
     //顶部导航栏
     nav: [           
