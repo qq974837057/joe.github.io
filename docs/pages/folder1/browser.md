@@ -1,3 +1,46 @@
+### 输入URL到看到页面发生什么（DNS解析-TCP连接-http请求/响应-浏览器解析渲染-连接结束）
+1. 浏览器根据请求的URL交给DNS域名解析，通过域名找到真实IP；
+2. TCP连接三次握手
+    - 客户端向服务器发送一个建立连接的请求 syn（您好，我是A）
+    - 服务器接到请求后发送同意连接的信号 syn+ack（收到，我是B）；
+    - 客户端接到同意连接的信号后，再次向服务器发送确认信号 ack（那我们建立连接了），客户端与服务器建立了连接。
+3. 请求：浏览器设置请求报文（请求行、头、主体），发起HTTP请求。
+4. 响应: 服务器处理完成后返回响应报文,（起始行（状态码），响应头、主体）浏览器接收文件（HTML、JS、CSS、图象等）；
+5. 浏览器对加载到的资源（HTML、JS、CSS等）进行语法解析，建立相应的内部数据结构（如HTML的DOM）；
+6. 载入解析好的资源文件，渲染UI页面，完成。
+
+- 从总体看优化：
+    - 优化目的是将信息**快速并友好**的展示给用户并能够与用户进行交互。
+    - 缩短连接时间：DNS优化
+    - 减少响应内容大小：进行压缩和懒加载
+    - 解析过程：减少回流重绘
+
+### 细节：DNS解析
+- 解析过程：
+    - 首先在本地域名服务器中查询IP地址，没有找到就去com顶级域名服务器请求查找，找到后把IP地址缓存在本地域名服务器便于下次使用。
+        ```
+         . -> .com -> google.com. -> www.google.com.
+         // 根域名服务器->com顶级域名服务器->一直找到对应的完整域名
+        ```
+- 优化（减少耗时，一般20-120ms，控制200ms以内）
+    - DNS的缓存
+        - 多级缓存顺序：浏览器缓存，系统缓存，路由器缓存，IPS服务器缓存，根域名服务器缓存，顶级域名服务器缓存，主域名服务器缓存。
+    - dns-prefetch预解析
+        - 适用于：引用很多第三方域名的资源的提前解析域名，如taobao。如果资源都在本域名下， 那就作用不大。   
+        - 当我们从该 URL 请求一个资源时，就不再需要等待 DNS 的解析过程。
+            ```
+            <link rel="dns-prefetch" href="//example.com">
+            ```
+        - 浏览器会对a标签的href自动启用DNS Prefetching，所以a标签里包含的域名不需要在head中手动设置link。
+        - HTTPS下不起作用，需要meta来强制开启a标签域名预解析。
+            ```
+            <meta http-equiv="x-dns-prefetch-control" content="on">
+            ```
+        
+    - DNS的负载均衡
+        - 又叫DNS重定向，根据每台机器负载量和距离返回一个合适的IP给用户。(CDN也是利用重定向)
+
+
 ### TCP三次握手
 - 保证client和server均让对方知道自己**的接收和发送能力**没问题而保证的最小次数
 - 每次握手都会带一个标识 seq，后续的ACK都会**对seq+1**来进行确认。
@@ -10,6 +53,105 @@
 - 服务端 -- **ACK+FIN --> 客户端**， 变成LAST-ACK状态
 - 客户端 -- **ACK --> 服务端**，**等待2MSL**（2个报文最大生存时间），变成CLOSED状态
 - 2个MSL: 一个保证最后的ACK能够到对面，一个保证重传的报文能到达。
+
+
+### HTTP请求
+- 步骤：
+    - 构建HTTP请求报文
+    - 通过TCP协议发送到服务器指定端口(HTTP协议80/8080, HTTPS协议443)。
+- 请求报文：
+    - 请求行
+    - 请求报头
+    - 请求体(正文)
+    
+    ```
+    // 请求行
+    POST /query HTTP/1.1
+    // 请求头
+    Accept: */*
+    Origin: https://juejin.im
+    Accept-Encoding: gzip, deflate, br
+    Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+    Content-Type: application/json;
+    Cookie：Cookie: ab={}; _ga=GA1.2.1711725290.1560907409;
+    
+    // 如json请求体
+    {"operationName":"","query":"","variables":{"type":"ALL","query":"url到页面","after":"","period":"ALL","first":20},"extensions":{"query":{"id":"a53db5867466eddc50d16a38cfeb0890"}}}
+    ```
+### HTTP响应
+- 步骤：
+    - 从端口接收到TCP报文，对请求进行解析
+    - 请求处理完后，通过构建响应报文发送会客户端。
+- 响应报文：
+    - 状态码
+    - 响应报头
+    - 响应体(正文)
+
+### 细节：HTML建立dom树-词法解析和语法解析
+- 词法解析：
+    - 生成Tokens: 二进制转为字符串后，浏览器会将HTML字符串解析成Tokens
+- 语法解析：
+    - 构建Nodes: 开始结束标签配对、添加属性、父子兄弟关系连接，构成DOM Tree
+
+### 细节：CSS规则树如何与dom结合成render树
+- 实现：对dom树进行遍历，将css附着对应的元素上
+- 顺序：浏览器选择器解析顺序（右->左），性能较好
+- 原理：先找最右节点,再向上找对应的类或者标签，一开始就筛除大量不符合条件的节点。
+### 细节：渲染UI页面的过程
+1. 解析HTML生成DOM树。
+2. 解析CSS生成CSS规则树。
+3. 将DOM树与CSS规则树合并在一起生成渲染树Render Tree。
+4. 遍历渲染树开始布局（Layout），计算每个节点的大小和坐标。
+5. 调用GPU进行绘制（Paint）,遍历渲染树每个节点，绘制到屏幕显示。
+
+### 重排（回流）和重绘
+- 重排（回流）：节点尺寸需要重新计算，重新排列元素
+- 重绘：样式发生变化，更新外观内容
+- 重绘不一定出现重排
+- 重排一定会出现重绘
+
+### 如何触发
+- display: none隐藏一个DOM节点 -> 回流和重绘
+- visibility: hidden隐藏一个DOM节点 -> 重绘
+- 增加、删除、更新dom
+- 移动dom或者动画
+- 调整窗口大小
+
+### 如何优化
+- 集中改变样式
+    - 改变class（类名）的方式
+        ```js
+        // 判断是否是黑色系样式
+        const theme = isDark ? 'dark' : 'light'
+        // 根据判断来设置不同的class
+        ele.setAttribute('className', theme)
+        ```
+- 离线操作dom：DocumentFragment
+    - createDocumentFragment在dom树之外创建游离节点，该节点上批量操作，再插入dom，一次重排
+        ```js
+        var fragment = document.createDocumentFragment();
+        for (let i = 0;i<10;i++){
+          let node = document.createElement("p");
+          node.innerHTML = i;
+          fragment.appendChild(node);
+        }
+        document.body.appendChild(fragment);
+        ```
+- 提升至合成层
+    - CSS 的 will-change  
+        ```css
+        #target {
+          will-change: transform;
+        }
+        ```
+    - 重绘时只会影响合成层，不会影响其它层
+    - transform 和 opacity 效果，不会触发 layout 和 paint
+    
+### 阻塞问题
+- 资源文件异步不阻塞：浏览器在解析过程中，如果遇到请求外部资源时，如图像,iconfont,JS等。请求过程是异步的，并不会影响HTML文档进行加载。
+- JS阻塞后续资源下载：当文档加载过程中遇到JS文件，HTML文档会挂起渲染过程，等到文档中JS文件加载完毕+解析+执行完毕，才会继续HTML的渲染过程。因为JS可能会修改DOM结构。
+- CSS不影响JS加载，但影响JS的执行。
+
 ### HTTP/HTTPS/HTTP2 协议
 - HTTP1.0
     - 定义了三种请求方法： GET, POST 和 HEAD方法
