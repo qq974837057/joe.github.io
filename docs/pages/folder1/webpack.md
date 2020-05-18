@@ -1,4 +1,4 @@
-### git
+## git
 ### git merge / git rebase 的区别
 - [知乎解释](https://zhuanlan.zhihu.com/p/75499871)
 - [git解释](https://github.com/geeeeeeeeek/git-recipes/wiki/5.1-%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%EF%BC%9AMerge%E3%80%81Rebase-%E7%9A%84%E9%80%89%E6%8B%A9)

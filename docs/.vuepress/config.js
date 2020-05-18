@@ -54,7 +54,8 @@ module.exports = {
               title: '前端进阶',
               collapsable: false, 
               children: [
-                  ['algorithm.md', '数据结构和算法'],
+                  ['algorithm-data.md', '数据结构和算法-概念'],
+                  ['algorithm-leetcode.md', '数据结构和算法-leetcode'],
                   ['writeapi.md', '手写API实现'],
                   ['nodejs.md', 'NodeJS'],
               ]
@@ -66,7 +67,7 @@ module.exports = {
 				{
 						title: '日常思考',   // 一级菜单名称
 						collapsable: false, // false为默认展开菜单, 默认值true是折叠,
-						sidebarDepth: 1,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
+						sidebarDepth: 2,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
 						children: [
 								['test4.md', '子菜单4'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
 						]

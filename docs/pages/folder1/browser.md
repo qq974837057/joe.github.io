@@ -1,4 +1,5 @@
-### 输入URL到看到页面发生什么（DNS解析-TCP连接-http请求/响应-浏览器解析渲染-连接结束）
+
+## 输入URL到看到页面发生什么（DNS解析-TCP连接-http请求/响应-浏览器解析渲染-连接结束）
 1. 浏览器根据请求的URL交给DNS域名解析，通过域名找到真实IP；
 2. TCP连接三次握手
     - 客户端向服务器发送一个建立连接的请求 syn（您好，我是A）
@@ -152,7 +153,7 @@
 - JS阻塞后续资源下载：当文档加载过程中遇到JS文件，HTML文档会挂起渲染过程，等到文档中JS文件加载完毕+解析+执行完毕，才会继续HTML的渲染过程。因为JS可能会修改DOM结构。
 - CSS不影响JS加载，但影响JS的执行。
 
-### HTTP/HTTPS/HTTP2 协议
+## HTTP/HTTPS/HTTP2 协议
 - HTTP1.0
     - 定义了三种请求方法： GET, POST 和 HEAD方法
     - 无法复用链接：完成即断开，重新慢启动和 TCP 3次握手,需要手动添加keep-alive
@@ -284,6 +285,31 @@
             空调
             ------WebKitFormBoundary1XNKw5IGSxIzisBM--
             ```
+### AJAX
+- 概念：异步JS和XML缩写，现在一般用JSON代替XML。
+- 用处：在不刷新页面的情况下，向浏览器发起请求和接受响应，最后局部更新页面。
+- 实现：基于XMLHttpRequest对象，可发起HTTP请求，监听readystate的变化获得响应，然后执行刷新。
+- 使用：
+    ```js
+    var xhr = new XMLHttpRequest(); // 声明一个请求对象
+    xhr.open('GET', 'url/xxxx',true);(默认为true，异步请求)
+    // 如何设置请求头? xhr.setRequestHeader(header, value);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(); // get方法 send null(亦或者不传) ,post 的 send 则是传递值("fname=Henry&lname=Ford")
+    
+    xhr.onreadystatechange = function() {
+        if(xhr.readyState === 4) {     // readyState 4 代表已向服务器发送请求
+            if(xhr.status === 200) {   // status 200 代表服务器返回成功
+               var json = JSON.parse(xhr.responseText);;  // 这是返回的文本
+            } else {
+                console.log("Error: "+ xhr.status); // 连接失败的时候抛出错误
+            }
+        }
+    }
+    ```
+- 优点：无刷新请求数据
+- 缺点：浏览器限制不能跨域，跨域看下面的方案。
+
 ### 跨域
 - 同源：“协议+域名+端口”三者相同
 - 浏览器这些标签不受同源策略
@@ -293,21 +319,22 @@
     <script src=XXX>
     ```
 - jsonp
-    - 利用`<script>`标签不受同源策略限制的特性进行跨域操作
-    - 一句话描述：前端定义函数却在后端完成调用然后返回前端执行
-    - 实现简单、兼容好
-    - 只支持get请求，`<script>`标签只能get，且容易受xss攻击
-    - 创建一个`<script>`标签，src为跨域的API数据接口,声明一个回调函数，window[show]=function(){ resolve(data)}参数值为函数名(如show)在地址中向服务器传递该函数名（可以通过问号传参:?callback=show），服务器特殊处理show(data)返回给客户端，客户端再调用执行回调函数（show），对返回的数据进行操作。
+    - 本质：利用`<script>`标签不受同源策略限制的特性进行跨域操作
+    - 核心实现：创建script标签发起get请求，前端定义函数，在后端把数据放入回调，然后返回前端执行。
+    - 优点：简单就可实现跨域、兼容好
+    - 缺点：只支持get请求，`<script>`标签只能get，且容易受xss攻击
+    - 具体：创建一个`<script>`标签，src为跨域的API数据接口,声明一个回调函数，window[show]=function(){ resolve(data)}参数值为函数名(如show)在地址中向服务器传递该函数名（可以通过问号传参:?callback=show），服务器特殊处理show(data)返回给客户端，客户端再调用执行回调函数（show），对返回的数据进行操作。
 - cors跨域资源共享
     - 主流跨域方案:http头告诉浏览器允许访问不同源服务器上的资源
-    - 支持所有类型的HTTP请求
-    - Access-Control-Allow-Origin
-    - Access-Control-Allow-Methods
-    - Access-Control-Allow-Headers
+    - 优点：简单配置即可跨域，支持所有类型的HTTP请求
+    - 缺点：某些老旧浏览器不支持CORS
+    - Access-Control-Allow-Origin：目标源
+    - Access-Control-Allow-Methods： 允许的方法
+    - Access-Control-Allow-Headers：允许的请求头
 - Nginx反向代理
-    - 利用服务器之间通信不受同源策略影响
-    - 最方便，支持所有浏览器，不需要改代码。
-    - 客户端所有请求经过nginx处理，nginx作为代理转发请求给服务器，服务器拿到响应，nginx返回给客户端。
+    - 本质：利用服务器之间通信不受同源策略影响
+    - 优点：最方便，支持所有浏览器，不需要改代码。
+    - 实现：客户端所有请求经过nginx处理，nginx作为代理转发请求给服务器，服务器拿到响应，nginx返回给客户端。
     - 配置nginx.conf
     - add_header Access-Control-Allow-Origin *; 设置nginx允许跨域请求
     - location /api {... proxy_pass http://192.168.0.103:8080; } 转发地址
@@ -337,10 +364,10 @@
 ### CORS
 - 简单请求： GET、POST、HEAD 
 - 非简单请求：请求方法 PUT和DELETE，或者Content-Type为application/json（POST时常用），或特殊请求头如Token
-- 非简单请求会进行一次预检(OPTIONS)：
-    - 请求头包括源+HTTP方法+额外头信息
+- 非简单请求（两步走）：先进行一次预检(OPTIONS)请求，第二步才是真实请求：
+    - 请求头包括源 + HTTP方法 + 额外头信息
     - 预检完返回允许请求的头和方法（一般返回所有方法）和源，如果通过则发起请求
-- 支持发送cookie（a.com请求 -> b.com的接口）
+- 如何支持发送cookie（a.com请求 -> b.com的接口）
     - 默认情况下，跨域不携带cookie，所以要进行设置
     - 前端：
         - AJAX请求中打开xhr.withCredentials= true;属性允许发送cookie和接收服务器set-cookie。
@@ -348,16 +375,17 @@
         - Access-Control-Allow-Credentials：true(服务器同意发送cookie)
         - Access-Control-Allow-Origin就不能设为星号（*），必须指定明确的、与发起跨域请求网页一致的的域名(a.com)。
     - 同源政策：服务器(b.com)设置cookie的才会上传，其他域的cookie不会上传，跨域原网页代码也获取不到服务器设置的cookie
+
 ### 正向代理和反向代理
 - [解释和优缺点](https://juejin.im/post/5cc26dfef265da037b611738#heading-18)
 - 正向代理
     - 代理的对象是客户端、隐藏真实客户端
     - 应用：国外搭建一个代理服务器，代理请求google
-- 反向代理
+- 反向代理(通过负载均衡设备实现)
     - 代理的对象是服务端、隐藏真实服务端
     - 应用：www.baidu.com就是我们的反向代理服务器。Nginx就是性能非常好的反向代理服务器，用来做负载均衡，将过多请求分布给多个真实的服务器。隐藏IP端口号，更安全。
-    - 
-### get和post
+
+## get和post
 - 传输
     - get通过url传输，post通过请求体传输
 - 类型
@@ -376,7 +404,7 @@
     - get一般用于获取资源，post一般用来创建资源。
     - axios的get方法不支持在body传参，只支持params，如果要传递，需要使用post。或者自己xhr封装实现，理论上是可以在body里传，但一般不这么做。
 
-### cookie和session区别
+## cookie和session区别
 - 安全性： Session 比 Cookie 安全，Session 是存储在服务器端的，Cookie 是存储在客户端的。
 - 存取值的类型不同：Cookie 只支持存字符串数据，想要设置其他类型的数据，需要将其转换成字符串，Session 可以存任意数据类型。
 - 有效期不同： Cookie 可设置为长时间保持，比如我们经常使用的默认登录功能，Session 一般失效时间较短，客户端关闭（默认情况下，sessionId被删导致失效的）或者 Session 超时都会失效。
