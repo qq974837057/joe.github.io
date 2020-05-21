@@ -55,6 +55,7 @@ module.exports = {
               collapsable: false, 
               children: [
                   ['algorithm-data.md', '数据结构和算法-概念'],
+                  ['algorithm-sort.md', '数据结构和算法-排序专题'],
                   ['algorithm-leetcode.md', '数据结构和算法-leetcode'],
                   ['writeapi.md', '手写API实现'],
                   ['nodejs.md', 'NodeJS'],
