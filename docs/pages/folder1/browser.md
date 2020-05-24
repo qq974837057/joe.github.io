@@ -318,19 +318,22 @@
     <link href=XXX>
     <script src=XXX>
     ```
+- 注意：跨域请求能发出去，服务端能收到请求并正常返回结果，只是响应结果被浏览器拦截了
 - jsonp
-    - 本质：利用`<script>`标签不受同源策略限制的特性进行跨域操作
+    - 本质：利用<script>标签不受同源策略限制的特性进行跨域操作
     - 核心实现：创建script标签发起get请求，前端定义函数，在后端把数据放入回调，然后返回前端执行。
     - 优点：简单就可实现跨域、兼容好
-    - 缺点：只支持get请求，`<script>`标签只能get，且容易受xss攻击
-    - 具体：创建一个`<script>`标签，src为跨域的API数据接口,声明一个回调函数，window[show]=function(){ resolve(data)}参数值为函数名(如show)在地址中向服务器传递该函数名（可以通过问号传参:?callback=show），服务器特殊处理show(data)返回给客户端，客户端再调用执行回调函数（show），对返回的数据进行操作。
+    - 缺点：只支持get请求，<script>标签只能get，且容易受xss攻击
+    - 具体：创建一个<script>标签，src为跨域的API数据接口,声明一个回调函数，window[show]=function(){ resolve(data)}参数值为函数名(如show)在地址中向服务器传递该函数名（可以通过问号传参:?callback=show），服务器特殊处理show(data)返回给客户端，客户端再调用执行回调函数（show），对返回的数据进行操作。
 - cors跨域资源共享
     - 主流跨域方案:http头告诉浏览器允许访问不同源服务器上的资源
     - 优点：简单配置即可跨域，支持所有类型的HTTP请求
     - 缺点：某些老旧浏览器不支持CORS
-    - Access-Control-Allow-Origin：目标源
-    - Access-Control-Allow-Methods： 允许的方法
-    - Access-Control-Allow-Headers：允许的请求头
+    - 允许该Origin请求，则响应里加入下面的头信息
+    - Access-Control-Allow-Origin(简单请求+预检都会返回)：目标源
+    - Access-Control-Allow-Methods(预检返回)： 允许的方法
+    - Access-Control-Allow-Headers(预检返回)：允许的请求头
+    - Access-Control-Max-Age(预检返回)：预检请求的有效期(有效期内不需要再发Option请求,浏览器有自己的最长时间限制，如600s)
 - Nginx反向代理
     - 本质：利用服务器之间通信不受同源策略影响
     - 优点：最方便，支持所有浏览器，不需要改代码。
@@ -364,9 +367,26 @@
 ## CORS
 - 简单请求： GET、POST、HEAD 
 - 非简单请求：请求方法 PUT和DELETE，或者Content-Type为application/json（POST时常用），或特殊请求头如Token
-- 非简单请求（两步走）：先进行一次预检(OPTIONS)请求，第二步才是真实请求：
+- 非简单请求（两步走）：浏览器检测到非简单请求，先进行一次预检(OPTIONS)请求，第二步才是真实请求。
     - 请求头包括源 + HTTP方法 + 额外头信息
-    - 预检完返回允许请求的头和方法（一般返回所有方法）和源，如果通过则发起请求
+    - 预检完返回CORS允许请求的头和方法（一般返回所有方法）和源，如果通过则发起请求
+    - 预检失败，返回时不包括CORS头信息，浏览器认定失败。
+    ```
+    // 预检头信息
+    Origin: http://api.bob.com
+    Access-Control-Request-Method: PUT
+    Access-Control-Request-Headers: X-Custom-Header
+    // 预检响应
+    Access-Control-Allow-Origin: http://api.bob.com
+    Access-Control-Allow-Methods: GET, POST, PUT
+    Access-Control-Allow-Headers: X-Custom-Header
+    
+    // 预检通过的再次请求
+    Origin: http://api.bob.com
+    X-Custom-Header: value
+    // 正常响应
+    Access-Control-Allow-Origin: http://api.bob.com
+    ```
 - 如何支持发送cookie（a.com请求 -> b.com的接口）
     - 默认情况下，跨域不携带cookie，所以要进行设置
     - 前端：
@@ -374,7 +394,7 @@
     - 服务器：
         - Access-Control-Allow-Credentials：true(服务器同意发送cookie)
         - Access-Control-Allow-Origin就不能设为星号（*），必须指定明确的、与发起跨域请求网页一致的的域名(a.com)。
-    - 同源政策：服务器(b.com)设置cookie的才会上传，其他域的cookie不会上传，跨域原网页代码也获取不到服务器设置的cookie
+    - 遵循同源政策：服务器(b.com)设置cookie的才会上传，其他域的cookie不会上传，跨域原网页代码也获取不到服务器设置的cookie
 
 ## 正向代理和反向代理
 - [解释和优缺点](https://juejin.im/post/5cc26dfef265da037b611738#heading-18)
