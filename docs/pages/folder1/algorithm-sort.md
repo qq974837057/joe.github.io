@@ -210,6 +210,70 @@
 - 空间复杂度：O(logn)
 - 稳定性：不稳定
 
+## 堆排序
+
+> 实际：快排性能比堆排序更好，虽然时间复杂度都是O(n logn)，原因是堆排序的比较次数比快排多。
+- 两步：建堆、排序
+![堆排序1](./img/heap-sort-1.png)
+![堆排序2](./img/heap-sort-2.png)
+![堆排序3](./img/heap-sort-3.png)
+- 思路： 三个函数：建大顶堆、堆化函数、排序函数
+  - 建大顶堆：从n / 2 - 1的坐标开始，直到[0]，每个值循环从上往下堆化（下沉）。
+  - 堆化函数：i = 2 * target + 1的坐标开始，表示左子节点，i + 1表示右子节点，判断左右节点谁大。target值和孩子的大节点比较，若小于孩子，则交换位置，将target设为孩子的节点，也就是i，继续下次循环。直到超出数组长度。
+  - 排序函数：先根据传入的arr创建大顶堆，循环交换第一个和最后一个元素，调整大顶堆，每次长度-1，直到元素全部排完，返回arr。
+
+  ```js
+  // 建堆函数
+  function createHeap(arr) {
+    let len = arr.length;
+    let start = parseInt(len / 2) - 1;
+    // 从n / 2 - 1的坐标开始，其他为叶子坐标。
+    for(let i = start; i >= 0; i--) {
+      adjust(arr, i, len);
+    }
+  }
+  // 向下堆化函数
+  function adjust(arr, target, len) {
+    for(let i = 2 * target + 1; i < len; i = 2 * i + 1) {
+      // 找到target的左右子节点中较大的一个
+      if(i + 1 < len && arr[i + 1] > arr[i]) {
+        i = i + 1;
+      }
+      // 满足条件则下沉，交换位置，target变为下一个位置，不满足则退出for循环。
+      if(arr[i] > arr[target]) {
+        [arr[i], arr[target]] = [arr[target], arr[i]];
+        target = i;
+      } else {
+        break;
+      }
+    }
+  }
+  // 堆排序函数
+  function heapSort(arr) {
+    createHeap(arr);
+    // 打印大顶堆
+    console.log(arr);
+    // 循环交换第一个和最后一个元素，调整大顶堆，每次长度-1
+    for(let i = arr.length - 1; i > 0; i--) {
+      [arr[i], arr[0]] = [arr[0], arr[i]];
+      adjust(arr, 0, i);
+    }
+    return arr;
+  }
+
+  let arr = [7, 5, 19, 8, 4, 1, 20, 13, 16];
+  heapSort(arr);
+  // 建好的大顶堆
+  // [20, 16, 19, 13, 4, 1, 7, 5, 8]
+  // 完成堆排序
+  // [1, 4, 5, 7, 8, 13, 16, 19, 20]
+  ```
+
+#### 复杂度和稳定性
+- 时间复杂度：平均、最好、最坏均为O(nlogn)
+- 空间复杂度：O(1)
+- 稳定性：不稳定
+
 ## 二分查找
 > 针对的是一个有序的数据集合，查找思想有点类似分治思想。每次都通过跟区间的中间元素对比，将待查找的区间缩小为之前的一半，直到找到要查找的元素，或者区间被缩小为 0。适合处理静态数据。
 
