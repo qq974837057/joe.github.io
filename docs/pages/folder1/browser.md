@@ -129,9 +129,66 @@
     - 从端口接收到TCP报文，对请求进行解析
     - 请求处理完后，通过构建响应报文发送会客户端。
 - 响应报文：
-    - 状态码
+    - 状态行
     - 响应报头
     - 响应体(正文)
+
+### HTTP报文结构
+组成部分：起始行 + 头部(header) + 空行 + 实体(body)
+    - 请求报文的起始行：方法 + 路径 + http版本 
+        ```
+        GET /home HTTP/1.1
+        ```
+    - 响应报文的起始行(状态行)：http版本 + 状态码 + 原因
+        ```
+        HTTP/1.1 200 OK
+        ```
+    - 空行：用来分开头部和实体 
+
+### HTTP报头
+- Origin：源
+- Referer：来源
+- Connection: keep-alive 长连接
+- Content-Length: 825 内容长度
+- Cookie：凭证
+- Accept系列字段：
+    - 数据格式：Content-Type
+        ```
+        // 发送端
+        Content-Type: ...
+        // 接收端
+        Accept: ...
+        
+        可取值范围：
+        text： text/html, text/plain, text/css 等
+        image: image/gif, image/jpeg, image/png 等
+        audio/video: audio/mpeg, video/mp4 等
+        application: application/json, application/javascript, application/pdf, application/octet-stream 等
+        ```
+    - 压缩方式：Content-Encoding
+        ```
+        // 发送端
+        Content-Encoding: gzip
+        // 接收端
+        Accept-Encoding: gzip
+        ```
+    - 支持语言：Content-Language
+        ```
+        // 发送端
+        Content-Language: zh-CN, zh, en
+        // 接收端
+        Accept-Language: zh-CN, zh, en
+        ```
+    - 字符集：放在Content-Type中
+        ```
+        // 发送端
+        Content-Type: text/html; charset=utf-8
+        // 接收端
+        Accept-Charset: charset=utf-8
+        ```
+
+- 响应的强缓存和协商缓存头如：Expires和Cache-Control、 ETag和Last-Modified    
+- 其他自定义头如：token
 
 ### 细节：HTML建立dom树-词法解析和语法解析
 - 词法解析：
@@ -496,6 +553,11 @@
         - 实现：a站写入第三方cookie，页面操作过程，将携带第三方cookie向第三方域发起请求，第三方域获取到数据。
         - 现状：Firefox、Safari 默认禁止、Chrome —— SameSite Cookie、2022将全面禁止
         - 解决：转成一方cookie（js操作document.cookie设置第三方cookie，而不是set-cookie，请求将cookie放在请求参数中，而不是放在cookie中，模拟三方cookie的标识用户的过程），不过第三方sdk能获取信息就更多，风险大。
+    - 通过JS创建cookie
+        - 可添加过期日期expires、可添加path设置路径（默认属于当前页）
+            ```js
+            document.cookie = "username=Joe; expires=Sun, 31 Dec 2017 12:00:00 UTC; path=/";
+            ```    
 - session注意
     - session 是基于 cookie 实现的，session 存储在服务器端，sessionId 会被存储到客户端的cookie 中
     - session失效两种情况

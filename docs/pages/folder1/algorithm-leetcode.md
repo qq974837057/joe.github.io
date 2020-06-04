@@ -1,3 +1,34 @@
+## 堆栈
+### LeetCode-20 有效的括号
+##### 法1：栈结构 + map保存括号对应关系
+- 思路
+遍历字符串
+  - 1、遇到左括号，推入栈。
+  - 2、遇到右括号，和栈顶数据进行匹配，如果匹配，左括号弹出栈，不匹配则返回false。
+  - 3、遍历完成，如果栈为空，则返回true。否则为false。
+
+- 实现
+```js
+var isValid = function(s) {
+    let stack = [];
+    let map = {
+        ")":"(",
+        "]":"[",
+        "}":"{"
+    };
+    for(const c of s) {
+        if(!map[c]) {
+            stack.push(c);
+        } else if(!stack.length || map[c] !== stack.pop()) {
+            return false;
+        }
+    }
+    return !stack.length;
+};
+```
+
+- 时间复杂度：O(n)​，进栈出栈是O(1)，遍历了 1 次含n个元素的空间，即O(1) x n，为O(n)
+- 空间复杂度：O(n)，最坏情况都是左括号会压入栈
 
 ## 递归
 ### LeetCode50.Pow(x,n)
@@ -479,6 +510,84 @@ var maxProfit = function(prices) {
 ```
 - 时间复杂度：O(n)
 - 空间复杂度：O(1)
+
+### LeetCode-53 最大子序和
+给定一个整数数组 nums ，找到一个具有最大和的连续子数组（子数组最少包含一个元素），返回其最大和。
+示例:
+```
+输入: [-2,1,-3,4,-1,2,1,-5,4],
+输出: 6
+解释: 连续子数组 [4,-1,2,1] 的和最大，为 6。
+```
+
+##### 法1：动态规划
+> 动态规划的难点在于找到状态转移方程，dp[i] —— 表示到当前位置 i 的最大子序列和
+
+- 思路
+  - 状态转移方程为： dp[i] = max(dp[i - 1] + nums[i], nums[i])
+  - 初始化：dp[0] = nums[0]
+
+从状态转移方程中，我们只关注前一个状态的值，所以不需要开一个数组记录位置所有子序列和，只需要两个变量，currMaxSum保存前一位的最大和，给数组后面判断是否要加上自身的数值。
+
+  - currMaxSum - 累计到当前位置i的最大和，因为要保存当前位置的最优状态，所以赋值给nums[i]
+  - maxSum - 全局最大子序列和，如果currMaxSum比当前maxSum大，赋值给maxSum。
+    - currMaxSum(nums[ i ]) = max(currMaxSum(nums[i - 1]) + nums[i], nums[i])
+    - maxSum = max(currMaxSum, maxSum)
+![leetcode53](./img/leetcode-53.png)
+
+- 实现
+```js
+var maxSubArray = function(nums) {
+    let len = nums.length;
+    let max = nums[0];
+    for(let i = 1; i < len; i++) {
+        nums[i] = Math.max(0, nums[i - 1]) + nums[i];
+        if(nums[i] > max) {
+            max = nums[i];
+        }
+    }
+    return max;
+};
+// 经过上面一顿赋值，传入的数组已变成currMaxSum，每个位置是当前的最大和。
+// 由于位置可选，所以保存在max中的才是全局最大和。
+```
+- 时间复杂度：O(n)，n 是数组长度
+- 空间复杂度：O(1)
+
+##### 法2：暴力法
+> 从数组最左边开始于数组右边数据依次相加，将相加之后数据进行比较，比较之后最大值为最终结果
+
+- 思路
+  - 创建临时变量 sum 和最大值 maxNumber
+  - 从数组子序列左端开始遍历依次取数据
+  - 从数组子序列右端开始遍历
+  - 依次取右端某个节点数据和夹在中间的数值依次相加
+  - 将相加之后值与最大值 sum 进行比较，大的值赋值与 maxNumber
+  - 最终获得最大值
+
+- 实现
+```js
+var maxSubArray = function(nums) {
+    let sum = 0;
+    let maxNumber = 0;
+
+    for(let i = 0; i < nums.length; i++) { // 从数组子序列左端开始
+        for(let j = i; j < nums.length; j++) { // 从数组子序列右端开始
+            sum = 0;
+            for(let k = i; k <= j; k++) { // 暴力计算
+                sum += nums[k];
+            }
+            if(sum > maxNumber) {
+                maxNumber = sum;
+            }
+        }
+    }
+    return maxNumber;
+};
+```
+- 时间复杂度：O(n^3) 对于每个元素，通过三次遍历数组的其余部分来寻找它所对应的目标元素，这将耗费 O(n^3) 的时间。
+- 空间复杂度：O(1)
+
 
 ## 回溯算法
 
