@@ -134,15 +134,17 @@
     - 响应体(正文)
 
 ### HTTP报文结构
-组成部分：起始行 + 头部(header) + 空行 + 实体(body)
-    - 请求报文的起始行：方法 + 路径 + http版本 
+- 组成部分：起始行 + 头部(header) + 空行 + 实体(body)
+    - 请求报文的起始行(请求行)：方法 + 路径 + http版本 
         ```
         GET /home HTTP/1.1
         ```
+    ![请求报文](./img/Request-Header.png)
     - 响应报文的起始行(状态行)：http版本 + 状态码 + 原因
         ```
         HTTP/1.1 200 OK
         ```
+    ![响应报文](./img/Response-Header.png)
     - 空行：用来分开头部和实体 
 
 ### HTTP报头
@@ -186,6 +188,7 @@
         // 接收端
         Accept-Charset: charset=utf-8
         ```
+    ![Accept字段对应](./img/Header-Accept.png)
 
 - 响应的强缓存和协商缓存头如：Expires和Cache-Control、 ETag和Last-Modified    
 - 其他自定义头如：token
@@ -275,11 +278,16 @@
     - HTTP/1.x中的头阻塞问题会造成连接总是处于等待响应的状态，而未充分利用带宽；
     - HTTP/1.x大量、重复的请求头在网络上传输，使网络负载了很大一部分本需要传输的数据量。
     - HTTP 1.x 中，如果想并发多个请求，必须使用多个TCP链接，浏览器为了控制资源，单个域名有6-8个的TCP链接请求限制
-- HTTP2相对于HTTP1.x的优势
+- HTTP2相对于HTTP1.x的优势(新特性)
     - 二进制分帧：二进制格式替换之前文本格式传输数据，解析更高效，请求响应消息由一个或多个帧组成，分割为更小的帧，可乱序发送，根据流标示重组。
-    - 头部压缩：只发送有差异头部，减少冗余头部数据传输，“首部表”
+    - 头部压缩：只发送有差异头部，减少冗余头部数据传输，“首部哈希表”
     - 多路复用：同域名下所有通信都在单个TCP连接上，**可以有多条流，每个流都有自己的帧**，避免每次都要建立TCP连接，可以同时发送请求或回应，且不按照顺序，比如耗时较长的请求可以放后面。
     - 服务器推送：发送页面HTML时主动推送JS和CSS资源，不需要等解析到再请求
+- HTTP2的头部压缩算法原理
+    > 在HTTP1中起始行中的请求方法、URI、状态码，在HTTP2起始行被废弃，一起变为请求头，前面加：以便和其他请求头区分开。
+    - HTTP/2 采用了HPACK压缩算法（哈希表+哈夫曼编码），对请求头进行压缩。
+    - 首先是在服务器和客户端之间建立哈希表，将用到的字段存放在这张表中，那么在传输的时候对于之前出现过的值，只需要把索引(比如0，1，2，...)传给对方即可，对方拿到索引进行查表就行了。让请求头字段实现精简和复用。
+    - 其次如果若索引空间中不存在，对于整数和字符串进行哈夫曼编码然后传输，哈夫曼编码的原理就是先将所有出现的字符建立一张索引表，然后让出现次数多的字符对应的索引尽可能短，传输这样的索引序列，可以达到非常高的压缩率。
 - HTTPS是安全版的HTTP，区别如下
     - HTTP协议的数据都是明文传输的，HTTPS的TLS/SSL 进行加密
     - HTTPS需要到CA机构申请证书(一般收费)
@@ -535,13 +543,13 @@
 
 - cookie注意
     - 无法跨域
-    - 使用 httpOnly禁止js通过 document.cookie 读取cookie（提高安全性，防范xss）
-    - maxAge表示失效时间（秒），负数表示临时 cookie，关闭浏览器就删除。默认-1，为0表示删除，。
-    - expires 设置过期时间，不设置，为Session，保存在客户端内存，关闭浏览器失效。
-    - domain 指定cookie所属域名， .taobao.com表示a.taobao.com 还是 b .taobao.com 都可以使用 Cookie。
-    - secure 设为true，在HTTPS才有效
-    - Path 指定了一个 URL 路径，该路径下的可以发送cookie
-    - **SameSite： Chrome80 版本中默认屏蔽了第三方的 Cookie（Lax）**
+    - 使用 HttpOnly禁止js通过 document.cookie 读取cookie（提高安全性，防范xss）
+    - Secure 设为true，在HTTPS才有效
+    - MaxAge表示失效时间（秒），负数表示临时 cookie，关闭浏览器就删除。默认-1，为0表示删除。
+    - Expires 设置过期时间，以客户端时间为准。不设置表示临时cookie，保存在客户端内存，关闭浏览器失效。
+    - Domain 指定cookie所属域名，默认为当前主机， .taobao.com表示a.taobao.com 还是 b .taobao.com 都可以使用 Cookie。
+    - Path 指定了一个 URL 路径，子路径也会匹配，该路径下的可接收cookie。
+    - **SameSite：主流浏览器得到支持，在 Chrome80 版本中默认屏蔽了第三方的 Cookie（Lax）**
         - 让 Cookie 在跨站请求时不会被发送
         - Strict 这个 Cookie 在任何情况下都不可能作为第三方 Cookie，跨站请求不能携带
         - Lax 允许部分第三方请求携带 Cookie（比如get）
@@ -553,6 +561,11 @@
         - 实现：a站写入第三方cookie，页面操作过程，将携带第三方cookie向第三方域发起请求，第三方域获取到数据。
         - 现状：Firefox、Safari 默认禁止、Chrome —— SameSite Cookie、2022将全面禁止
         - 解决：转成一方cookie（js操作document.cookie设置第三方cookie，而不是set-cookie，请求将cookie放在请求参数中，而不是放在cookie中，模拟三方cookie的标识用户的过程），不过第三方sdk能获取信息就更多，风险大。
+    - 服务器创建cookie
+        - 通过Set-cookie响应头(一次Set一个cookie)
+            ```
+            Set-Cookie: <cookie-name>=<cookie-value>; Expires=<date>; Domain=<domain-value>; Path=<path-value>; Secure; HttpOnly; SameSite=Lax
+            ```
     - 通过JS创建cookie
         - 可添加过期日期expires、可添加path设置路径（默认属于当前页）
             ```js
