@@ -30,8 +30,119 @@ var isValid = function(s) {
 - 时间复杂度：O(n)​，进栈出栈是O(1)，遍历了 1 次含n个元素的空间，即O(1) x n，为O(n)
 - 空间复杂度：O(n)，最坏情况都是左括号会压入栈
 
+## 堆
+### LeetCode-面试40 最小的k个数
+##### 法1：排序【适合静态数据集合】
+> 在 V8 引擎 7.0 版本之前，数组长度小于10时， Array.prototype.sort() 使用的是插入排序，否则用快速排序。
+
+> 在 V8 引擎 7.0 版本之后就舍弃了快速排序，因为它不是稳定的排序算法，在最坏情况下，时间复杂度会降级到 O(n2)。
+
+> 而是采用了一种混合排序的算法：TimSort 。
+
+> 在数据量小的子数组中使用插入排序，然后再使用归并排序将有序的子数组进行合并排序，时间复杂度为 O(nlogn) 。
+
+- 思路
+将数组进行排序（可以是最简单的快排），取前 K 个数就可以了，so easy
+- 实现
+```js
+var getLeastNumbers = function(arr, k) {
+    return arr.sort((a, b) => a - b).slice(0, k);
+}
+```
+- 时间复杂度：O(nlogn)
+- 空间复杂度：O(logn)
+
+##### 法2：大顶堆求Tok K【更适合动态数据集合】
+- 思路
+  - 从数组中取前 k 个数（ 0 到 k-1 位），构造一个大顶堆
+  - 从 k 位开始遍历数组，每一个数据都和大顶堆的堆顶元素进行比较，如果大于堆顶元素，则不做任何处理，继续遍历下一元素；如果小于堆顶元素，则将这个元素替换掉堆顶元素，然后再堆化成一个大顶堆。
+  - 遍历完成后，堆中的数据就是前 K 小的数据
+- 实现
+```js
+var getLeastNumbers = function(arr, k) {
+    let heap = [,],i=0;
+    // 从 arr 中取出前 k 个数，构建一个大顶堆
+    while(i < k) {
+        heap.push(arr[i++])
+    }
+    buildHeap(heap,k);
+    // 从 k 位开始遍历数组
+    for(let i=k;i<arr.length;i++) {
+        if(heap[1]> arr[i]) {
+            // 替换并堆化
+            heap[1] = arr[i];
+            buildHeap(heap, k);
+        }
+    }
+    // 删除heap中第一个元素
+    heap.shift();
+    return heap;
+};
+// 原地建堆，从后往前，自上而下式建大顶堆
+let buildHeap = (arr,k) => {
+    if(k===1) return;
+    // 从最后一个非叶子节点开始，自上而下式堆化
+    for(let i = Math.floor(k/2); i>= 1 ;i--) {
+        heapify(arr, k, i);
+    }
+}
+// 堆化
+let heapify = (arr, k, i) => {
+    // 自上而下式堆化
+    while(true) {
+        let maxIndex = i
+        if(2*i <= k && arr[2*i] > arr[i]) {
+            maxIndex = 2*i;
+        }
+        if(2*i+1 <= k && arr[2*i+1] > arr[maxIndex] ){
+            maxIndex = 2*i +1;
+        }
+        if(maxIndex !== i) {
+            [arr[i],arr[maxIndex]]=[arr[maxIndex],arr[i]];
+            i = maxIndex;
+        } else {
+            break;
+        }
+    }
+}
+```
+- 时间复杂度：遍历数组需要 O(n) 的时间复杂度，一次堆化需要 O(logk) 时间复杂度，所以利用堆求 Top k 问题的时间复杂度为 O(nlogk)
+- 空间复杂度：O(k)
+
+### LeetCode-215 数组中的第K个最大元素
+##### 法1：排序
+- 思路
+  - 先对数组进行排序，再返回倒数第 k 个元素
+  - 语义是从右边往左边数第 k 个元素，那么从左向右数是第几个呢，我们列出几个找找规律就好了。
+  - 一共 6 个元素，找第 2 大，索引是 4；
+  - 一共 6 个元素，找第 4 大，索引是 2。
+  - 因此，升序排序以后，目标元素的索引是 len - k。
+- 实现
+```js
+var findKthLargest = function(nums, k) {
+    return nums.sort((a,b) => a - b)[nums.length-k];
+};
+```
+- 时间复杂度：O(n logn) 算法的性能消耗主要在排序，n是数组的长度
+- 空间复杂度：O(1) 原地排序，没有借助额外的辅助空间。
+
+
+##### 法2：小顶堆
+- 思路
+  - 维护一个大小为 K 的小顶堆，顺序遍历数组，从数组中取出数据与堆顶元素比较。
+  - 如果比堆顶元素大，我们就把堆顶元素删除，并且将这个元素插入到堆中；
+  - 如果比堆顶元素小，则不做处理，继续遍历数组。
+  - 这样等数组中的数据都遍历完之后，堆中的数据就是前 K 大数据了，堆顶元素就是第K大数据。
+- 实现
+```js
+
+```
+- 时间复杂度：O(nlogK) 遍历数组需要 O(n) 的时间复杂度，一次堆化操作需要 O(logK) 的时间复杂度，所以最坏情况下，n 个元素都入堆一次.
+- 空间复杂度：O(K)，用于存储堆元素。
+
+
 ## 递归
-### LeetCode50.Pow(x,n)
+### LeetCode-50 Pow(x,n)
 实现 pow(x, n) ，即计算 x 的 n 次幂函数。
 
 输入: 2.00000, 10
@@ -72,6 +183,125 @@ var isValid = function(s) {
 - 空间复杂度：O(log n)，即为递归的层数。这是由于递归的函数调用会使用栈空间。
 
 ## 二叉树
+### LeetCode-144 二叉树的前序遍历
+给定一个二叉树，返回它的 前序 遍历。
+
+示例:
+```
+输入: [1,null,2,3]  
+   1
+    \
+     2
+    /
+   3 
+
+输出: [1,2,3]
+```
+
+##### 法1：递归
+- 思路
+- 实现
+```js
+const preorderTraversal = (root) => {
+    let res = [];
+    let preorder = (node) => {
+        if(node) {
+            res.push(node.val);
+            preorder(node.left);
+            preorder(node.right);
+        }
+    }
+    preorder(root);
+    return res;
+}
+```
+- 时间复杂度：O(n)
+- 空间复杂度：O(n)
+
+##### 法2：迭代
+> 递归使用调用栈，所以用栈模拟递归的过程
+- 思路
+  - 首先根入栈
+  - 根节点出栈，将根的val值放入res中
+  - 将根的左右节点入栈，入栈顺序是先右后左，保证出栈顺序才是先左后右（符合根左右）
+  - 左节点出栈，左节点val值放入res
+  - 如果左节点仍有子节点，则继续入栈。
+  - 以此类推，直到栈为空，遍历完成。
+- 实现
+```js
+const preorderTraversal = (root) => {
+    let res = [];
+    let stack = [];
+    if(root) stack.push(root);
+    while(stack.length > 0) {
+        let node = stack.pop();
+        res.push(node.val);
+        node.right && stack.push(node.right);
+        node.left && stack.push(node.left);
+    }
+    return res;
+}
+```
+- 时间复杂度：O(n)
+- 空间复杂度：O(n)
+
+### LeetCode-145 二叉树的后序遍历
+给定一个二叉树，返回它的 后序 遍历。
+
+示例:
+```
+输入: [1,null,2,3]  
+   1
+    \
+     2
+    /
+   3 
+
+输出: [3,2,1]
+```
+##### 法1：递归
+- 思路
+- 实现
+```js
+const postorderTraversal = (root) => {
+    let res = [];
+    let postorder = (node) => {
+        if(node) {
+            postorder(node.left);
+            postorder(node.right);
+            res.push(node.val);
+        }
+    }
+    postorder(root);
+    return res;
+}
+```
+- 时间复杂度：O(n)
+- 空间复杂度：O(n)
+
+##### 法2：迭代+倒序解
+> 如果我们把前序遍历的 list.push(node.val) 变更为 list.unshift(node.val) （遍历结果逆序），那么遍历顺序就由 根左右 变为 右左根，仅需将 右左根 变更为 左右根 即可完成后序遍历
+- 思路
+  - 每次把值都插到数组的最前面
+  - 每次先入栈左节点, 然后入栈右节点
+- 实现
+```js
+const postorderTraversal = (root) => {
+    let res = [];
+    let stack = [];
+    if(root) stack.push(root);
+    while(stack.length > 0) {
+        let node = stack.pop();
+        res.unshift(node.val);
+        node.left && stack.push(node.left);
+        node.right && stack.push(node.right);
+    }
+    return res;
+}
+```
+- 时间复杂度：O(n)
+- 空间复杂度：O(n)
+
 ### LeetCode-94 二叉树的中序遍历
 给定一个二叉树，返回它的中序 遍历。
 
@@ -107,20 +337,21 @@ TreeNode: {
 - 实现
 ```js
 const inorderTraversal = (root) => {
-    const result = [];
-    const midSeq = (root) => {
-        if(!root) return;
-        const { left, right, val } = root;
-        left && midSeq(left);
-        val && result.push(val); // 这一步是关键，代表根在中间插入。
-        right && midSeq(right);
+    let res = [];
+    let inorder = (node) => {
+        if(node) {
+            inorder(node.left);
+            res.push(node.val);
+            inorder(node.right);
+        }
     }
-    midSeq(root);
-    return result;
+    inorder(root);
+    return res;
 }
 ```
 - 时间复杂度：O(n)​ 递归函数 T(n)=2∗T(n/2)+1 ，因此时间复杂度为 O(n)​
-- 空间复杂度：O(logn)
+- 空间复杂度：O(n)
+
 ##### 法2：迭代法
 - 思路
   - 声明一个临时堆栈存放左子节点和result存放结果，一直向下查找，找到有node.left存在，则push进临时堆栈中，continue 继续判断有无left，直到查不到左子节点。
@@ -128,7 +359,7 @@ const inorderTraversal = (root) => {
   - 将该节点的右节点作为下一次迭代对象。最后返回result。
 
 - 实现
-  - 取跟节点为目标节点，开始遍历
+  - 取根节点为目标节点，开始遍历
   - 1.左孩子入栈 -> 直至左孩子为空的节点
   - 2.节点出栈 -> 访问该节点
   - 3.以右孩子为目标节点，再依次执行1、2、3
