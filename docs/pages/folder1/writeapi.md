@@ -109,6 +109,34 @@
 ## new
 ## Object.create
 ## call、apply
+### call
+```js
+// 设置目标this的fn为函数本身
+// 不要第一个this参数，取剩余传入的参数
+// 目标this执行该fn函数(带参数)
+// 删除该fn函数，返回结果
+
+Function.prototype.call2 = function(context = window) {
+  context.fn = this;
+  let args = [...arguments].slice(1);
+  let result = context.fn(...args);
+  delete context.fn;
+  return result;
+}
+
+// 测试用例
+let test = { value: 666 };
+
+function joe(name, age) {
+  // 函数的传参
+  console.log(name);
+  console.log(age);
+  // this对象里的内容
+  console.log(this.value);
+}
+
+joe.call2(test, 'joe', 25);
+```
 ## bind
 ## 防抖
 ## 节流
