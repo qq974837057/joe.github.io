@@ -1,3 +1,9 @@
+## Normal flow 
+- 正常流(文档流)：元素从左到右，从上到下显示，块级会独占一行，行内元素会和小伙伴们共享一行，是传统的HTML文档布局。
+- 浮动(float)、position中的绝对定位(absolute)和固定定位(fixed)三种方式定位会脱离文档流。
+    - 浮动后，后面的元素无视它占据的区域，直接在它身下布局。但是后面文字会认同浮动元素的区域，围绕它布局，没有脱离文本流。
+    - 绝对定位就既脱出文档流又脱出文本流，后面文字无视它占据的区域，不会环绕，直接身下布局。
+
 ## 盒子模型
 - 盒模型由content（内容）、padding（内边距）、border（边框）、margin（外边距）组成。
 - 标准模型（w3c）
@@ -30,6 +36,21 @@
 - 父flex/grid + 子margin auto（最简单）（父要设高度）
 - 已知宽高：absolute+top50%+left50%+margin：-50px 0 0 -50px
 - 未知宽高：absolute + transform（父relative+子absolute+top50%+left50%+translate（-50%，-50%））
+
+## inline-block的使用场景
+设置了display:inline-block的元素
+    - 既拥有了block元素可以设置width和height的特性
+    - 又保持了inline元素不换行的特性
+场景(行内排列并且可以设置大小的场景)
+    - 网页头部横向排列的菜单列表
+    - 用a标签做按钮，可设置大小
+    - 网页布局如三列布局
+解决空隙问题
+    - 移除标签之间的空格
+    - 使用margin负值
+    - 使用font-size:0、内部fontsize重新设置（推荐）
+    - letter-spacing、字符间距设置负值
+    - word-spacing、单词间距设置负值
 
 ## 使一个元素不可见的方式（常见3种+1种）
 - display:none 文档流消失，不占空间、回流重绘、不可点击、不会继承
@@ -111,10 +132,10 @@
 - static，默认值。位置设置为static的元素，它始终会处于文档流给予的位置。
 - inherit，规定应该从父元素继承 position 属性的值。但是任何的版本的 Internet Explorer （包括 IE8）都不支持属性值 “inherit”。
 - fixed，生成绝对定位的元素。默认情况下，可定位于相对于浏览器窗口的指定坐标。元素的位置通过 “left”, “top”, “right” 以及 “bottom” 属性进行规定。不论窗口滚动与否，元素都会留在那个位置。但当祖先元素具有transform属性且不为none时，就会相对于祖先元素指定坐标，而不是浏览器窗口。
-absolute，生成绝对定位的元素，相对于距该元素最近的已定位的祖先元素进行定位。此元素的位置可通过 “left”、”top”、”right” 以及 “bottom” 属性来规定。
+- absolute，生成绝对定位的元素，相对于距该元素最近的已定位的祖先元素进行定位。此元素的位置可通过 “left”、”top”、”right” 以及 “bottom” 属性来规定。
 - relative，生成相对定位的元素，相对于该元素在文档中的初始位置进行定位。通过 “left”、”top”、”right” 以及 “bottom” 属性来设置此元素相对于自身位置的偏移。
 
-浮动、绝对定位和固定定位会脱离文档流，相对定位不会脱离文档流，绝对定位相对于该元素最近的已定位的祖先元素，如果没有一个祖先元素设置定位，那么参照物是body层。
+注意：浮动、绝对定位和固定定位会脱离文档流，相对定位不会脱离文档流，绝对定位相对于该元素最近的已定位的祖先元素，如果没有一个祖先元素设置定位，那么参照物是body层。
 
 ## 清除浮动的方法（3种）
 
@@ -160,10 +181,17 @@ absolute，生成绝对定位的元素，相对于距该元素最近的已定位
     - flex-grow 放大比例
     - flex-shrink 缩小比例
     - flex-basis 本身大小（相当于width、height）
-    - flex 简写grow shink basis:auto（1 1 auto）
+    - flex 简写grow shrink basis
     - align-self 独自的对齐方式:auto(默认)/flex-start/flex-end/center/baseline/stretch 可重写自己的align-items
 
+- 常用：
+    - flex: auto (1 1 auto) -> (放大比例1，缩小比例1，分配多余空间之前占据的主轴空间)
+    - flex: 0 1 auto -> (grow为0，shrink为1，basis为auto)
+
 - flex和grid布局
+
+> 引用自知乎一丝：CSS2.1 之前,一直没有一个专门的属性来解决网页布局问题,Float也好,position 也罢,都只是一种 Tricks 技巧.直到 Flexbox 的出现,非常方便的解决了网页一维布局的问题,而CSS Grid 则能更好的解决二维布局的问题.
+
     - 布局历程：表格布局 --> 定位布局 --> 浮动布局 --> flexbox布局 --> gridbox网格布局 
     - 目前移动端布局更多使用 flexbox 
     - flexbox 是一维布局，他只能在一条直线上放置你的内容区块；

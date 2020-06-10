@@ -35,6 +35,97 @@
     </body>
     ```
 
+
+## SEO（搜索引擎优化）
+- 利用搜索引擎的规则
+- 提高网站在有关搜索内的自然排名
+
+
+## DOCTYPE
+- `<!DOCTYPE html>` 声明文档类型和引入DTD规范(H4.0.1才需要DTD)
+- 作用：告知浏览器的解析器用什么文档标准解析这个文档。
+- 必须声明在HTML文档的第一行。
+
+## HTML 5 新标签
+- `<header>`：定义了文档的头部区域
+- `<footer>`：定义 section 或 document 的页脚。
+- `<article>`：定义页面独立的内容区域
+- `<aside>`：定义页面的侧边栏内容
+- `<nav>`：定义导航链接的部分。
+- `<video>`：定义视频（video 或者 movie）
+- `<audio>`：定义音频内容
+- `<canvas>`：标签定义图形
+...
+
+## 常用的meta标签
+meta标签由name和content两个属性来定义，来描述一个HTML网页文档的元信息
+- viewport —— 可以控制视口的大小和比例
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+```
+- keywords —— 关键词，用于搜索引擎
+```html
+<meta name="keywords" content="HTML, CSS, XML, XHTML, JavaScript">
+```
+- charset —— 描述HTML文档的编码形式（HTML5 中，有一个新的 charset 属性）
+```html
+<meta charset="UTF-8" >
+```
+- http-equiv —— 通过content属性设置http头部,可以设置http的缓存过期日期
+```html
+<meta http-equiv="expires" content="Wed, 20 Jun 2019 22:33:00 GMT">
+```
+
+
+## Label标签
+- 将该标签显示的内容绑定对应的表单控件。
+- 将`<label>` 标签的 for 属性和控件的id设置为相同即可。
+- 多个控件(input)的name设为相同可限制单选一个，如sex性别，选男或女。
+
+```html
+<label for="name"> Name: </label>
+<input type="text" id="name"/>
+
+<form>
+  <label for="male">Male</label>
+  <input type="radio" name="sex" id="male" />
+  <br />
+  <label for="female">Female</label>
+  <input type="radio" name="sex" id="female" />
+</form>
+
+```
+
+## 易混淆的标签
+- title 和 h1
+    - `<title>` 单纯的标题，放在head中浏览器会特殊处理，放在标题栏上
+    - `<h1>` 标题 + 层次明确，对页面信息的抓取有很大的影响
+- b 和 strong
+    - `<b>` 单纯的粗体
+    - `<strong>` 粗体 + 语气更强的强调，使用阅读设备`<strong>`会重读
+- i 和 em
+    - `<i>` 单纯的斜体
+    - `<em>` 斜体 + 强调
+
+
+## 标准模式和兼容模式
+- 标准模式：排版和js都以浏览器最高标准执行
+- 兼容模式：以宽松的向后兼容方式显示，模拟老式浏览器的行为，以防无法正常工作。
+- 比如：360浏览器里有着两个浏览器内核，一个是极速模式用的谷歌浏览器Chrome（Chrommium内核），另外一个是兼容模式用IE浏览器IE（Trident内核）
+
+## 行内元素、块级元素、空元素
+> CSS规范规定，每个元素都有display属性，确定该元素的类型，每个元素都有默认的display值。如div的display默认值为“block”，则为“块级”元素；span默认display属性值为“inline”，是“行内”元素。
+
+默认情况下
+- 行内元素不会以新行开始，块级元素会新起一行。
+- 行内元素只能包含数据和其他行内元素，块级元素可以包含行内元素和其他块级元素。
+- 块级元素只能出现在 `<body>` 元素内。
+
+1. 行内元素有：a b span img input select button em strong ...（强调的语气）
+2. 块级元素有：div ul ol li dl dd h1…h6 p table form ...
+3. 常见的空元素：`<br>换行` `<hr>分割线` `<img>` `<input>` `<link>` `<meta>`... (在开始标签加斜杠表示闭合空元素，如`<br />`)
+
+
 ## src(引入文件)和href(链接跳转)的区别
 - src表示来源地址，是**引入**。
     - 用于 img、script、iframe等
@@ -104,11 +195,11 @@
         
         > 注意removeEventListener("click",handler,false);和addEventListener("click",handler,false);是同一个处理函数。 
 
-## SEO（搜索引擎优化）
-- 利用搜索引擎的规则
-- 提高网站在有关搜索内的自然排名
 
-## <!DOCTYPE html>
-- 声明文档类型和DTD规范的
-- 作用：告知浏览器的解析器用什么文档标准解析这个文档。
-- 必须声明在HTML文档的第一行。
+
+
+
+
+
+
+

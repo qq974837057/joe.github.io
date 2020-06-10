@@ -117,9 +117,10 @@
 // 删除该fn函数，返回结果
 
 Function.prototype.call2 = function(context = window) {
+  let result;
   context.fn = this;
   let args = [...arguments].slice(1);
-  let result = context.fn(...args);
+  result = context.fn(...args);
   delete context.fn;
   return result;
 }
@@ -136,8 +137,41 @@ function joe(name, age) {
 }
 
 joe.call2(test, 'joe', 25);
+// 'joe' 25 666
+```
+### apply
+```js
+// 设置目标this的fn为函数本身
+// 取argument[1]数组为参数，展开并传入
+// 目标this执行该fn函数(带参数，若无argument[1]则不带)
+// 删除该fn函数，返回结果
+
+Function.prototype.apply2 = function(context = window) {
+  let result;
+  context.fn = this;
+  if(arguments[1]) {
+    result = context.fn(...arguments[1]);
+  } else {
+    result = context.fn();
+  }
+  delete context.fn;
+  return result;
+}
+
+// 测试用例
+let test = { value: 666 };
+
+function joe(name, age) {
+  console.log(name);
+  console.log(age);
+  console.log(this.value);
+}
+
+joe.apply2(test, ['joe', 25]);
+// 'joe' 25 666
 ```
 ## bind
+
 ## 防抖
 ## 节流
 ## 浅拷贝、深拷贝
