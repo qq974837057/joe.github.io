@@ -38,14 +38,20 @@
 - 未知宽高：absolute + transform（父relative+子absolute+top50%+left50%+translate（-50%，-50%））
 
 ## inline-block的使用场景
-设置了display:inline-block的元素
-    - 既拥有了block元素可以设置width和height的特性
-    - 又保持了inline元素不换行的特性
-场景(行内排列并且可以设置大小的场景)
+- 使用
+```css
+display:inline-block
+```
+- 特性
+    - 保持了inline元素不换行的特性
+    - 拥有了block元素可以设置width和height的特性
+
+- 使用场景(行内排列并且可以设置大小的场景)
     - 网页头部横向排列的菜单列表
     - 用a标签做按钮，可设置大小
     - 网页布局如三列布局
-解决空隙问题
+
+- 解决空隙问题
     - 移除标签之间的空格
     - 使用margin负值
     - 使用font-size:0、内部fontsize重新设置（推荐）
@@ -67,7 +73,7 @@
 - 子选择器ul>li（父元素为ul的所有li）
 - 后代选择器li a（内部的所有a元素，不管嵌套多深）（h标签的后代使用其他h标签，失效）
 - 通配符选择器*
-- 属性选择器a[rel='external']
+- 属性选择器a[href="http://www.w3school.com.cn"]{...}、input[type="text"]{...}， `[attribute=value]`用于选取带有指定属性和值的元素。
 
 
 ## 选择器优先级（权重）
@@ -178,8 +184,8 @@
 
 - 项目：
     - order 顺序 越小越靠前 可为负
-    - flex-grow 放大比例
-    - flex-shrink 缩小比例
+    - flex-grow 放大比例，默认为 0。
+    - flex-shrink 缩小比例，默认为 1。
     - flex-basis 本身大小（相当于width、height）
     - flex 简写grow shrink basis
     - align-self 独自的对齐方式:auto(默认)/flex-start/flex-end/center/baseline/stretch 可重写自己的align-items
@@ -188,11 +194,12 @@
     - flex: auto (1 1 auto) -> (放大比例1，缩小比例1，分配多余空间之前占据的主轴空间)
     - flex: 0 1 auto -> (grow为0，shrink为1，basis为auto)
 
+
+> 引用自知乎一丝：CSS2.1 之前,一直没有一个专门的属性来解决网页布局问题,Float也好,position 也罢,都只是一种 Tricks 技巧.直到 Flexbox 的出现,非常方便的解决了网页一维布局的问题,而CSS Grid 则能更好的解决二维布局的问题
+
 - flex和grid布局
 
-> 引用自知乎一丝：CSS2.1 之前,一直没有一个专门的属性来解决网页布局问题,Float也好,position 也罢,都只是一种 Tricks 技巧.直到 Flexbox 的出现,非常方便的解决了网页一维布局的问题,而CSS Grid 则能更好的解决二维布局的问题.
-
-    - 布局历程：表格布局 --> 定位布局 --> 浮动布局 --> flexbox布局 --> gridbox网格布局 
+    - 布局历史：表格布局 --> 定位布局 --> 浮动布局 --> flexbox布局 --> gridbox网格布局 
     - 目前移动端布局更多使用 flexbox 
     - flexbox 是一维布局，他只能在一条直线上放置你的内容区块；
     - grid是一个二维布局。它除了可以灵活的控制水平方向之外，还能轻易的控制垂直方向的布局模式，未来的布局。
@@ -311,3 +318,96 @@
             color: red;
         }
         ```
+
+## flex计算示例
+- [知乎解释](https://zhuanlan.zhihu.com/p/24372279)
+
+
+```html
+<div class="container">
+    <div class="left"></div>
+    <div class="right"></div>
+</div>
+
+<style>
+  * {
+    padding: 0;
+    margin: 0;
+  }
+  .container {
+    width: 600px;
+    height: 300px;
+    display: flex;
+  }
+  .left {
+    flex: 1 2 500px;
+    background: red;
+  }
+  .right {
+    flex: 2 1 400px;
+    background: blue;
+  }
+</style>
+
+```
+- 空间不够时，让各个子元素收缩以适应有限的空间，使用 flex-shrink 的计算方式
+    - 子元素的 flex-shrink 的值分别为 2，1
+
+- 第一步：计算子元素总溢出值
+    - 500 + 400 - 600 = 300
+
+- 第二步：计算子元素的收缩权重总和（每个子元素权重为 flex-shrink * 宽度）
+    - 2 * 500 + 1 * 400 = 1400
+
+- 第三步：计算子元素该收缩多少（总溢出值 * 权重/权重总和）
+    - left:  300 * 2(flex-shrink) * 500(width) / 1400 = 214.28
+    - right: 300 * 1(flex-shrink) * 400(width) / 1400 = 85.72
+
+- 第四步：子元素宽度减去收缩值，得到结果
+    - left:  500 - 214.28 = 285.72
+    - right: 400 - 85.72 = 314.28
+
+
+```html
+<div class="container">
+    <div class="left"></div>
+    <div class="right"></div>
+</div>
+
+<style>
+  * {
+    padding: 0;
+    margin: 0;
+  }
+  .container {
+    width: 1000px;
+    height: 300px;
+    display: flex;
+  }
+  .left {
+    flex: 1 2 500px;
+    background: red;
+  }
+  .right {
+    flex: 2 1 400px;
+    background: blue;
+  }
+</style>
+```
+
+
+- 空间有剩余时，各个子元素根据放大比例来分配剩余空间，使用 flex-grow 的计算方式
+    - 子元素的 flex-grow 的值分别为 1，2
+- 第一步：计算父元素的剩余空间
+    - 1000 - (500 + 400) = 100
+- 第二步：计算子元素权重总和
+    - 1 + 2 = 3
+- 第三步：计算子元素增加多少（剩余空间 * 放大系数/权重总和）
+    - left:  100 * 1 / 3 = 33.33
+    - right: 100 * 2 / 3 = 66.67
+- 第四步：子元素宽度加上增量值，得到结果
+    - left:  500 + 33.33 = 533.33
+    - right: 400 + 66.67 = 466.67
+
+
+总结：在不考虑 max/min-width 的前提下，子元素的宽度一定会被调整到适应父元素，或放大或缩小，放大计算比较简单，直接将剩余空间 * 放大比例即可得出。缩小计算比较复杂，要把自身宽度加入权重比例的计算。

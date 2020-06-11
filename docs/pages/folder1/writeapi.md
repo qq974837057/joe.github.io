@@ -172,6 +172,51 @@ joe.apply2(test, ['joe', 25]);
 ```
 ## bind
 
+> bind() 方法会创建一个新函数。当这个新函数被调用时，bind() 的第一个参数将作为它运行时的 this，之后的一序列参数将会在传递的实参前传入作为它的参数。(来自于 MDN )
+
+- 非函数调用bind报错
+- 1. 返回一个函数，指定this为传入的第一个参数
+- 2. 两个地方可传参数，执行bind时，执行bind的返回函数时，所以要将bind函数的arguments参数和返回函数的arguments参数concat()在一起。
+- 3. bind返回的函数作为构造函数，bind时指定的this失效，但传入参数仍有效。
+- 4. 判断this有没有被new构造函数改成指向实例，若被new调用(改变this)，则apply执行的this指向this，使context的this失效，否则为context。
+- 5. 返回的函数作为构造函数需要实现继承(通过返回bound构造函数new出来的实例可以继承绑定函数的原型中的值)，为了避免绑定函数的prototype被同时修改，使用Object.create隔离开原型，再通过原型链实现继承。
+
+```js
+Function.prototype.bind2 = function(context) {
+  if(typeof this !== 'function') {
+    throw Error('not a function');
+  }
+  let fn = this;
+  let args = [...arguments].slice(1);
+  let bound = function() {
+    return fn.apply(this instanceof bound ? this : context, args.concat([...arguments]));
+  }
+  // bound.prototype = fn.prototype; (不好)
+  bound.prototype = Object.create(fn.prototype);
+  return bound;
+}
+
+// 测试用例1
+
+// 函数需要传 name 和 age 两个参数，可以在 bind 的时候，只传一个 name，在执行返回的函数的时候，再传另一个参数 age。
+var test = { value: 1 };
+function joe(name, age) {
+    console.log(this.value);
+    console.log(name);
+    console.log(age);
+}
+var bindJoe = joe.bind2(test, 'joe');
+bindJoe('25');  // 1 'joe' '25'
+
+// 测试用例2
+
+// 修改的是 bindFoo.prototype ，bar.prototype 的值没被影响修改
+function bar() {}
+var bindFoo = bar.bind2(null);
+bindFoo.prototype.value = 1;
+console.log(bindFoo.prototype.value); // 1
+console.log(bar.prototype.value);     // undefined
+```
 ## 防抖
 ## 节流
 ## 浅拷贝、深拷贝
