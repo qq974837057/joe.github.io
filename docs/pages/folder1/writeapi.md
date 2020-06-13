@@ -135,6 +135,24 @@
 ### 区别
   - ES5 的继承使用借助构造函数实现，实质是先创造子类的实例对象this，然后再将父类的方法添加到this上面。ES6 的继承机制完全不同，实质是先创造父类的实例对象this（所以必须先调用super方法），然后再用子类的构造函数修改this。
   - ES6 在继承的语法上不仅继承了类的原型对象，还继承了类的静态属性和静态方法
+
+
+## Object.create
+
+作用：创建一个新对象，以参数obj作为新对象的__proto__
+
+- 定义了一个临时构造函数
+- 将这个临时构造函数的原型指向了传入进来的对象。
+- 返回这个构造函数的一个实例。该实例拥有obj的所有属性和方法。
+
+```js
+function create(obj) {
+  function F() {}
+  F.prototype = obj;
+  return new F();
+}
+```
+
 ## new
 
 - new Object()创建新的obj对象。
@@ -189,7 +207,6 @@ console.log(joe2.age) // 25
 ```
 
 
-## Object.create
 ## call、apply
 ### call
 ```js
