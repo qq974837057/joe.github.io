@@ -348,7 +348,112 @@ display:inline-block
 
     > 类似百分比，不过百分比大部分针对的是父元素
 
+## 方案&图标集合
+- 画0.5px线（0.5px相当于高清屏物理像素的1px）
+    - 方案：svg/transform在IOS和安卓的设备上都能完美支持
+    - 伪元素+transform: height: 1px; transform: scaleY(0.5);.
+        - 缺点：chrome缩放会变虚
+        - 解决：transform-origin: 50% 100%;
+        - 搭配媒体查询
+            ```css
+            .border_1px:before{
+              content: '';
+              position: absolute;
+              top: 0;
+              height: 1px;
+              width: 100%;
+              background-color: #000;
+              transform-origin: 50% 100%;
+            }
 
+            /* 2倍屏 */
+            @media only screen and (-webkit-min-device-pixel-ratio: 2.0) {
+                .border_1px::before {
+                    transform: scaleY(0.5);
+                }
+            }
+            
+            /* 3倍屏 */
+            @media only screen and (-webkit-min-device-pixel-ratio: 3.0) {
+                .border_1px::before {
+                    transform: scaleY(0.33);
+                }
+            }
+            ```
+    - svg: div设置height：1px，background：url("data:")为一个svg文件,svg描边属性为物理像素的1px
+
+        ```html
+        <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='1px'>
+            <line x1='0' y1='0' x2='100%' y2='0' stroke='#000'></line>
+        </svg>
+        ```
+        - 缺点：firefox的background-image，svg只支持命名的颜色，16进制无效果。
+        - 解决：svg转成base64来解决
+    - viewport缩放为dpr/1：让CSS像素等于真正的物理像素
+        ```html
+        <meta name="viewport" content="width=device-width,initial-sacle=0.5">
+        ```
+
+- 字体适配：(浏览器有字体最小限制)
+    - PC上最小 font-size=12px
+    - 手机上最小 font-size=8px
+    - 如果小于最小字体，那么字体默认就是最小字体。
+    - 强制缩放如下
+        ```
+        .text {
+            font-size: 12px;
+              /* font-size: 10px; */
+              transform: scale(10/12); //0.83
+        }
+        ```
+
+- 图片模糊问题
+    - 位图（png、jpg...）每个像素点都具有特定的位置和颜色值
+    - 每个像素对应在屏幕上使用一个物理像素来渲染，最佳显示效果
+    - 高清屏（dpr>1）物理像素点并不能被准确的分配上对应位图像素的颜色
+    - 方案一：根据不同dpr屏幕展示不同分辨率图片，2倍图/3倍图
+    - srcset 配合 1x 2x 像素密度描述符
+        ```html
+        <img src="joe_1x.png" srcset=" joe_2x.png 2x, joe_3x.png 3x">
+        ```  
+    - 使用window.devicePixelRatio获取设备像素比，遍历所有图片，替换图片地址
+        ```js
+        const dpr = window.devicePixelRatio;
+        const images =  document.querySelectorAll('img');
+        images.forEach((img)=>{
+          img.src.replace(".", `@${dpr}x.`);
+        })
+
+        ```
+    - 方案二：使用SVG，全称是可缩放矢量图
+        ```html
+        <img src="joe.svg">
+        <img src="data:image/svg+xml;base64,[data]">
+        ```
+- 横屏和竖屏显示不同的布局
+    - JS
+        ```js
+        window.addEventListener("resize", ()=>{
+            if (window.orientation === 180 || window.orientation === 0) { 
+              // 正常方向或屏幕旋转180度
+                console.log('竖屏');
+            };
+            if (window.orientation === 90 || window.orientation === -90 ){ 
+               // 屏幕顺时钟旋转90度或屏幕逆时针旋转90度
+                console.log('横屏');
+            }  
+        }); 
+
+        ```
+    - CSS
+        ```css
+        @media screen and (orientation: portrait) {
+          /*竖屏...*/
+        } 
+        @media screen and (orientation: landscape) {
+          /*横屏...*/
+        }
+        ```
 ## 管理CSS
 - 如何选择：对外公共组件库，可用BEM。业务代码可用局部作用域。
 - 1、BEM命名规范：
