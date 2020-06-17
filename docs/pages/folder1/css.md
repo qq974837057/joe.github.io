@@ -406,25 +406,52 @@ display:inline-block
               transform: scale(10/12); //0.83
         }
         ```
+- 超出部分隐藏：
+
+单行：超出隐藏+超出省略号+禁止换行
+```css
+.div {
+    width:100px;
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap;
+}
+```
+
+多行：显示行数-webkit-line-clamp: 2(不支持IE浏览器)
+
+>  -webkit-line-clamp CSS 属性 可以把 块容器 中的内容限制为指定的行数，同时还要设置display:-webkit-box(弹性伸缩盒子) 并且 -webkit-box-orient:vertical(子元素的排列方式)
+
+```css
+.div {
+    width:100px;
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap;
+    display: -webkit-box; 
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+```
 
 - 图片模糊问题
     - 位图（png、jpg...）每个像素点都具有特定的位置和颜色值
     - 每个像素对应在屏幕上使用一个物理像素来渲染，最佳显示效果
     - 高清屏（dpr>1）物理像素点并不能被准确的分配上对应位图像素的颜色
     - 方案一：根据不同dpr屏幕展示不同分辨率图片，2倍图/3倍图
-    - srcset 配合 1x 2x 像素密度描述符
-        ```html
-        <img src="joe_1x.png" srcset=" joe_2x.png 2x, joe_3x.png 3x">
-        ```  
-    - 使用window.devicePixelRatio获取设备像素比，遍历所有图片，替换图片地址
-        ```js
-        const dpr = window.devicePixelRatio;
-        const images =  document.querySelectorAll('img');
-        images.forEach((img)=>{
-          img.src.replace(".", `@${dpr}x.`);
-        })
+        - srcset 地址 + 1x 2x 像素密度描述符自动切换src
+            ```html
+            <img src="joe_1x.png" srcset="joe_2x.png 2x, joe_3x.png 3x">
+            ```  
+        - 使用window.devicePixelRatio获取设备像素比，遍历所有图片，替换图片地址
+            ```js
+            const dpr = window.devicePixelRatio;
+            const images =  document.querySelectorAll('img');
+            images.forEach((img)=>{
+                img.src.replace(".", `@${dpr}x.`);
+            })
+            ```
 
-        ```
     - 方案二：使用SVG，全称是可缩放矢量图
         ```html
         <img src="joe.svg">
@@ -454,6 +481,126 @@ display:inline-block
           /*横屏...*/
         }
         ```
+- 画圆形
+    - border-radius: 50%宽高的一半
+```html
+<div class="circle"></div>
+```
+```css
+.circle {
+    width: 100px;
+    height: 100px;
+    background-color: #FFB5BF;
+    border-radius: 50%;      /* 或者 50px */
+}
+```
+- 画椭圆
+    - border-radius：50% 宽为长轴，高为短轴
+
+```html
+<div class="circle"></div>
+```
+```css
+.circle {
+    width: 200px;
+    height: 100px;
+    background-color: #FFB5BF;
+    border-radius: 50%;  
+}
+```
+- 画三角形
+    - 等腰三角形：设置div宽高为0，去掉top的border，两边设置transparent隐藏
+
+```html
+<div class="box"></div>
+```
+```css
+.box {
+    width: 0;
+    height: 0;
+    border-right: 50px solid transparent;
+    border-left: 50px solid transparent;
+    border-bottom: 50px solid #FFB5BF;
+}
+```
+    - 直角三角形：设置div宽高为0，设置相邻两边border，其中一边设置transparent隐藏
+```css
+.box {
+    width: 0;
+    height: 0;
+    border-top: 50px solid #FFB5BF;
+    border-right: 50px solid transparent;
+}
+
+```
+- loading加载动画
+    - 静态圆+边框+单边框颜色+动画+状态转换from {rotate(0deg)} to {rotate(360deg)}
+```html
+<div class="loading"></div>
+```
+```css
+.loading {
+    width: 50px;
+    height: 50px;
+    display: inline-block;
+    border: 5px solid #ddd;
+    border-left-color: #FFB5BF;
+    border-radius: 50%; 
+}
+
+.loading {
+    animation: loading-animation 1.2s linear infinite;
+}
+@keyframes loading-animation {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+}
+```
+![loading](./img/CSS-demo-loading.png)
+
+- 气泡对话框
+    - 矩形+两个倒三角错开重叠+叠在上面的三角形颜色设置为背景色
+```html
+<div class="bubble">
+    <div class="triangle common"></div>
+    <div class="cover common"></div>     <!-- 用来覆盖的倒三角 -->
+</div>
+```
+```css
+.bubble {
+    width: 200px; 
+    height: 50px; 
+    border: 5px solid #FFB5BF; 
+    position: relative;
+}
+.common {
+    width: 0; 
+    height: 0; 
+    position: absolute;        /* 使用绝对定位 */
+    left: 50%;
+    transform: translate(-50%, 0);    /* 水平居中 */
+}
+.triangle {
+    bottom: -20px;
+    border-top: 20px solid #FFB5BF;
+    border-right: 20px solid transparent;
+    border-left: 20px solid transparent;
+}
+.cover {
+    bottom: -13px;
+    border-top: 20px solid #94E8FF;
+    border-right: 20px solid transparent;
+    border-left: 20px solid transparent;
+}
+```
+- 最后将覆盖的三角形颜色该为背景色即可。
+
+![气泡框](./img/CSS-demo-bubble.png)
+
 ## 管理CSS
 - 如何选择：对外公共组件库，可用BEM。业务代码可用局部作用域。
 - 1、BEM命名规范：
