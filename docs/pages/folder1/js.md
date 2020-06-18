@@ -1,9 +1,64 @@
 
-## markdown示例内容，可以自己填写别的。
-![测试图](./img/task.png)
+## JS数据类型
+- 基本类型
+  - Undefined
+  - Null
+  - Boolean
+  - Number
+  - String
+  - Symbol(ES6-独一无二且不可变的)
+  - BigInt(ES10)
+- 引用类型
+  - Object 对象
+  - Array 数组
+  - Function 函数
+  - Date 日期
+  - RegExp 正则
+  - Math 数学对象
+
+- 注意点：
+  - Object是基础类型，其他所有引用类型都继承它的基本行为。
+  - 使用 new + 构造函数 生成的实例，叫对象。构造函数上有定义默认属性和方法。
+  - 函数也是对象。
+  - null不是对象，虽然typeof null 是object，但是历史Bug，以前低位存储变量的类型信息，000开头代表对象，而null为全0，所以误判。
+  - 函数参数是按值传递的，和赋值是一样的。基本类型就是复制该变量的值，如果参数是引用类型，赋值对象的内存地址值给函数内的局部变量，改动这个局部变量，外部对象会跟着改变，局部对象使用完会被销毁，如果局部对象更改成另一个对象内存地址，则指向另一个对象。
+
+## BigInt
+- 表示大于 2^53 - 1 的整数，可以表示任意大的整数。
+- 也就是超过Javascript中可以用 Number 表示的最大数字。
+- 使用 typeof 测试时， BigInt 对象返回 "bigint" 
+
+- 使用方式
+  - 在一个整数字面量后面加 n
+  - 调用函数BigInt()
+  ```js
+  const BiggestInt1 = 9007199254740991n;
+
+  const BiggestInt2 = BigInt(9007199254740991);
+  // ↪ 9007199254740991n
+  ```
+- 注意：
+  - 不能用于Math对象中的方法
+  - 转换：BigInt 变量在转换成 Number 变量时可能会丢失精度。
+  - 计算：BigInt 不能和 Number 实例混合运算，必须为同类型。
+  - 排序：BigInt 和 Number 实例混合的数组可以进行sort。
+  - 条件：与Number类似，只要不是0n，BigInt就被视为truthy的值。
+  - 位运算：BigInt可以正常地进行位运算，如|、&、<<、>>和^
+  - 比较：BigInt 和 Number 不是严格相等(===)的，但是宽松相等(==)的。
+  ```js
+  0n === 0
+  // ↪ false
+
+  0n == 0
+  // ↪ true
+  ```
+- [兼容性](https://www.caniuse.com/#search=bigint)：
+  - 目前IE、Safari、iOS Safari不支持
+
+## 0.1+0.2为什么不等于0.3？
 
 ## 类型判断
-基本(原始)类型
+基本类型
   - Boolean
   - Null
   - Undefined
@@ -12,11 +67,11 @@
   - Symbol(ES6)
   - BigInt(ES10)
 
-复杂(引用)类型
+引用类型
   - Object [ Array、Function、Date、RegExp、Error...]
 
 ### typeof
-- 基本(原始)数据类型使用typeof可以返回其基本数据类型(字符串形式)，但是null类型会返回object
+- 基本数据类型使用typeof可以返回其基本数据类型(字符串形式)，但是null类型会返回object
 - 引用数据类型使用typeof会返回object，函数会返回function，其他引用类型需要使用instanceof来检测引用数据类型。
 
 ### 判断引用类型
