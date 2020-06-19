@@ -421,8 +421,41 @@
 - 优点：无刷新请求数据
 - 缺点：浏览器限制不能跨域，跨域看下面的方案。
 
+## 域名
+- 一个完整的域名由二个或二个以上部分组成，各部分之间用英文的句号"."来分隔。
+- 倒数第一个"."的右边部分称为顶级域名（TLD，也称为一级域名）
+- 顶级域名的左边部分字符串到下个"."为止称为二级域名（SLD）
+- 二级域名的左边部分称为三级域名，以此类推
+- 每一级的域名控制它下一级域名的分配。
+
 ## 跨域
 - 同源：“协议+域名+端口”三者相同
+    - 非同源会被限制：无法完成AJAX请求，无法读写其他域localStorage，非指定域名的Cookie不会发送。
+- 不同域之间相互请求资源，就算作“跨域”。
+![域名地址组成](./img/HTTP-domain.png)
+
+```
+URL                                      说明                    是否允许通信
+http://www.domain.com/a.js
+http://www.domain.com/b.js         同一域名，不同文件或路径           允许
+http://www.domain.com/lab/c.js
+
+http://www.domain.com:8000/a.js
+http://www.domain.com/b.js         同一域名，不同端口                不允许
+ 
+http://www.domain.com/a.js
+https://www.domain.com/b.js        同一域名，不同协议                不允许
+ 
+http://www.domain.com/a.js
+http://192.168.4.12/b.js           域名和域名对应相同ip              不允许
+ 
+http://www.domain.com/a.js
+http://x.domain.com/b.js           主域相同，子域不同                不允许
+http://domain.com/c.js
+ 
+http://www.domain1.com/a.js
+http://www.domain2.com/b.js        不同域名                         不允许
+```
 - 浏览器这些标签不受同源策略
     ```html
     <img src=XXX>
@@ -536,6 +569,7 @@
     - axios的get方法不支持在body传参，只支持params，如果要传递，需要使用post。或者自己xhr封装实现，理论上是可以在body里传，但一般不这么做。
 
 ## cookie和session区别
+- [知乎参考](https://zhuanlan.zhihu.com/p/63061864)
 - 安全性： Session 比 Cookie 安全，Session 是存储在服务器端的，Cookie 是存储在客户端的。
 - 存取值的类型不同：Cookie 只支持存字符串数据，想要设置其他类型的数据，需要将其转换成字符串，Session 可以存任意数据类型。
 - 有效期不同： Cookie 可设置为长时间保持，比如我们经常使用的默认登录功能，Session 一般失效时间较短，客户端关闭（默认情况下，sessionId被删导致失效的）或者 Session 超时都会失效。
@@ -557,8 +591,9 @@
         - 影响：Post 表单，iframe（广告），AJAX，Image（埋点），`<script>`（jsonp）不发送三方 Cookie
         - 改造：SameSite=none，允许同站、跨站请求携带该cookie
     -  三方cookie
-        - 用途：前端日志打点监控、行为分析、广告推荐 
-        - 实现：a站写入第三方cookie，页面操作过程，将携带第三方cookie向第三方域发起请求，第三方域获取到数据。
+        - 通常cookie的域和浏览器地址的域匹配，这被称为第一方cookie。那么第三方cookie就是cookie的域和地址栏中的域不匹配。
+        - 用途：前端日志打点监控、行为分析、广告推荐
+        - 实现：A站写入第三方cookie(域名为第三方)，页面操作过程将携带第三方cookie向第三方域发起请求，第三方域获取到数据。(如请求第三方广告商网站的图片，响应成功顺便设置第三方cookie，去另一个网站，还是请求同个广告商图片，会将这个第三方cookie发送到广告商，这样会收集到用户的数据)
         - 现状：Firefox、Safari 默认禁止、Chrome —— SameSite Cookie、2022将全面禁止
         - 解决：转成一方cookie（js操作document.cookie设置第三方cookie，而不是set-cookie，请求将cookie放在请求参数中，而不是放在cookie中，模拟三方cookie的标识用户的过程），不过第三方sdk能获取信息就更多，风险大。
     - 服务器创建cookie
