@@ -1,3 +1,8 @@
+## 学习链接
+- [阮老师的ES6](https://es6.ruanyifeng.com/)
+- [JavaScript教程](https://wangdoc.com/javascript/index.html)
+- [MDN](https://developer.mozilla.org/zh-CN/)
+- [JS Bin](https://jsbin.com/)
 
 ## JS数据类型
 - 基本类型
@@ -368,3 +373,90 @@ function isObj(obj) {
     ```    
 
 > 注意：获取dom之后要将所有图片dom节点转为数组对象才能使用数组遍历方法：Array.from
+
+## 内存管理
+- 基本类型普遍被存放在『栈』中，而引用类型是被存放在堆内存的。
+  - 不是所有基本类型都存在栈中，当基本类型被闭包引用后，也可以长期在内存堆中。
+- 执行栈的函数如何使用保存在堆中的引用类型呢？
+  - 上下文会保存一个内存堆对应复杂类型对象的内存地址，通过引用来使用复杂类型对象。
+```js
+function add() {
+    const a = 1
+    const b = {
+        num: 2
+    }
+
+    const sum = a + b.num
+}
+```
+示意图如下(暂时不考虑函数本身的内存)
+![JS-heap-1](./img/JS-heap-1.png)
+
+### 垃圾回收
+
+### 内存泄漏
+- [参考](https://mp.weixin.qq.com/s?__biz=MzUxMzcxMzE5Ng==&mid=2247496779&idx=2&sn=892d968a86ebd083582ae2e28f48ab8f&chksm=f9524108ce25c81e960471a63357cf2bc59971e2a22ca9549f67c5266100474712fcaa208f28&mpshare=1&scene=1&srcid=&sharer_sharetime=1592813500572&sharer_shareid=f72feefcc9c2c137677aa7f49d02e0f4&key=5275bdb85f6fecb5b863a0f4364938b0f20d3068a623c70bb17408602e09ad9840bc8824054c5f5f3e8b5fdacdf41cf6d13413049806b41cdb497e6abe7e48742dabb92c99874d17f7c19bace4019ecd&ascene=1&uin=MjI1NjQ0MTU1&devicetype=Windows+7+x64&version=62090523&lang=zh_CN&exportkey=AZvo2t51y73c8EhAeN7gjAk%3D&pass_ticket=KfXN%2BILZIw36ijjDu%2F7KSM38UJxJ2Cjf8FTYPf6jp%2Fg%3D)
+
+- [分析Chrome性能调试工具Timeline简介](https://www.jianshu.com/p/f27b27167125)
+- 滥用全局变量: 如未声明的变量，在函数中滥用this指向全局对象，无法被回收
+  - 预防：使用严格模式（"use strict"）
+- 闭包(返回子函数): 父执行完后，子函数中引用父的变量无法被释放，导致引用的变量被保留。
+  - 预防：会用到，但要知道何时创建，保留哪些对象
+- 定时器: 未被正确关闭，导致所引用的外部变量无法被释放
+  - 预防：必要时销毁定时器如clearInterval
+- 事件监听: 没有正确销毁，如使用监听执行匿名内联函数，无法使用removeEventListener() 将其删除
+  ```js
+  document.addEventListener('keyup', function() { 
+    doSomething(hugeString); 
+  });
+  ```
+  - 预防：
+    - 将执行函数的引用传递进removeEventListener，来注销事件监听。
+    - 还可以使用addEventListener() 第三个参数`{once: true}`，在处理一次事件后，将自动删除侦听器函数。
+    ```js
+    function listener() {
+      doSomething(hugeString);
+    }
+    document.addEventListener('keyup', listener); 
+    document.removeEventListener('keyup', listener); 
+    ```
+- dom 引用: 在全局中对DOM节点的直接引用，删除该DOM节点，也不会被垃圾回收
+  ```js
+  function createElement() {
+    const div = document.createElement('div');
+    div.id = 'detached';
+    return div;
+  }
+  const detachedDiv = createElement();
+  document.body.appendChild(detachedDiv);
+  // this will keep referencing the DOM element even after deleteElement() is called
+  ```
+  - 预防：
+    - 使用弱引用WeakSet 和 WeakMap 保存 DOM 的引用
+    - 将对DOM的引用移入函数局部作用域，函数使用完，局部变量对DOM的引用被销毁。
+  ```js
+  function createElement() {...} 
+  function appendElement() {
+      const detachedDiv = createElement(); // DOM的引用放在函数内
+      document.body.appendChild(detachedDiv);
+  }
+  appendElement();
+  ```
+
+
+- 查看内存泄露： 
+  - Chrome 中的 Performance 面板，可视化查看内存的变化情况，找出异常点。
+  ![JS-heap-check](./img/JS-heap-check.png)
+    - 打开开发者工具，选择 Performance 面板
+    - 在顶部勾选 Memory
+    - 点击左上角的录制按钮Record。
+    - 在页面上进行各种操作，模拟用户的使用情况。
+    - 一段时间后，点击对话框的 stop 按钮，面板上就会显示这段时间的内存占用情况。
+    - 关注JS Heap，看到起点不断增高而没有释放内存，可能出现异常，点击预览图蓝色线增高点，看看执行了什么操作。去对应的函数中排查代码。
+
+  - Chrome 中的 Memory 面板，可查看活动的Javascript对象（以及DOM节点）在内存中的分布
+  ![JS-heap-2](./img/JS-heap-2.png)
+    - Heap snapshot 堆快照，可截操作前后的内存快照，进行对比分析。
+    - on timeline 时间线，可开始录制操作，执行一段操作，选择内存增大的时间点分析。
+
+
