@@ -316,6 +316,47 @@ bindFoo.prototype.value = 1;
 console.log(bindFoo.prototype.value); // 1
 console.log(bar.prototype.value);     // undefined
 ```
+
+## instanceof
+- 检测构造函数的`prototype`属性是否出现在某个实例对象的原型链上
+- 用法：object instanceof constructor （实例对象 instanceof 构造函数）
+- String 对象和 Date 对象都属于 Object 类型，下面的类型Car生成auto的实例对象，即属于Car，又属于Object。
+```js
+// __proto__: 代表原型对象链
+instance.[__proto__]=== instance.constructor.prototype
+
+// 示例：Car作为构造函数，auto为实例对象
+function Car(make, model, year) {
+  this.make = make;
+  this.model = model;
+  this.year = year;
+}
+const auto = new Car('Honda', 'Accord', 1998);
+
+console.log(auto instanceof Car);     // true
+console.log(auto instanceof Object);  // true
+
+var simpleStr = "This is a simple string"; //(基本类型，查不到__proto__)
+var newStr = new String("String created with constructor");//(对象，有__proto__)
+var myDate = new Date();
+
+simpleStr instanceof String; // false
+newStr instanceof String;   // true
+newStr instanceof Object;   // true
+myDate instanceof Date;     // true
+myDate instanceof Object;   // true
+```
+- 模拟实现instanceof
+```js
+function instance_of(L, R) {
+  var O = R.prototype, L = L.__proto__;
+  while (true) {
+    if(L === null) return false;
+    if(O === L) return true;
+    L = L.__proto__;
+  }
+}
+```
 ## 防抖
 ## 节流
 ## 浅拷贝、深拷贝

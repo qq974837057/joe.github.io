@@ -142,10 +142,10 @@
         - 变量对象：全局对象window，由Object实例化的对象
     -  函数上下文
         - 变量(活动)对象AO：进入上下文被创建激活，属性可被访问(函数的形参、函数声明、变量声明)
-    - **执行过程**
+    - **变量对象的两个阶段**
         - 分析(进入执行上下文): 创建AO(函数的形参、函数声明、变量声明)**，优先处理函数声明，如果变量名称与函数相同，不影响已存在函数。**
         - 执行(代码执行) :  按顺序执行，修改AO对象的值
-    - 作用域链(只能下往上查找，不能由上往下)
+    - **作用域链的两个阶段**(只能下往上查找，不能由上往下)
         - 每一个子函数都会拷贝上级的作用域（保存变量对象），形成一个作用域的链条
         - 函数创建时：内部属性 [[scope]]会保存所有父变量对象进去(父变量对象的层级链)
         ```
@@ -158,11 +158,11 @@
         ```
         Scope = [AO].concat([[Scope]]);
         ```
-- 函数执行上下文的变量对象和作用域创建过程：
+- 函数执行上下文的变量对象和作用域创建全过程：
     - **保存父级作用域-创建变量(形参/函数/变量)-压入作用域头部-修改变量-弹出执行栈**
-    - 函数定义，保存作用域到函数的内部属性[[scope]]
+    - 函数定义，保存整个父级作用域(变量对象)到函数的内部属性[[scope]]
     - 函数准备执行，创建上下文，压入执行栈
-    - 准备工作1：Scope:[[scope]]赋值父级作用域进入上下文
+    - 准备工作1：Scope:[[scope]]创建整个作用域，先将父级作用域存入，进入上下文
     - 准备工作2：arguments 创建AO进行初始化，加入形参、函数声明、变量声明
     - 准备工作3：AO压入作用域头部Scope:[AO, [[Scope]]]
     - 开始执行：修改AO属性值
@@ -220,6 +220,93 @@
     - 作用域分全局作用域、函数作用域、es6使用let/const创建的块级作用域，作用域链里的变量对象是一层一层push的，可以往上查找，但外层访问不到内层的作用域变量对象。而变量提升都是在自己的作用域头部，例如全局作用域 or 函数作用域的头部。
         
 - [知乎解释](https://zhuanlan.zhihu.com/p/26533735)
+
+## 闭包
+
+- 概念：**指有权访问另一个函数作用域中的变量的函数**，本质是当前环境中存在指向父级作用域的**引用** 
+    - 如在父函数声明a=1，在子函数console.log(a)
+    - 闭包的作用域链包含着它自己的作用域，以及包含它的函数的作用域和全局作用域。
+    - 通常，函数的作用域及其所有变量都会在函数执行结束后被销毁。但是，在创建了一个闭包以后，内部函数引用着外部函数的变量，这个函数的作用域就会一直保存到闭包不存在为止。
+- 理论：所有的JavaScript函数都是闭包，可以访问全局作用域的变量
+- 实践：**即使创建子函数的上下文已经销毁，因为引用了父级，所以父级变量对象仍然保存在内存，不会被销毁**
+- 创建方法：
+    - 1.在一个函数内部创建另一个函数，并暴露出来(通过返回或者传给其他函数)
+    - 2.异步的回调函数，如setTimeout
+    - 3.IIFE(匿名函数+立即执行函数表达式)创建闭包
+    ```js
+    function waitSomeTime(msg, time) {
+    	setTimeout(function () {
+    		console.log(msg)
+    	}, time);
+    }
+    waitSomeTime('hello', 1000);
+    
+    // 闭包经典循环输出问题：全部输出6
+    for(var i = 1; i <= 5; i ++){
+      setTimeout(function timer(){
+        console.log(i)
+      }, 0)
+    }
+    // 因为setTimeout为宏任务，等循环执行完再排队执行，此时找不到自己作用域的i，向上找到全局作用域的i，为6。需要产生一个私有的作用域来解决。
+    // 方法一：使用ES6的块级作用域，作用域以块级为单位
+    for(let i = 1; i <= 5; i++){
+      setTimeout(function timer(){
+        console.log(i)
+      },0)
+    }
+    // 方法二：使用立即执行函数创建闭包，中间加个匿名函数的执行上下文，匿名函数有独立的作用域，每个循环都保存自己的私有变量i
+    for(var i = 1;i <= 5;i++){
+      (function(j){
+        setTimeout(function timer(){
+          console.log(j)
+        }, 0)
+      })(i)
+    }
+    ```
+
+- 特性：
+  - 1.函数嵌套函数 
+  - 2.函数内部可以引用外部的参数和变量 
+  - 3.外部的参数和变量不会被垃圾回收机制回收
+- 应用：
+    - 创建私有变量和方法（函数外部不能访问私有变量）
+        ```js
+        var singleton = (function(){
+          // 私有变量
+          var age = 22;
+          var speak = function(){
+            console.log("speaking!!!");
+          };
+          
+          // 特权（或公有）属性和方法
+          return {
+            name: "percy",
+            getAge: function(){
+              return age;
+            }
+          };
+        })();
+        ```
+    - 模块化代码，避免全局污染
+        ```js
+        var objEvent = objEvent || {};
+        (function(){ 
+            var addEvent = function(){ 
+              // some code
+            };
+            function removeEvent(){
+              // some code
+            }
+        
+            objEvent.addEvent = addEvent;
+            objEvent.removeEvent = removeEvent;
+        })();
+        ```
+    - 防抖节流函数！私有化计时器变量，返回传入的函数，供外部使用。
+
+- 缺点：
+    - 常驻内存会增大内存使用量，容易导致内存泄露
+    - 非特殊任务，不要在函数内创建其他函数，影响JS处理速度和内存消耗
 
 
 ## 类型判断
@@ -392,7 +479,37 @@ function add() {
 示意图如下(暂时不考虑函数本身的内存)
 ![JS-heap-1](./img/JS-heap-1.png)
 
-### 垃圾回收
+### 垃圾回收GC（Garbage Collection）
+- V8的垃圾回收策略：分代回收
+  - 新生代：对象的存活时间较短。新生对象或只经过一次垃圾回收的对象。
+  - 老生代：对象存活时间较长。经历过一次或多次垃圾回收的对象。
+- 回收算法：
+  - 新生代：Scavenge 算法 + 对象晋升
+  - 老生代：Mark-Sweep + Mark-Compact 算法 + 全停顿优化：Incremental Marking(增量标记)
+- 新生代垃圾回收过程
+![JS-GC-1](./img/JS-GC-1.png)
+  - Scavenge算法将新生代空间分为两部分，使用中的 semispace 称为 「From 空间」，闲置的 semispace 称为 「To 空间」
+  - 1.首先在From空间分配对象，如果空间满了，执行垃圾回收
+  - 2.检查对象是否存活，不存活则释放该空间
+  - 3.对象晋升：若对象存活，检查是否符合晋升（经历过一次Scavenge回收或To空间内存超过25%），满足晋升条件直接晋升到老生代，不满足则将对象从 From 空间复制到 To 空间。
+  - 4.完成复制后，将 From 空间与 To 空间进行角色翻转（flip），继续下一轮的分配和回收。
+![JS-GC-2](./img/JS-GC-2.png)
+- 老生代垃圾回收过程
+  - Mark-Sweep，标记清除。
+    - 标记阶段，它将遍历堆中所有对象，并对存活的对象进行标记
+    - 清除阶段，对未标记对象的空间进行回收
+    - 存在的问题：经过一次标记清除后，内存空间变得不连续，再分配一个大对象时，无内存碎片支持该分配，会提前触发一次没必要的垃圾回收。
+    ![JS-GC-3](./img/JS-GC-3.png)
+  - Mark-Compact，标记整理。
+    - 标记阶段，同上，再将标记的存活对象集中移到一边
+    - 清除阶段，清理边界外的未标记对象。
+    ![JS-GC-4](./img/JS-GC-4.png)
+  - 总结：V8老生代主要使用Mark-Sweep算法，然后在当空间内存分配不足时，采用Mark-Compact算法。因为Mark-Compact需要移动对象，执行速度较慢。
+  - 全停顿优化：
+    - 垃圾回收算法在执行前，需要将应用逻辑暂停，执行完垃圾回收后再执行应用逻辑，这种行为称为 「全停顿」（Stop The World）。例如，如果一次GC需要50ms，应用逻辑就会暂停50ms。
+    - 老生代中，存活对象多，垃圾回收时间长，全停顿造成的影响大。为了减少全停顿的时间，进行增量标记优化。
+    - 增量标记(Incremental Marking)：在标记阶段，分成很多小步，每完成一小步，就执行一下应用逻辑，交替多次完成标记。
+    ![JS-GC-5](./img/JS-GC-5.png)
 
 ### 内存泄漏
 - [参考](https://mp.weixin.qq.com/s?__biz=MzUxMzcxMzE5Ng==&mid=2247496779&idx=2&sn=892d968a86ebd083582ae2e28f48ab8f&chksm=f9524108ce25c81e960471a63357cf2bc59971e2a22ca9549f67c5266100474712fcaa208f28&mpshare=1&scene=1&srcid=&sharer_sharetime=1592813500572&sharer_shareid=f72feefcc9c2c137677aa7f49d02e0f4&key=5275bdb85f6fecb5b863a0f4364938b0f20d3068a623c70bb17408602e09ad9840bc8824054c5f5f3e8b5fdacdf41cf6d13413049806b41cdb497e6abe7e48742dabb92c99874d17f7c19bace4019ecd&ascene=1&uin=MjI1NjQ0MTU1&devicetype=Windows+7+x64&version=62090523&lang=zh_CN&exportkey=AZvo2t51y73c8EhAeN7gjAk%3D&pass_ticket=KfXN%2BILZIw36ijjDu%2F7KSM38UJxJ2Cjf8FTYPf6jp%2Fg%3D)
@@ -420,7 +537,7 @@ function add() {
     document.addEventListener('keyup', listener); 
     document.removeEventListener('keyup', listener); 
     ```
-- dom 引用: 在全局中对DOM节点的直接引用，删除该DOM节点，也不会被垃圾回收
+- DOM 引用: 在全局中对DOM节点的直接引用，删除该DOM节点，也不会被垃圾回收
   ```js
   function createElement() {
     const div = document.createElement('div');

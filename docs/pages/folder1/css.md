@@ -399,13 +399,14 @@ display:inline-block
     - 手机上最小 font-size=8px
     - 如果小于最小字体，那么字体默认就是最小字体。
     - 强制缩放如下
-        ```
+        ```css
         .text {
             font-size: 12px;
               /* font-size: 10px; */
               transform: scale(10/12); //0.83
         }
         ```
+
 - 超出部分隐藏：
 
 单行：超出隐藏+超出省略号+禁止换行
