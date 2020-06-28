@@ -55,6 +55,20 @@ const parse2 = (url) => {
 console.log(parse2(url));
 ```
 
+## 实现add函数-闭包
+```js
+const add = (function() {
+    let count = 0;
+    return function() {
+        return console.log(count++); // 使父级的count变量+1
+    }
+})();
+// add保存的是返回的闭包函数，再执行一次该函数，完成自增。
+add(); // 0
+add(); // 1
+add(); // 2
+```
+
 ## 双飞翼布局
 - 内容高度已知，三栏布局，左右栏300px，中间自适应。
 - 五种方法:浮动，绝对定位，flex，表格，网格
