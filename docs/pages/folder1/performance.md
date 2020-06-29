@@ -1,0 +1,166 @@
+## 概述
+- 前端应用最影响性能的是加载速度，直接影响用户体验。
+- 大部分页面需要2秒内完成加载，超过3秒，接近40%的用户离开网站。
+- 所以优化方向就是让用户觉得加载得快！不仅包括加载指标速度的提升，还包括提高用户的体验，如有趣的loading或顺畅的骨架屏会让用户感觉并没有等太久。
+
+## 性能指标
+- [知乎参考](https://zhuanlan.zhihu.com/p/82981365)
+
+- 指标概念
+  - 是否发生？FP(首次绘制) - 屏幕首次有视觉变化的时间点
+  - 是否发生？FCP(首次内容绘制) - 浏览器第一次向屏幕绘制内容(文本、图片...)
+  - 是否有用？FMP(首次有意义绘制) - 页面主要内容出现在屏幕上的时间
+  - 是否可用？TTI(可交互时间) - 已渲染完毕，可以响应用户的操作
+  - FPS(每秒帧率) - 每秒钟画面更新次数，大部分屏幕为60次/秒
+
+- 统计方式
+  - 手动：Chrome面板
+    - Performance的Timings一栏：查看FP、FCP、FMP
+    - Performance的Main一栏：Recalculate Style：样式计算。Layout：布局位置。
+    - Show Rendering：勾选FPS，可查看帧率和GPU内存使用情况
+  - 代码：使用window.performance.timing
+  ![timing API1](./img/Per-timingAPI-1.jpg)
+  ![timing API2](./img/Per-API.jpg)
+    - 起始点可选择：navigationStart(在URL输入栏回车或者页面按F5刷新的时间点) vs fetchStart(准备用 HTTP 请求获取文档的时间，除去重定向)
+    - 白屏时间：从用户再按下回车的瞬间navigationStart 到 解析器完成工作domInteractive(即能看到第一个内容)
+  ```js
+  let t = window.performance.timing;
+  let blankTime = t.domInteractive - t.navigationStart;          // 白屏时间
+  let firstTime = t.domContentLoadedEventEnd - t.navigationStart; // 首屏加载时间
+  let tcpTime = t.connectEnd - t.connectStart;                   // tcp连接耗时
+  let dnsTime = t.domainLookupEnd - t.domainLookupStart;         // dns查询耗时
+  ```
+- 数据上传
+  - navigator.sendBeacon(url, data);通过HTTP将少量数据异步传输到Web服务器(不支持IE)
+  ```js
+  window.addEventListener('unload', logData, false);
+  function logData() {
+      navigator.sendBeacon("/log", analyticsData);
+  }
+  ```
+  - 或者使用new Image()方式自动get请求，进行降级上报。
+- 注意：
+  - 白屏时间可以通过FP、FCP来粗略代替，精确则使用window.performance.timing。
+  - SPA通过window.performance.timing，只是首次加载的数据。改变URL实际不刷新页面，该API是无法获取子路由对应的页面相关时间。
+
+
+```js
+// FP
+function getFPTime(){
+    const timings = performance.getEntriesByType('paint');
+    return timings ? Math.round(timings[0].startTime) : null
+}
+// FCP
+function getFCPTime(){
+    const timings = performance.getEntriesByType('paint');
+    return timings.length > 1 ? Math.round(timings[1].startTime) : null
+}
+
+// FMP 尚无标准化的定义
+
+// TTI 谷歌npm包 - tti-polyfill
+
+// FPS
+//不掉帧的情况，requestAnimationFrame 这个方法在一秒内会执行 60 次。假设动画在时间 A 开始执行，在时间 B 结束，耗时 x ms。而中间 requestAnimationFrame 一共执行了 n 次，则此段动画的帧率大致为：n / (B - A)。
+
+// 设备信息
+window.navigator.userAgent     // 获取用户设备信息
+window.navigator.language      // 获取用户设备语言
+window.navigator.connection    // 获取设备网络信息
+window.devicePixelRatio        // 获取设备像素比
+```
+![用户设备信息](./img/Per-device.png)
+
+- 注意：
+  - FP和FCP可能是相同的时间，也可能是先FP后FCP
+  - 帧率能够达到 50 ～ 60 FPS 的动画将会相当流畅，让人倍感舒适；帧率在 30 FPS 以下或者帧率波动很大的动画，让人感觉到明显的卡顿和不适感；
+
+- 客户端&服务端&预渲染
+  - 客户端渲染：用户访问 url，请求 html 文件，前端根据路由动态渲染页面内容。关键链路较长，有一定的白屏时间；
+  - 服务端渲染：用户访问 url，服务端根据访问路径请求所需数据，拼接成 html 字符串，返回给前端。前端接收到 html 时已有部分内容；
+  - 预渲染：构建阶段生成匹配预渲染路径的 html 文件（注意：每个需要预渲染的路由都有一个对应的 html）。构建出来的 html 文件已有部分内容。不适合个性化、经常变化的内容使用预渲染。
+
+
+## 加载时
+
+### 首屏加载
+> 首屏的加载速度很重要,过长的白屏会导致用户流失。
+
+- 用户体验感知
+  - 前置loading：插件html-webpack-plugin，白屏时展示loading图。
+  - 骨架屏占位：插件vue-server-renderer，展示大体结构，视觉过渡流畅。
+
+- 网络和缓存
+  - HTTP2：二进制分帧、多路复用、头部压缩、服务端推送
+  - 拆包+缓存策略：webpack 4.x 对SplitChunksPlugin插件进行拆包配置 + 强制缓存和协商缓存，将第三方库设置较长的强缓存时间
+
+- 懒加载
+  - 图片懒加载（vue-lazyload）原理：进入可视区域再加载图片
+    - 使用：src换成v-lazy
+    ```html
+    <img v-lazy="/static/img/1.png">
+    ```
+  - 路由懒加载（不同路由组件分割代码块chunk，访问该路由才加载对应js）结合 Vue 的异步组件和 Webpack 的代码分割(Code Splitting)功能
+    ```js
+    const Foo = () => import('./Foo.vue')
+    ```
+  - 组件级别懒加载
+  - 组件keep-alive
+    - 在页面已经跳转后依然不销毁组件,保存组件的实例在内存中,再次渲染时可以利用缓存的组件实例。
+    - 大量实例不销毁,保存在内存中,存在内存泄漏的风险,要调用deactivated销毁。
+
+- 减少体积
+  - Tree Shaking：webpack4.x 默认支持，基于ES6的modules，要设置 modules: false 避免转为commonjs规范。
+  - gzip压缩：生成.gz文件。服务器nginx设置压缩比等 或者 前端配置compression-webpack-plugin，服务器就无须再压缩。一般图片不压缩。
+  - CDN：加速拉取第三方库依赖（vue、element-ui）：剥离一些依赖 ，放在cdn如 jsdelivr，在html中通过script引入，不会被打包到代码文件，提升构建速度。配置externals。
+  - 动态加载 ES6 代码：ES6意味着不用经过Babel转译，体积更小，性能更好，`<script type="module">`这个标签来判断浏览器是否支持 es6。
+  - npm run build -- --report 查看打包后的大小
+
+- 预渲染
+  - 预渲染：插件prerender-spa-plugin，预渲染静态 html 内容，html 会在脚本执行完被捕获并输出index.html。
+  - SSR服务端渲染(nuxt.js)
+
+## 执行时
+> 高性能要求的场景，优化代码执行速度。
+
+### 动画性能
+- 动画的三种实现方式
+  - CSS3
+  - Canvas + JS
+  - DOM + JS (非常容易引起回流重绘，尽量避免)
+
+- CSS动画优化
+  - 原则：
+    - 尽量将动画放在一个独立图层，避免动画效果导致重绘影响其他渲染层的元素
+    - 尽量避免回流和重绘
+    - 尽量利用GPU加速
+  - 方法-提升为合成层：
+    - CSS 的 will-change 属性。will-change 设置为 opacity、transform、top、left、bottom、right（其中 top、left 等需要设置明确的定位属性，如 relative 等）
+    - 如不支持，使用3D transform属性强制提升，transform: translateZ(0);。
+  - 合成层好处：
+    - 需要重绘时，只重绘自身，不会影响其他层
+    - transform 和 opacity 效果，不会回流重绘
+    - 合成层的位图会交给GPU合成，速度比CPU快
+  - 查看合成层
+    - 简单：DevTools，勾选上 Layer Borders
+    - 详细：More Tools，添加 Layers 选项卡
+    - 可关注 Composite渲染层合并的时间来优化合成层的数量。
+    ![查看合成层](./img/Per-Composite.png)
+
+- Canvas动画优化
+  - 使用requestAnimationFrame替代setInterval来做动画循环
+  - 使用web worker分担主线程压力，解决大量数据计算，大量DOM操作的卡顿问题
+
+### 大数据性能
+
+> 前端渲染大量数据上千行，不允许分页情况下，容易导致卡顿，掉帧现象。
+
+- 解决方案：
+  - 虚拟列表 - 只渲染可视区域的数据
+  - 时间分片 - 使用 setTimeout 拆分密集型任务
+  - Web Worker - 与主线程并行的独立线程，通过 onmessage 和 postMessage 接口进行通信，完成大量的数据计算，结果返回主线程，由主线程更新DOM元素。
+
+## Vue项目优化
+
+
+

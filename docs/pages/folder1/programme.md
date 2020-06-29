@@ -60,7 +60,7 @@ console.log(parse2(url));
 const add = (function() {
     let count = 0;
     return function() {
-        return console.log(count++); // 使父级的count变量+1
+        console.log(count++); // 使父级的count变量+1
     }
 })();
 // add保存的是返回的闭包函数，再执行一次该函数，完成自增。
