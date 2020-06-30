@@ -5,7 +5,7 @@
 - [JS Bin](https://jsbin.com/)
 
 ## JS数据类型
-- 基本类型
+- 基本类型(7)
   - Undefined
   - Null
   - Boolean
@@ -22,6 +22,7 @@
   - Math 数学对象
 
 - 注意点：
+  - 基本类型保存在栈内存，引用类型保存在堆内存。
   - Object是基础类型，其他所有引用类型都继承它的基本行为。
   - 使用 new + 构造函数 生成的实例，叫对象。构造函数上有定义默认属性和方法。
   - 函数也是对象。
@@ -129,6 +130,7 @@
 
 - 在创建新的对象或者类时，方法通常应该关联于对象的原型，而不是定义到对象的构造器中。
   - 原因是这将导致每次构造器被调用时，方法都会被重新赋值一次（也就是说，对于每个对象的创建，方法都会被重新赋值）。
+
 ## 作用域、作用域链
 - 作用域：代码中定义变量的区域，确定当前执行代码对变量的访问权限范围。可以看做一个封闭空间。
 - 作用域链和变量查找(只能下往上查找，不能由上往下，找到就停止，不会继续向上找)
@@ -351,6 +353,73 @@
 // 外部无法访问变量 name
 ```
 
+## 深浅拷贝
+
+### 浅拷贝
+![浅拷贝](./img/JS-copy-shallow.jpg)
+- 定义：拷贝原对象生成新对象，如果属性是基本类型，拷贝它的值，如果是引用类型，拷贝它的地址，所以改变这个地址的内容，另一个对象也会跟着改变。
+- 方法：
+  - Object.assign({ },obj)
+  - 展开运算符(...) -> {...obj}
+  - Array.prototype.concat()
+  - Array.prototype.slice()
+  - 函数库lodash的_.clone方法
+- 代码：
+  ```js
+  // Object.assign({ },obj)
+  let obj1 = { person: { name: "joe", age: 25 }, sports: 'swimming' };
+  let obj2 = Object.assign({}, obj1);
+  obj2.person.age = 15
+  console.log(obj1.person.age) // 15 被影响
+
+  // 展开运算符(...)
+  let obj1 = { name: 'joe', address:{ x:100, y:100 } }
+  let obj2 = { ...obj1 };
+  obj1.address.x = 120;
+  obj1.name = 'joo';
+  console.log(obj2); // { name: "joe", address: {x: 120, y: 100} }
+
+  // Array.prototype.concat()
+  let arr1 = [1, 3, { username: 'joe' }];
+  let arr2 = arr1.concat();
+  arr2[2].username = 'joo';
+  console.log(arr1); // [ 1, 3, { username: 'joo' } ]
+
+  // Array.prototype.slice()
+  let arr1 = [1, 3, { username: 'joe' }];
+  let arr2 = arr1.slice();
+  arr2[2].username = 'joo';
+  console.log(arr1); // [ 1, 3, { username: 'joo' } ]
+
+  // 函数库
+  let obj2 = lodash.clone(obj1);
+  ```
+
+### 深拷贝
+![深拷贝](./img/JS-copy-deep.jpg)
+- 定义：完全拷贝一个新对象，保存在堆内存的新区域，修改时原对象不再受到影响。
+- 方法：
+  - JSON.parse(JSON.stringify())
+    - 性能最快
+    - 对象存在循环引用会报错
+    - 只拷贝数组和对象，属性值为函数(变为null)、正则(变为空对象)、Date...时无法深拷贝
+  - 手写实现递归
+  - 函数库lodash的_.cloneDeep方法
+- 代码：
+  ```js
+  // JSON.parse(JSON.stringify())
+  let arr1 = [1, 3, { name: 'joe' }];
+  let arr2 = JSON.parse(JSON.stringify(arr1));
+  arr2[2].name = 'joo'; 
+  console.log(arr1[2].name); // joe
+
+  // 函数库
+  let obj2 = lodash.cloneDeep(obj1);
+
+  // 手写递归 - 详见手写API
+  ```
+
+
 ## 运算符
 - 递增 (++)
   - 概念：递增运算符为其操作数增加1，返回一个数值。
@@ -358,18 +427,8 @@
     - 如果使用后置（postfix），即运算符位于操作数的后面（如 x++），那么将会在递增前返回数值，也就是先返回后增加。
     - 如果使用前置（prefix），即运算符位于操作数的前面（如 ++x），那么将会在递增后返回数值，也就是先增加后返回。
 
-## 类型判断
-基本类型
-  - Boolean
-  - Null
-  - Undefined
-  - Number
-  - String
-  - Symbol(ES6)
-  - BigInt(ES10)
 
-引用类型
-  - Object [ Array、Function、Date、RegExp、Error...]
+## 类型判断
 
 ### typeof
 - 基本数据类型使用typeof可以返回其基本数据类型(字符串形式)，但是null类型会返回object

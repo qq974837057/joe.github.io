@@ -151,7 +151,7 @@ window.devicePixelRatio        // 获取设备像素比
   - 使用requestAnimationFrame替代setInterval来做动画循环
   - 使用web worker分担主线程压力，解决大量数据计算，大量DOM操作的卡顿问题
 
-### 大数据性能
+### 大数据长列表性能
 
 > 前端渲染大量数据上千行，不允许分页情况下，容易导致卡顿，掉帧现象。
 
@@ -159,6 +159,79 @@ window.devicePixelRatio        // 获取设备像素比
   - 虚拟列表 - 只渲染可视区域的数据
   - 时间分片 - 使用 setTimeout 拆分密集型任务
   - Web Worker - 与主线程并行的独立线程，通过 onmessage 和 postMessage 接口进行通信，完成大量的数据计算，结果返回主线程，由主线程更新DOM元素。
+  - 触底请求分页+节流优化滚动(允许分页请求条件下)
+
+- 常见场景：
+  - 插件关联时：不选择对应品类的话，会展示所有品类的全部版本插件，每个插件可能是几十上百个版本，所有品类最多可上万条版本数据供关联。
+
+#### 长列表渲染-虚拟列表
+- 原因：DOM元素的创建和渲染时间成本很高,大数据完整渲染列表比较慢。
+- 场景：适用复杂情况的列表item，如element-ui组件
+- 原理：从总数据取一部分数据，只对「可见区域」进行渲染，不可见部分不渲染。
+- 步骤：基于Vue
+- item高度相同同情况下：
+    - 创建容器：在容器中创建两块元素，一个是真实可视列表，一个是不可见的元素撑开列表，使用计算属性根据列表数据计算这个不可见元素整个高度，占位让列表滚动条出现。computed:{ contentHeight() { return this.data.length * itemHeight + 'px' } }
+    -  监听滚动：scrollTop表示已滚出屏幕的高度。监听最外的容器滚动：@scroll="handleScroll" 
+    -  执行更新：计算高度const scrollTop = this.$el.scrollTop; 再执行下面update(scrollTop)方法，更新可视区域数据。
+        - 计算可视区域放数据的个数const visibleCount = Math.ceil(this.$el.clientHeight / this.itemHeight); 
+        - 计算可视区域的起始item坐标start （比如0）const start = Math.floor(scrollTop / this.itemHeight); 向下取整
+        - 计算可视区域的结束item坐标end （比如10） const end = start + visibleCount;
+        - 取出需要显示的数据，并更新渲染 this.visibleData = this.data.slice(start, end);
+        - 把可见区域的 top 设置为起始元素在整个列表中的位置，也就是向下滚动 this.$refs.content.style.transform = `translateY(${ start * this.itemHeight }px)`;
+
+-  item高度不同（动态高度）情况下：
+    - 预估高度先渲染，再获取真实高度并缓存下来。
+        - 定义一个props :estimatedItemSize 预估高度
+        - 定义一个this.positions = [ {top:0,bottom:100,height:100} ,{...}] 保存每一项的高度及位置信息
+        - 执行初始化，将预估高度保存入positions里，里面有高度、top、bottom
+        - 列表总高度contentHeight：最后一项距离列表顶部的位置this.positions[this.positions.length - 1].bottom;
+        - 渲染后，**获取真实位置并缓存**：在updated钩子里，遍历列表item的数组，获取每个node节点的高度**getBoundingClientRect.height**，与预估高度进行对比，如果有差值，进行bottom减去这个差值。height替换为新的height。更新所有后面的项位置。
+        - 查找起始item：遍历positions，找到bottom>scrollTop的第一项（bottom是从小到大递增的，这里可用二分法查找优化）
+        - 偏移量offset：this.offset = this.positions[this.start - 1].bottom，再执行向下滚动this.$refs.content.style.transform = `translateY(${ offset }px)`
+
+
+#### 长列表渲染-时间切片
+- 原因：DOM元素的创建和渲染时间成本很高,大数据完整渲染列表比较慢。
+- 场景：大量简单的dom 
+- 原理：延时加载，setTimeout（回调与系统刷新不一致会有闪屏现象）或window.requestAnimationFrame进行分批渲染
+- window.requestAnimationFrame(回调函数执行与浏览器刷新频率保持一致，通常是每秒60次，更优)下次重绘之前继续更新下一帧动画
+- FPS表示每秒钟画面更新次数，大多数显示器的刷新频率是60Hz，相当于每秒钟重绘60次，人眼睛有视觉停留效应，间隔时间太短16.7ms（1000/60 ms）让你以为屏幕的图像是禁止的。 50 ～ 60 FPS 的动画将会相当流畅，帧率在 30 FPS 以下的动画，明显的卡顿和不适感；
+- 实现：
+```html
+<div>
+    <ul id="container"></ul>
+ </div>
+<script type="text/javascript">
+    let ul = document.getElementById('container');
+    // 总数
+    let total = 50000;
+    // 一次插入 20 条
+    let once = 20;
+    // 每条记录的索引
+    let index = 0;
+    
+    //循环加载数据
+    function loop(curTotal,index) {
+      if(curTotal <= 0) {
+        return false;
+      }
+      //每页多少条
+      let pageCount = Math.min(curTotal, once);
+      window.requestAnimationFrame( function() {
+          for(let i = 0;i<pageCount;i++) {
+            let li = document.createElement('li');
+            li.innerText =index +  ":"+ i + ":" + ~~(Math.random()*total);
+            ul.appendChild(li);
+          }
+          // 添加下一批数据
+          loop(curTotal - pageCount,index + pageCount);
+        }
+      )
+    }
+    
+    loop(total,index);
+</script>
+```
 
 ## Vue项目优化
 
