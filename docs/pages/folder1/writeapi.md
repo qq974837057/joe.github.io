@@ -359,5 +359,165 @@ function instance_of(L, R) {
 ```
 ## 防抖
 ## 节流
+
 ## 浅拷贝、深拷贝
+### 浅拷贝
+- 思路：直接递归赋值再返回即可。
+
+```js
+function clone(target) {
+  let  copy = {};
+  for (const key in target) {
+    copy[key] = target[key];
+  }
+  return copy;
+}
+let obj1 = {name:'joe',sport:{name:'swim'}};
+let obj2 = clone(obj1);
+console.log(obj2); // { name: 'joe', sport: { name: 'swim' } }
+
+obj2.sport.name = 'joo';
+console.log(obj1); // { name: 'joe', sport: { name: 'joo' } }
+```
+
+### 深拷贝
+- 思路：
+  - 如果是基本类型或者函数，直接返回，两个对象使用一个在内存中处于同一个地址的函数也是没有任何问题。
+  - 如果是 RegExp 或者 Date 类型，返回对应类型。
+  - 如果是引用类型(数组、对象)，进行递归赋值。
+  - 考虑循环引用的问题、使用一个WeakMap结构存储已经被拷贝的对象，每一次进行拷贝的时候就先向WeakMap查询该对象是否已经被拷贝，如果已经被拷贝则取出该对象并返回，WeakMap键名只能为对象，不能为基本类型。 使用WeakMap，map和obj存在的就是弱引用关系，垃圾回收时内存会释放掉，节省内存消耗 。
+
+- 常规版
+
+```js
+function deepClone(obj, map = new WeakMap()) {
+
+  if(obj instanceof Date) return new Date(obj);     // 专门处理Date
+  if(obj instanceof RegExp) return new RegExp(obj); // 专门处理RegExp
+  if (obj === null || typeof obj !== 'object') {    
+    // 不是引用数据类型或是function, 直接返回
+    return obj;
+  }
+
+  // 解决循环引用问题
+  if(map.get(obj)) {
+    return map.get(obj);
+  }
+  let copy = Array.isArray(obj) ? [] : {};
+  map.set(obj, copy);
+
+  // 遍历+递归赋值
+  for(const key in obj) {
+    copy[key] = deepClone(obj[key], map);
+  }
+  return copy;
+}
+// 测试用例
+const obj = {
+  arr: [1, 2],
+  joe: {key: '对象'},
+  a:() => {
+    console.log('函数');
+  },
+  date: new Date(),
+  reg: /正则/g
+}
+obj.obj = obj;
+
+const obj1 = deepClone(obj);
+console.log(obj1);
+// { 
+// arr: [ 1, 2 ],
+// joe: { key: '对象' },
+// a: [Function: a],
+// date: 2020-07-01T09:39:52.799Z,
+// reg: /正则/g,
+// obj: [Circular] 
+// }
+
+```
+
+- 增强版
+
+```js
+// 考虑Set、Map
+function deepClone(obj, map = new WeakMap()) {
+
+  if(obj instanceof Date) return new Date(obj);     // 专门处理Date
+  if(obj instanceof RegExp) return new RegExp(obj); // 专门处理RegExp
+  if (obj === null || typeof obj !== 'object') {    
+    // 不是引用数据类型或是function, 直接返回
+    return obj;
+  }
+
+  // 解决循环引用问题
+  if(map.get(obj)) {
+    return map.get(obj);
+  }
+  let copy = Array.isArray(obj) ? [] : {};
+  map.set(obj, copy);
+
+  // 克隆set
+  if (obj instanceof Set) {
+    copy = new Set();
+    obj.forEach(value => {
+        copy.add(deepClone(value, map));
+    });
+    return copy;
+  }
+
+  // 克隆map
+  if (obj instanceof Map) {
+    copy = new Map();
+    obj.forEach((value, key) => {
+      copy.set(key, deepClone(value, map));
+    });
+    return copy;
+  }
+
+  // 遍历+递归赋值
+  for(const key in obj) {
+    copy[key] = deepClone(obj[key], map);
+  }
+  return copy;
+}
+
+// 测试用例
+let mySet = new Set();
+mySet.add(1); // Set [ 1 ]
+mySet.add(2); // Set [ 1, 2 ]
+let myMap = new Map();
+myMap.set('keyString', "和键'a string'关联的值");
+myMap.set('keyObj', "和键keyObj关联的值");
+
+const obj = {
+  arr: [1, 2],
+  joe: {key: '对象'},
+  a:() => {
+    console.log('函数');
+  },
+  date: new Date(),
+  reg: /正则/g,
+  set: mySet,
+  map: myMap
+}
+obj.obj = obj;
+
+const obj1 = deepClone(obj);
+console.log(obj1);
+// { 
+//   arr: [ 1, 2 ],
+//   joe: { key: '对象' },
+//   a: [Function: a],
+//   date: 2020-07-01T09:44:28.949Z,
+//   reg: /正则/g,
+//   set: Set { 1, 2 },
+//   map:Map {
+    //      'keyString' => '和键\'a string\'关联的值',
+    //      'keyObj' => '和键keyObj关联的值' 
+    //       },
+//   obj: [Circular] 
+// }
+```
+
 ## AJAX的promise版

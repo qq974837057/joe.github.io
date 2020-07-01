@@ -397,7 +397,7 @@
 
 ### 深拷贝
 ![深拷贝](./img/JS-copy-deep.jpg)
-- 定义：完全拷贝一个新对象，保存在堆内存的新区域，修改时原对象不再受到影响。
+- 定义：完全拷贝一个新对象，两个独立内存区域。修改时原对象不再受到影响。
 - 方法：
   - JSON.parse(JSON.stringify())
     - 性能最快
@@ -405,6 +405,7 @@
     - 只拷贝数组和对象，属性值为函数(变为null)、正则(变为空对象)、Date...时无法深拷贝
   - 手写实现递归
   - 函数库lodash的_.cloneDeep方法
+- 场景：修改数据时，深拷贝一份数据存于当前编辑表单对象中，改动后，取消修改不会影响修改之前的数据。
 - 代码：
   ```js
   // JSON.parse(JSON.stringify())
@@ -419,6 +420,24 @@
   // 手写递归 - 详见手写API
   ```
 
+## Map、Set、WeakMap、WeakSet
+- 弱引用和强引用
+  - 一个对象若只被弱引用所引用，不可访问（或弱可访问），可能在任何时刻被回收。
+  - 可用于深拷贝中，当拷贝对象非常大时，使用Map造成内存消耗，需要手动清除Map 的属性。使用WeakMap可以成为弱引用，引用的对象释放后，拷贝的属性就会自动释放。
+  - 如使用Map，对象间是存在强引用关系，手动释放obj，map对obj存在强引用，无法释放该内存。
+  ```js
+  let obj = { name : 'Joe'}
+  const map = new Map();
+  map.set(obj,'Joo');
+  obj = null;
+  ```
+  - 使用WeakMap，weak对obj存在弱引用，下一次垃圾回收时，该内存会被释放。
+  ```js
+  let obj = { name : 'Joe'}
+  const weak = new WeakMap();
+  weak.set(obj,'Joo');
+  obj = null;
+  ```
 
 ## 运算符
 - 递增 (++)
