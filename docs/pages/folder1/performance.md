@@ -14,9 +14,13 @@
   - FPS(每秒帧率) - 每秒钟画面更新次数，大部分屏幕为60次/秒
 
 - 统计方式
+  - 整体：
+    - 通过 Performance 工具可以用来录制一段时间的 CPU 占用、内存占用、FPS 等运行时性能问题，如Bottom Up看出一段时间较耗时的操作。
+    - 通过 Network 工具或者代码统计页面的加载时间来分析加载性能问题。
   - 手动：Chrome面板
     - Performance的Timings一栏：查看FP、FCP、FMP
     - Performance的Main一栏：Recalculate Style：样式计算。Layout：布局位置。
+    - Performance的Frames查看FPS帧率，水平线越低且持续时间长，代表画面卡顿。
     - Show Rendering：勾选FPS，可查看帧率和GPU内存使用情况
   - 代码：使用window.performance.timing
   ![timing API1](./img/Per-timingAPI-1.jpg)
@@ -75,11 +79,44 @@ window.devicePixelRatio        // 获取设备像素比
   - FP和FCP可能是相同的时间，也可能是先FP后FCP
   - 帧率能够达到 50 ～ 60 FPS 的动画将会相当流畅，让人倍感舒适；帧率在 30 FPS 以下或者帧率波动很大的动画，让人感觉到明显的卡顿和不适感；
 
-- 客户端&服务端&预渲染
+- 获取函数执行耗时
+  - 只能控制台调试用(不要在生产环境使用)
+    - console.time('1');fn();console.timeEnd('1');
+  - 获取时间戳，然后相减。
+    - Date.now(); 时间精度为 毫秒（10^-3）级别；
+    - new Date().getTime();
+    - +new Date();
+  - 更精确的方案
+    - 浏览器：window.performance.now()获取window.performance.timing.navigationStart到当前时刻的毫秒数，带小数点。performance.timing.navigationStart + performance.now() 约等于 Date.now()。
+    ```js
+    function doSomething(){
+      for(let i=0;i<1000;i++){
+        i=i+1;
+      }
+    }
+    let t0 = window.performance.now();
+    doSomething();
+    let t1 = window.performance.now();
+    console.log("doSomething函数执行了" + (t1 - t0) + "毫秒.")
+    // doSomething函数执行了0.09499990846961737毫秒.
+    ```
+    - Node环境：process.hrtime.bigint()，直接通过两个 bigint 相减来计算差异。在 Node.js 程序中，优先选 process.hrtime，其次选 performance.now，最后才会是 Date.now。
+    ```js
+    const start = process.hrtime.bigint();
+    // 191051479007711n
+    setTimeout(() => {
+      const end = process.hrtime.bigint();
+      // 191052633396993n
+      console.log(`基准测试耗时 ${end - start} 纳秒`);
+      // 基准测试耗时 1154389282 纳秒
+    }, 1000);
+    ```
+
+- 客户端渲染&服务端渲染&预渲染
   - 客户端渲染：用户访问 url，请求 html 文件，前端根据路由动态渲染页面内容。关键链路较长，有一定的白屏时间；
   - 服务端渲染：用户访问 url，服务端根据访问路径请求所需数据，拼接成 html 字符串，返回给前端。前端接收到 html 时已有部分内容；
   - 预渲染：构建阶段生成匹配预渲染路径的 html 文件（注意：每个需要预渲染的路由都有一个对应的 html）。构建出来的 html 文件已有部分内容。不适合个性化、经常变化的内容使用预渲染。
-
+![客户端渲染&服务端渲染&预渲染](./img/Per-SSR&Prerender.png)
 
 ## 加载时
 
@@ -120,7 +157,7 @@ window.devicePixelRatio        // 获取设备像素比
   - 预渲染：插件prerender-spa-plugin，预渲染静态 html 内容，html 会在脚本执行完被捕获并输出index.html。
   - SSR服务端渲染(nuxt.js)
 
-## 执行时
+## 运行时
 > 高性能要求的场景，优化代码执行速度。
 
 ### 动画性能
@@ -235,5 +272,53 @@ window.devicePixelRatio        // 获取设备像素比
 
 ## Vue项目优化
 
+### 加载时
+- 预渲染(Prerender)或服务端渲染(SSR)
+  - 参考上方
 
+### 运行时
 
+- 启用Vue的生产环境模式 (Vue CLI默认开启)
+  - Vue 源码会根据 process.env.NODE_ENV 决定是否启用生产环境模式，同时构建过程的警告也会被压缩工具去除。
+  ```js
+  // webpack4 + 使用mode选项配置production
+  module.exports = {
+    mode: 'production'
+  }
+  ```
+- 使用单文件组件(.vue)预编译模板 (Vue CLI默认开启)
+  - 写好的代码自动预编译，包含编译好的渲染函数而不是模板字符串。
+- 提取组件的CSS (Vue CLI默认开启)
+  - 单文件组件时，组件内的 CSS 会以 `<style>` 标签的方式通过 JavaScript 动态注入，使用插件extract-text-webpack-plugin + `vue-loader`将所有组件的CSS提取到一个文件中。
+  ```js
+  // webpack.config.js
+  var ExtractTextPlugin = require("extract-text-webpack-plugin")
+
+  module.exports = {
+    // other options...
+    module: {
+      rules: [
+        {
+          test: /\.vue$/,
+          loader: 'vue-loader',
+          options: {
+            extractCSS: true
+          }
+        }
+      ]
+    },
+    plugins: [
+      new ExtractTextPlugin("style.css")
+    ]
+  }
+  ```
+- Object.freeze()冻结对象
+  - 冻结后，不能添加、删除、修改属性值，不能修改可写性、可枚举性等。
+  - 阻止了Vue使用数据劫持，用 Object.defineProperty 重写setter和getter。
+  - 适合展示类的场景，如大数据表格。
+- 扁平化接口返回的数据
+  - JSON数据规范化（normalize），将深层嵌套的 JSON 对象通过定义好的 schema 转变成使用 id 表示的对象，如用户user数组集中使用id来存放信息，在评论也是写上id即可表示是哪个用户评论，快速在user数组即可找到这个用户的信息。
+- 组件级别懒加载
+  - 思路：IntersectionObserver条件判断是否出现在屏幕(图片懒加载也使用过此API) + v-if 指令渲染组件 + 骨架屏触发屏幕条件判断(大体灰白结构)
+- 虚拟列表
+  - 参考上方

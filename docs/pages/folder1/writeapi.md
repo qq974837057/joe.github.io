@@ -155,11 +155,11 @@ function create(obj) {
 
 ## new
 
-- new Object()创建新的obj对象。
-- obj的`__proto__`链接到构造函数的原型。
-- 执行构造函数，用apply使this指向新建的对象。
-- 构造函数执行完有返回对象，返回该对象，返回非对象值，忽略。
-- 执行完无返回对象，返回创建的obj对象。
+- new Object()创建新的对象obj。
+- obj的`__proto__`链接到构造函数的原型`fn.prototype`。
+- 执行构造函数，用apply使this指向新建的对象`fn.apply(obj, [...arguments].slice(1))`。
+- 构造函数执行完若有返回引用类型的值，则返回该对象res，返回非引用类型的值，则忽略。
+- 执行完无返回，则返回创建的对象obj。
 
 
 ```js

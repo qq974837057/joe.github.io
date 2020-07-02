@@ -1,5 +1,6 @@
 ## 学习链接
-- [阮老师的ES6](https://es6.ruanyifeng.com/)
+- [阮一峰-ES6入门教程](https://es6.ruanyifeng.com/)
+- [冴羽-ES6完全使用手册](https://juejin.im/post/5bfe05505188252098022400#heading-1)
 - [JavaScript教程](https://wangdoc.com/javascript/index.html)
 - [MDN](https://developer.mozilla.org/zh-CN/)
 - [JS Bin](https://jsbin.com/)
@@ -225,6 +226,15 @@
         
 - [知乎解释](https://zhuanlan.zhihu.com/p/26533735)
 
+
+## new运算符的实现
+- new Object()创建新的对象obj。
+- obj的`__proto__`链接到构造函数的原型`fn.prototype`。
+- 执行构造函数，用apply使this指向新建的对象`fn.apply(obj, [...arguments].slice(1))`。
+- 构造函数执行完若有返回引用类型的值，则返回该对象res，返回非引用类型的值，则忽略。
+- 执行完无返回，则返回创建的对象obj。
+
+
 ## 闭包
 > 概念：闭包 =『函数』和『函数对外部作用域的变量引用』的捆绑，即闭包可以从让内部函数访问外部函数作用域。本质是当前环境中存在指向父级作用域的**引用**。
   - 如在父函数声明a=1，在子函数console.log(a)
@@ -352,6 +362,60 @@
 })();
 // 外部无法访问变量 name
 ```
+
+## 数组合并&对象合并
+- 数组
+  - ES6扩展运算符
+  ```js
+  const arr1 = [0, 1, 2];
+  const arr2 = [3, 4, 5];
+  const arr = [...arr1, ...arr2];
+  // arr => [0, 1, 2, 3, 4, 5];
+  ```
+
+  - concat
+  ```js
+  const arr1 = [0, 1, 2];
+  const arr2 = [3, 4, 5];
+  const arr = arr1.concat(arr2);
+  // arr => [0, 1, 2, 3, 4, 5]
+  ```
+  
+  - for
+  ```js
+  const arr1 = [0, 1, 2];
+  const arr2 = [3, 4, 5];
+  for(let i in arr2) {
+    arr1.push(arr2[i]);
+  }
+  // arr1 => [0, 1, 2, 3, 4, 5] 改变了arr1的原始值
+  ```
+
+  - push.apply
+  ```js
+  const arr1 = [0, 1, 2];
+  const arr2 = [3, 4, 5];
+  arr1.push.apply(arr1, arr2);   
+  // arr1 => [0, 1, 2, 3, 4, 5] 改变了arr1的原始值
+  ```
+
+- 对象
+  - Object.assign(target, ...sources)
+  ```js
+  const obj1 = { a: 0, b: 1, c: 2 };
+  const obj2 = { c: 3, d: 4, e: 5 };
+  const obj = Object.assign(obj1, obj2);
+  // obj => { a: 0, b: 1, c: 3, d: 4, e: 5 }
+  // obj1 => { a: 0, b: 1, c: 3, d: 4, e: 5 } // 改变了obj1的原始值
+  ```
+
+  - ES6扩展运算符
+  ```js
+  const obj1 = { a: 0, b: 1, c: 2 };
+  const obj2 = { c: 3, d: 4, e: 5 };
+  const obj = { ...obj1, ...obj2 };
+  // obj => { a: 0, b: 1, c: 3, d: 4, e: 5 }
+  ```
 
 ## 深浅拷贝
 
