@@ -112,24 +112,48 @@ window.devicePixelRatio        // 获取设备像素比
     }, 1000);
     ```
 
+- 打包后文件体积
+  ```
+  npm run build -- --report 查看打包后的大小
+  ```
+  - 主要是vendors依赖包文件js较大，和app主代码块较大，下面为某项目举例
+    - stat 原始大小 2.7mb
+    - parsed 压缩插件处理后  1.08mb (40%)
+    - gzip 压缩后 300kb (10%)
+
+
 - 客户端渲染&服务端渲染&预渲染
   - 客户端渲染：用户访问 url，请求 html 文件，前端根据路由动态渲染页面内容。关键链路较长，有一定的白屏时间；
   - 服务端渲染：用户访问 url，服务端根据访问路径请求所需数据，拼接成 html 字符串，返回给前端。前端接收到 html 时已有部分内容；
   - 预渲染：构建阶段生成匹配预渲染路径的 html 文件（注意：每个需要预渲染的路由都有一个对应的 html）。构建出来的 html 文件已有部分内容。不适合个性化、经常变化的内容使用预渲染。
 ![客户端渲染&服务端渲染&预渲染](./img/Per-SSR&Prerender.png)
 
+- 客户端渲染(CSR)
+  - 优点：客户端体验好
+  - 缺点：首屏加载慢，不利于seo(抓取不到通过 Ajax 获取到的内容)
+
+- 服务端渲染(SSR)
+  - 优点
+    - 更好的 SEO：数据已包含在页面，无须异步Ajax获取内容，方便爬虫抓取。
+    - 首屏加载更快：直接渲染好后返回，无须再下载js再渲染。
+  - 缺点
+    - 开发条件限制：只支持 beforCreate 和 created 两个钩子函数，一些外部扩展库需要特殊处理。且服务器需要处于Node.js运行环境。
+    - 服务器负载：占用更多CPU资源，负载更大。
+
 ## 加载时
 
 ### 首屏加载
 > 首屏的加载速度很重要,过长的白屏会导致用户流失。
+> WEEX生成的是JS渲染成原生组件，此部分不适用
 
 - 用户体验感知
   - 前置loading：插件html-webpack-plugin，白屏时展示loading图。
   - 骨架屏占位：插件vue-server-renderer，展示大体结构，视觉过渡流畅。
+    - 将vue文件转为html 和css字符串，骨架屏的样式通过`<style></style>`标签直接被插入，而骨架屏的内容也被放置在`div#app`之间
 
 - 网络和缓存
   - HTTP2：二进制分帧、多路复用、头部压缩、服务端推送
-  - 拆包+缓存策略：webpack 4.x 对SplitChunksPlugin插件进行拆包配置 + 强制缓存和协商缓存，将第三方库设置较长的强缓存时间
+  - 拆包 + 缓存策略：webpack 4.x 对SplitChunksPlugin插件进行拆包配置 + 强制缓存和协商缓存，将第三方库设置较长的强缓存时间
 
 - 懒加载
   - 图片懒加载（vue-lazyload）原理：进入可视区域再加载图片
@@ -140,21 +164,146 @@ window.devicePixelRatio        // 获取设备像素比
   - 路由懒加载（不同路由组件分割代码块chunk，访问该路由才加载对应js）结合 Vue 的异步组件和 Webpack 的代码分割(Code Splitting)功能
     ```js
     const Foo = () => import('./Foo.vue')
+    const router = new VueRouter({
+      routes: [
+        { path: '/foo', component: Foo }
+      ]
+    })
     ```
   - 组件级别懒加载
+    - 思路：IntersectionObserver条件判断是否出现在屏幕(图片懒加载也使用过此API) + v-if 指令渲染组件 + 骨架屏触发屏幕条件判断(大体灰白结构)
   - 组件keep-alive
     - 在页面已经跳转后依然不销毁组件,保存组件的实例在内存中,再次渲染时可以利用缓存的组件实例。
     - 大量实例不销毁,保存在内存中,存在内存泄漏的风险,要调用deactivated销毁。
 
 - 减少体积
   - Tree Shaking：webpack4.x 默认支持，基于ES6的modules，要设置 modules: false 避免转为commonjs规范。
-  - gzip压缩：生成.gz文件。服务器nginx设置压缩比等 或者 前端配置compression-webpack-plugin，服务器就无须再压缩。一般图片不压缩。
-  - CDN：加速拉取第三方库依赖（vue、element-ui）：剥离一些依赖 ，放在cdn如 jsdelivr，在html中通过script引入，不会被打包到代码文件，提升构建速度。配置externals。
-  - 动态加载 ES6 代码：ES6意味着不用经过Babel转译，体积更小，性能更好，`<script type="module">`这个标签来判断浏览器是否支持 es6。
-  - npm run build -- --report 查看打包后的大小
+  - gzip压缩：效果 Content-Encoding：gizp，文件大小降为30%。服务器nginx设置压缩比等 或者 前端安装compression-webpack-plugin，再配置productionGzip，构建时生成.gz 文件，服务器就无须再压缩。一般图片不压缩。
+    - nginx
+    ```
+    // nginx的配置方式
+    http {
+      gzip on;
+      gzip_static on;
+      gzip_min_length 1024;
+      gzip_buffers 4 16k;
+      gzip_comp_level 2;
+      gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php application/vnd.ms-fontobject font/ttf font/opentype font/x-woff image/svg+xml;
+      gzip_vary off;
+      gzip_disable "MSIE [1-6]\.";
+    }
+    ```
+    - 前端：config/index.js里有一个productionGzip设置为true，前端进行gzip压缩生成.gz 文件。nginx的gzip_static设为on，就直接使用同名.gz文件，不用占用服务器CPU资源自己压缩。
+    - express：
+    ```
+    npm i express compression
 
-- 预渲染
-  - 预渲染：插件prerender-spa-plugin，预渲染静态 html 内容，html 会在脚本执行完被捕获并输出index.html。
+    // serve.js
+    var express = require('express')
+    var app = express()
+
+    // 开启gzip压缩,如果你想关闭gzip,注释掉下面两行代码，重新执行`node server.js`
+    var compression = require('compression')
+    app.use(compression())
+
+    app.use(express.static('dist'))
+    app.listen(3000,function () {
+      console.log('server is runing on http://localhost:3000')
+    })
+
+    node server.js
+    ```
+
+  - CDN：剥离第三方库依赖（vue、element-ui）放在cdn如 jsDelivr，在html中通过script引入，不会被打包到代码文件，减少包的体积，降低自己服务器压力，CDN提升依赖加载速度。【如vue、vue-router、vuex、element-ui和axios】，使用CDN后卸载对应npm包【npm uninstall ...】
+    - 将依赖的vue、vue-router、vuex、element-ui和axios这五个库，改为通过CDN链接获取。借助HtmlWebpackPlugin,可以方便的使用循环语法在index.html里插入js和css的CDN链接。
+    ```js
+    <!-- CDN文件，配置在config/index.js下 -->
+    // config/index.js
+    module.exports = {
+      build: {
+        cdn: {
+          css: [
+            "https://unpkg.com/element-ui/lib/theme-chalk/index.css",
+          ],
+          js: [
+            "https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.min.js",
+            "https://cdn.jsdelivr.net/npm/vue-router@3.0.1/dist/vue-router.min.js",
+            "https://cdn.jsdelivr.net/npm/vuex@3.0.1/dist/vuex.min.js",
+            "https://unpkg.com/element-ui/lib/index.js",
+            "https://cdn.jsdelivr.net/npm/axios@0.18.0/dist/axios.min.js"
+          ]
+        }
+      }
+    }
+
+    // build/webpack.prod.conf.js
+
+    new HtmlWebpackPlugin(Object.assign(
+      { ... },
+      config.build.cdn
+    )),
+    ```
+    ```html
+    // index.html - 通过模板引入循环插入html
+    <head>
+      <% for (var i in htmlWebpackPlugin.options.css) { %>
+      <link href="<%= htmlWebpackPlugin.options.css[i] %>" rel="stylesheet">
+      <% } %>
+    </head>
+    <body>
+      <% for (var i in htmlWebpackPlugin.options.js) { %>
+      <script src="<%= htmlWebpackPlugin.options.js[i] %>"></script>
+      <% } %>
+    </body>
+
+    ```
+    - 在build/webpack.prod.conf.js中添加如下代码,使用CDN引入外部文件的情况下，依然可以在项目中使用import的语法来引入这些第三方库，也就意味着你不需要改动项目的代码，这里的键名是import的npm包名，键值是该库暴露的全局变量。
+    ```js
+    // build/webpack.prod.conf.js
+    externals: {
+      'vue': 'Vue',
+      'vue-router': 'VueRouter',
+      'vuex': 'Vuex',
+      'element-ui':'ELEMENT',
+      'axios':'axios'
+    }
+    ```
+
+  - 动态加载 ES6 代码：ES6意味着不用经过Babel转译，体积更小，性能更好，`<script type="module">`这个标签来判断浏览器是否支持 es6。
+
+- 预渲染&服务端渲染
+  - 预渲染：插件prerender-spa-plugin，预渲染静态 html 内容，构建过程中，本地模拟开启页面，捕获内容并输出html文件，放在指定路由同名的文件夹，访问时返回对应的已渲染好的index.html文件，适合静态内容多的页面。
+    - router设为history模式，然后安装插件
+    ```
+    npm i prerender-spa-plugin --save-dev
+
+    ```
+    - 添加配置，定义需要预渲染的路由
+    ```js
+    //  build/webpack.prod.conf.js 
+    const PrerenderSPAPlugin = require('prerender-spa-plugin')
+    ...
+    new PrerenderSPAPlugin({
+      staticDir: config.build.assetsRoot,
+      routes: [ '/', '/Contacts' ], // 需要预渲染的路由（视你的项目而定）
+      minify: {
+        collapseBooleanAttributes: true,
+        collapseWhitespace: true,
+        decodeEntities: true,
+        keepClosingSlash: true,
+        sortAttributes: true
+      }
+    })
+    ```
+    - 调整main.js
+    ```js
+    // 激活静态HTML，使他们成为动态的，可根据后续数据变化调整。
+    // 强制使用应用程序的激活模式
+    new Vue({
+      router,
+      render: h => h(App)
+    }).$mount('#app', true)
+    ```
   - SSR服务端渲染(nuxt.js)
 
 ## 运行时
@@ -278,7 +427,41 @@ window.devicePixelRatio        // 获取设备像素比
 
 ### 运行时
 
-- 启用Vue的生产环境模式 (Vue CLI默认开启)
+- 指令场景
+  - v-if(条件渲染)用在条件较少改变的场景，v-show(display切换)用在频繁切换的场景
+  - v-for遍历要加key(提高diff速度)，v-for遍历避免同时使用v-if(v-for比v-if优先级高，每次都会遍历)
+  - computed用于进行依赖数值的计算，有缓存。用watch用于执行监听数据变化后的回调，可异步。
+
+- Object.freeze()冻结对象
+
+  - 阻止了Vue使用数据劫持（用 Object.defineProperty 重写setter和getter）
+  - 因为冻结后，不能添加、删除、修改属性值，不能修改可写性、可枚举性等。
+  - 适合只是展示的场景，数据不会改变，如大数据表格。
+  ```js
+  export default {
+    data() {
+      return {
+        users: {}
+      }
+    },
+    async created() {
+      const users = await axios.get("/api/users");
+      this.users = Object.freeze(users);
+    }
+  };
+  ```
+
+- 扁平化接口返回的数据
+  - JSON数据规范化（normalize），将深层嵌套的 JSON 对象通过定义好的 schema 转变成使用 id 表示的对象，如用户user数组集中使用id来存放信息，在评论也是写上id即可表示是哪个用户评论，快速在user数组即可找到这个用户的信息。
+
+- 路由懒加载
+  - 参考上方
+- 组件级别懒加载
+  - 参考上方
+- 虚拟列表
+  - 参考上方
+
+- 启用Vue的生产环境模式 【Vue CLI默认开启】
   - Vue 源码会根据 process.env.NODE_ENV 决定是否启用生产环境模式，同时构建过程的警告也会被压缩工具去除。
   ```js
   // webpack4 + 使用mode选项配置production
@@ -286,9 +469,9 @@ window.devicePixelRatio        // 获取设备像素比
     mode: 'production'
   }
   ```
-- 使用单文件组件(.vue)预编译模板 (Vue CLI默认开启)
+- 使用单文件组件(.vue)预编译模板 【Vue CLI默认开启】
   - 写好的代码自动预编译，包含编译好的渲染函数而不是模板字符串。
-- 提取组件的CSS (Vue CLI默认开启)
+- 提取组件的CSS 【Vue CLI默认开启】
   - 单文件组件时，组件内的 CSS 会以 `<style>` 标签的方式通过 JavaScript 动态注入，使用插件extract-text-webpack-plugin + `vue-loader`将所有组件的CSS提取到一个文件中。
   ```js
   // webpack.config.js
@@ -312,13 +495,3 @@ window.devicePixelRatio        // 获取设备像素比
     ]
   }
   ```
-- Object.freeze()冻结对象
-  - 冻结后，不能添加、删除、修改属性值，不能修改可写性、可枚举性等。
-  - 阻止了Vue使用数据劫持，用 Object.defineProperty 重写setter和getter。
-  - 适合展示类的场景，如大数据表格。
-- 扁平化接口返回的数据
-  - JSON数据规范化（normalize），将深层嵌套的 JSON 对象通过定义好的 schema 转变成使用 id 表示的对象，如用户user数组集中使用id来存放信息，在评论也是写上id即可表示是哪个用户评论，快速在user数组即可找到这个用户的信息。
-- 组件级别懒加载
-  - 思路：IntersectionObserver条件判断是否出现在屏幕(图片懒加载也使用过此API) + v-if 指令渲染组件 + 骨架屏触发屏幕条件判断(大体灰白结构)
-- 虚拟列表
-  - 参考上方

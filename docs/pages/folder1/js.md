@@ -513,11 +513,11 @@
 
 ## 类型判断
 
-### typeof
+#### typeof
 - 基本数据类型使用typeof可以返回其基本数据类型(字符串形式)，但是null类型会返回object
 - 引用数据类型使用typeof会返回object，函数会返回function，其他引用类型需要使用instanceof来检测引用数据类型。
 
-### 判断引用类型
+#### 判断引用类型
 
 判断一：使用typeof，排除null特殊情况。
 ```js
@@ -526,12 +526,12 @@ function isObj(obj) {
 }
 ```
 
-### 判断函数
+#### 判断函数
 - fun typeof function
 - fun instanceof Function
 - Object.prototype.toString.call(fun)是否为'[object Function]'
 
-### 判断数组
+#### 判断数组
 - 1、Object.prototype.toString.call()
 - 2、判断是否在Array的原型链上
 - 3、Array.isArray()是ES5新增的方法
@@ -543,11 +543,11 @@ function isObj(obj) {
 3.  Array.isArray(arr) // true
 ```
 
-### 判断null
+#### 判断null
 - null===x 判断是否为null
 - Object.prototype.`__proto__`===x 原始对象原型的原型即null
 
-### 判断NaN
+#### 判断NaN
 - Number.isNaN()
 
 
