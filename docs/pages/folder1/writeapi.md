@@ -7,7 +7,7 @@
 - 组合式：通过构造函数继承属性，通过原型链继承方法，保证每个子类的实例有自己的父类属性副本，而且可以通过原型链复用方法。
 - 寄生组合式：由于组合式中，子类/父类的原型对象都是Parent.prototype，子类没有自己的constructor，无法区分是由父类直接new出来还是子类直接new出来的实例，所以通过Object.create(Parent.prototype)，创建一个中间对象，使得父类/子类的原型对象可以隔离开，然后将constructor指向Child构造函数，就完成最理想的整个继承过程。
 
-### 构造函数继承：借助构造函数（父类构造函数在子类执行，this指向子类构造函数的实例）
+#### 构造函数继承：借助构造函数（父类构造函数在子类执行，this指向子类构造函数的实例）
 - 缺点：只能继承属性，无法继承父类的原型上的方法
   ```js
   function Parent() {
@@ -22,7 +22,7 @@
   }
   console.log(new Child()) //name: "parent" type: "child"
   ```
-### 原型链继承：借助原型链（子类构造函数的prototype赋值为父类的实例）
+#### 原型链继承：借助原型链（子类构造函数的prototype赋值为父类的实例）
 - 可以继承父类的原型上的属性和方法
 - 但是包含引用类型值的原型对象的属性会被实例共享(这也是为什么要在构造函数上定义属性，而不是原型对象中定义属性的原因)
 - 缺点：new Parent()出来的实例被当成Child生成出所有实例的原型对象，所以原型对象包含引用类型值的属性，就会被Child生成的实例所共享，改动其中一个，另一个实例也跟着改变。如改变play数组。
@@ -47,7 +47,7 @@
   console.log(child2.play); // [ 1, 2, 3, 4 ]
   ```
 ![原型链继承](./img/inherit-2.png)
-### 组合继承
+#### 组合继承
 - 使用原型链实现继承原型方法，使用构造函数继承实例属性，每个实例都有自己的属性副本，避免共享引用属性。
 - 缺点：执行了两次父类构造函数，且构造函数指的是父类的构造函数。
   ```js
@@ -75,7 +75,7 @@
   child1.say()
   child2.say()
   ```
-### 寄生组合继承：使用构造函数继承属性，使用原型链继承方法，创造一个父类原型的副本作为子类构造函数的原型。
+#### 寄生组合继承：使用构造函数继承属性，使用原型链继承方法，创造一个父类原型的副本作为子类构造函数的原型。
 - 前面组合式由于共用一个原型对象(Parent.prototype)，子类无自己构造函数，向上找构造函数是Parent。所以用Object.create隔离开原型，再给子类添加自己的构造函数）
 - Object.create(obj) 创建的中间对象以参数为原型对象，形成原型链
 - 内部原理：创建一个新的构造函数，它的prototype指向参数obj，再返回这个构造函数的实例，也就是新对象Obj。
@@ -106,7 +106,7 @@
   //          -> 也就是Obj的构造函数和Parent的构造函数指向同一个原型对象
   ```
 ![寄生组合继承](./img/inherit-4.png)
-### ES6 : class / extends 语法糖
+#### ES6 : class / extends 语法糖
   ```js
   class Parent {
         constructor(name) {
@@ -132,7 +132,7 @@
 
   let testA = new Child('Joe')
   ```
-### 区别
+#### 区别
   - ES5 的继承使用借助构造函数实现，实质是先创造子类的实例对象this，然后再将父类的方法添加到this上面。ES6 的继承机制完全不同，实质是先创造父类的实例对象this（所以必须先调用super方法），然后再用子类的构造函数修改this。
   - ES6 在继承的语法上不仅继承了类的原型对象，还继承了类的静态属性和静态方法
 
@@ -519,5 +519,234 @@ console.log(obj1);
 //   obj: [Circular] 
 // }
 ```
+
+## Promise/A+ 实现
+
+#### Promise/A+规范：
+
+（1）一个promise必须有3个状态（state），pending（等待态），fulfilled（成功态），rejected（失败态）。当处于pending状态的时候，可以转移到fulfilled或者rejected状态。当处于fulfilled状态或者rejected状态的时候，就不可变。
+
+（2）一个promise必须有一个then方法，then方法接受两个参数：
+
+```js
+promise.then(onFulfilled, onRejected)
+```
+其中onFulfilled方法表示状态从pending——>fulfilled时所执行的方法，且有不可改变的值(value)，而onRejected表示状态从pending——>rejected所执行的方法，且有不可改变的值(reason)。
+
+（3）为了实现链式调用，then方法必须返回一个promise
+```js
+promise2 = promise1.then(onFulfilled, onRejected)
+```
+
+（4）executor函数报错 直接执行reject();
+
+#### 用法：
+```js
+const promise = new Promise((resolve, reject) => {
+  if('操作成功') {
+    resolve(result)
+  } else {
+    reject(error)
+  }
+})
+
+promise.then(function(res) {
+  // success
+  console.log(res)
+}, function(err) {
+  // failure
+  console.log(err)
+})
+// 也可以使用箭头函数
+```
+
+#### 简版实现
+- [资料](https://juejin.im/post/5b2f02cd5188252b937548ab#)
+
+- promise用类class声明
+- new Promise会传入函数，也就是构造函数的参数叫executor，传入就立即执行。
+- 构造函数中
+   - 声明状态和回调函数数组、定义resolve、reject函数
+   - `resolve/reject`中判断`pending`状态、改变state为`fulfilled/rejected`，赋值`this.value/this.reason`并遍历执行回调函数数组中的每个函数。
+   - 执行传入的参数executor函数，try...catch... 执行出错直接reject(err)
+- then方法
+  - 传入两个参数，`then(onFulfilled, onRejected)`
+  - 分三个状态：
+    - 'fulfilled'-> 执行回调函数 `onFulfilled(this.value)`
+    - 'rejected' -> 执行回调函数 `onRejected(this.reason)`
+    - 'pending' -> 传入回调函数数组保存起来 `this.onResolvedCallbacks.push(() => {onFulfilled(this.value);})`
+    - 'pending'-> 传入回调函数数组保存起来  `this.onRejectedCallbacks.push(() => {onRejected(this.reason);})`
+
+```js
+class Promise {
+  constructor(executor) {
+    // 初始化state为等待态
+    this.state = 'pending';
+    this.value = undefined;
+    this.reason = undefined;
+
+    // 解决异步调用resolve的情况，保存回调方法
+    this.onResolvedCallbacks = [];
+    this.onRejectedCallbacks = [];
+
+    let resolve = (value) => {
+      if(this.state === 'pending') {
+        this.state = 'fulfilled';
+        this.value = value;
+        this.onResolvedCallbacks.forEach(fn => fn());
+      }
+    };
+    let reject = (reason) => {
+      if(this.state === 'pending') {
+        this.state = 'rejected';
+        this.reason = reason;
+        this.onRejectedCallbacks.forEach(fn => fn());
+      }
+    };
+    // 如果executor执行报错，直接执行reject
+    try {
+      executor(resolve, reject);
+    } catch(err) {
+      reject(err);
+    }
+  }
+  // then 方法 有两个参数onFulfilled onRejected
+  then(onFulfilled, onRejected) {
+    if(this.state === 'fulfilled') {
+      onFulfilled(this.value);
+    }
+    if(this.state === 'rejected') {
+      onRejected(this.reason);
+    }
+    // 一个promise可以有多个then，then时state还是pending等待状态，我们就需要在then调用的时候，将成功和失败存到各自的数组，一旦reject或者resolve，就调用它们
+    if(this.state === 'pending') {
+      // onFulfilled传入到成功处理函数的回调数组
+      this.onResolvedCallbacks.push(() => {
+        onFulfilled(this.value);
+      })
+      // onRejected传入到失败处理函数的回调数组
+      this.onRejectedCallbacks.push(() => {
+        onRejected(this.reason);
+      })
+    }
+  }
+}
+```
+
+#### 完整版（包括链式调用resolvePromise、then异步队列、catch）
+- then标准是将其放在microTask微任务实现的，我们模拟只是用setTimeout实现异步，放在宏任务队列中。setTimeout和promise同时存在时，代码顺序会存在问题。
+- 返回new Promise + resolvePromise来实现链式调用
+
+```js
+class Promise {
+  constructor(executor) {
+    // 初始化state为等待态
+    this.state = 'pending';
+    this.value = undefined;
+    this.reason = undefined;
+
+    // 解决异步调用resolve的情况，保存回调方法
+    this.onResolvedCallbacks = [];
+    this.onRejectedCallbacks = [];
+
+    let resolve = (value) => {
+      if(this.state === 'pending') {
+        this.state = 'fulfilled';
+        this.value = value;
+        this.onResolvedCallbacks.forEach(fn => fn());
+      }
+    };
+    let reject = (reason) => {
+      if(this.state === 'pending') {
+        this.state = 'rejected';
+        this.reason = reason;
+        this.onRejectedCallbacks.forEach(fn => fn());
+      }
+    };
+    // 如果executor执行报错，直接执行reject
+    try {
+      executor(resolve, reject);
+    } catch(err) {
+      reject(err);
+    }
+  }
+  // then 方法 有两个参数onFulfilled onRejected
+  then(onFulfilled, onRejected) {
+    // then执行完会返回一个promise，叫promise2，方便链式调用
+    let promise2 = new Promise((resolve, reject) => {
+      if(this.state === 'fulfilled') {
+        setTimeout(() => {
+          // x 为回调函数执行完的返回值
+          let x = onFulfilled(this.value);
+          // resolvePromise函数，处理自己return的promise和默认的promise2的关系
+          resolvePromise(promise2, x, resolve, reject);
+        }, 0)
+      }
+      if(this.state === 'rejected') {
+        setTimeout(() => {
+          let x = onRejected(this.reason);
+          resolvePromise(promise2, x, resolve, reject);
+        }, 0)
+      }
+      if(this.state === 'pending') {
+        // onFulfilled传入到成功处理函数的回调数组
+        this.onResolvedCallbacks.push(() => {
+          setTimeout(() => {
+            let x = onFulfilled(this.value);
+            resolvePromise(promise2, x, resolve, reject);
+          }, 0)
+        });
+        // onRejected传入到失败处理函数的回调数组
+        this.onRejectedCallbacks.push(() => {
+          setTimeout(() => {
+            let x = onRejected(this.reason);
+            resolvePromise(promise2, x, resolve, reject);
+          }, 0)
+        });
+      }
+    });
+    // 返回promise，完成链式
+    return promise2;
+  }
+  catch(fn) {
+    return this.then(null, fn);
+  }
+}
+
+// resolvePromise 让不同的promise代码互相套用
+function resolvePromise(promise2, x, resolve, reject) {
+  // 循环引用报错
+  if(x === promise2) {
+    return reject(new TypeError('cycle error'));
+  }
+  if((typeof x === 'object' || typeof x === 'function') && x !== null) {
+    try {
+      // A+规定，声明then = x的then方法
+      let then = x.then;
+      // 如果then是函数，就默认是promise了
+      if(typeof then === 'function') {
+        // 让then执行 第一个参数是this   后面是成功的回调 和 失败的回调
+        then.call(x, y => {
+          // 继续判定是否仍为promise，是的话继续执行
+          resolvePromise(promise2, y, resolve, reject);
+        }, err => {
+          reject(err);
+        })
+      } else {
+        // 不是promise，直接成功即可
+        resolve(x);
+      }
+    } catch(e) {
+      // 取then出错了就不要再继续执行
+      reject(e); 
+    }
+  } else {
+    // 普通值直接resolve
+    resolve(x);
+  }
+}
+
+```
+
 
 ## AJAX的promise版
