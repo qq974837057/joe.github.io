@@ -357,7 +357,10 @@ function instance_of(L, R) {
   }
 }
 ```
+
 ## 防抖
+- [木易杨](https://muyiy.cn/blog/7/7.2.html#underscore-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90)
+
 ## 节流
 
 ## 浅拷贝、深拷贝
@@ -572,11 +575,15 @@ promise.then(function(res) {
 - then方法
   - 传入两个参数，`then(onFulfilled, onRejected)`
   - 分三个状态：
-    - 'fulfilled'-> 执行回调函数 `onFulfilled(this.value)`
-    - 'rejected' -> 执行回调函数 `onRejected(this.reason)`
-    - 'pending' -> 传入回调函数数组保存起来 `this.onResolvedCallbacks.push(() => {onFulfilled(this.value);})`
-    - 'pending'-> 传入回调函数数组保存起来  `this.onRejectedCallbacks.push(() => {onRejected(this.reason);})`
-
+    - 'fulfilled'-> 执行回调函数 `onFulfilled(this.value)` -> 链式调用 `resolvePromise(x, resolve, reject);`
+    - 'rejected' -> 执行回调函数 `onRejected(this.reason)` -> 链式调用 `resolvePromise(x, resolve, reject);`
+    - 'pending' -> 传入回调函数数组保存起来 `this.onResolvedCallbacks.push(() => {onFulfilled(this.value);})` + 链式调用 `resolvePromise(x, resolve, reject);`
+    - 'pending'-> 传入回调函数数组保存起来  `this.onRejectedCallbacks.push(() => {onRejected(this.reason);})` + 链式调用 `resolvePromise(x, resolve, reject);`
+- resolvePromise(x, resolve, reject)函数：
+  - 取x.then作为下一个then
+  - 通过then.call(x, y => { resolvePromise(y, resolve, reject); }, err => {reject(err);})
+  - 绑定x环境执行then，然后成功回调判断是否继续链式then，失败回调直接reject。
+  
 ```js
 class Promise {
   constructor(executor) {
@@ -610,34 +617,106 @@ class Promise {
       reject(err);
     }
   }
-  // then 方法 有两个参数onFulfilled onRejected
+  // then 方法的两个参数onFulfilled onRejected
   then(onFulfilled, onRejected) {
     if(this.state === 'fulfilled') {
-      onFulfilled(this.value);
+      let x = onFulfilled(this.value);
+      resolvePromise(x, resolve, reject); // 实现链式调用
     }
     if(this.state === 'rejected') {
-      onRejected(this.reason);
+      let x = onRejected(this.reason);
+      resolvePromise(x, resolve, reject);
     }
     // 一个promise可以有多个then，then时state还是pending等待状态，我们就需要在then调用的时候，将成功和失败存到各自的数组，一旦reject或者resolve，就调用它们
     if(this.state === 'pending') {
       // onFulfilled传入到成功处理函数的回调数组
       this.onResolvedCallbacks.push(() => {
-        onFulfilled(this.value);
+        let x = onFulfilled(this.value);
+        resolvePromise(x, resolve, reject);
       })
       // onRejected传入到失败处理函数的回调数组
       this.onRejectedCallbacks.push(() => {
-        onRejected(this.reason);
+        let x = onRejected(this.reason);
+        resolvePromise(x, resolve, reject);
       })
     }
   }
 }
+
+// resolvePromise 让不同的promise代码互相套用
+function resolvePromise(x, resolve, reject) {
+  if((typeof x === 'object' || typeof x === 'function') && x !== null) {
+      let then = x.then;
+      // 如果then是函数，就默认是promise
+      if(typeof then === 'function') {
+        // 让then执行 第一个参数是this ，后面是 成功的回调 和 失败的回调
+        then.call(x, y => {
+          // 继续判定是否仍为promise，是的话继续执行
+          resolvePromise(y, resolve, reject);
+        }, err => {
+          reject(err);
+        })
+      } else {
+        // 不是promise，直接成功即可
+        resolve(x);
+      }
+  } else {
+    // 普通值直接resolve
+    resolve(x);
+  }
+}
 ```
 
-#### 完整版（包括链式调用resolvePromise、then异步队列、catch）
-- then标准是将其放在microTask微任务实现的，我们模拟只是用setTimeout实现异步，放在宏任务队列中。setTimeout和promise同时存在时，代码顺序会存在问题。
-- 返回new Promise + resolvePromise来实现链式调用
+#### Promise.all实现
+- 实现Promise.all
+- 思路
+  - 首先返回个new Promise
+  - 设置一个结果数组result和一个计数count
+  - `for(let [key, val] of promises)`  遍历promsies数组，使用`Promise.resolve(p)`转为promise对象
+  - then成功回调将res保存到result中，判断count是否执行完所有promsie，是的话`resolve(result)`
+  - then失败回调将err抛出，`reject(err)`
 
 ```js
+function all(promises) {
+  return new Promise((resolve, reject) => {
+    let result = [];
+    let count = 0;
+    for(let [i, p] of promises) {
+      Promise.resolve(p).then(res => {
+        count++;
+        result[i] = res;
+        if(count === promises.length) {
+          resolve(result);
+        }
+      }, err => {
+        reject(err);
+      })
+    }
+  })
+}
+```
+
+#### Promise.race实现
+```js
+function race(promises) {
+  return new Promise((resolve, reject) => {
+    promises.forEach(p => {
+      Promise.resolve(p).then(resolve, reject)
+    })
+  })
+}
+```
+
+#### 完整版
+> 通过promise/A+ : 包括链式调用resolvePromise、then异步队列、判断onFulfilled、onRejected非函数的情况、失败和成功只调用一次、catch
+
+- then标准是将其放在microTask微任务实现的，我们模拟只是用setTimeout实现异步，放在宏任务队列中。setTimeout和promise同时存在时，代码顺序会存在问题。
+- 返回new Promise + resolvePromise来实现链式调用
+- 思路：
+  - 待整理...
+
+```js
+// 通过 promise/A+
 class Promise {
   constructor(executor) {
     // 初始化state为等待态
@@ -671,36 +750,62 @@ class Promise {
     }
   }
   // then 方法 有两个参数onFulfilled onRejected
+  // 规定onFulfilled,onRejected都是可选参数，如果他们不是函数，必须被忽略
+  // onFulfilled返回一个普通的值，成功时直接等于 value => value
+  // onRejected返回一个普通的值，失败时如果直接等于 value => value，则会跑到下一个then中的onFulfilled中，所以直接扔出一个错误reason => throw err
+
   then(onFulfilled, onRejected) {
+
+     // onFulfilled如果不是函数，就忽略onFulfilled，直接返回value
+    onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value => value;
+     // onRejected如果不是函数，就忽略onRejected，直接扔出错误
+    onRejected = typeof onRejected === 'function' ? onRejected : err => { throw err };
+
     // then执行完会返回一个promise，叫promise2，方便链式调用
     let promise2 = new Promise((resolve, reject) => {
       if(this.state === 'fulfilled') {
         setTimeout(() => {
-          // x 为回调函数执行完的返回值
-          let x = onFulfilled(this.value);
-          // resolvePromise函数，处理自己return的promise和默认的promise2的关系
-          resolvePromise(promise2, x, resolve, reject);
+          try {
+            // x 为回调函数执行完的返回值
+            let x = onFulfilled(this.value);
+            // resolvePromise函数，处理自己return的promise和默认的promise2的关系
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (e) {
+            reject(e);
+          }
         }, 0)
       }
       if(this.state === 'rejected') {
         setTimeout(() => {
-          let x = onRejected(this.reason);
-          resolvePromise(promise2, x, resolve, reject);
+          try {
+            let x = onRejected(this.reason);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (e) {
+            reject(e);
+          }
         }, 0)
       }
       if(this.state === 'pending') {
         // onFulfilled传入到成功处理函数的回调数组
         this.onResolvedCallbacks.push(() => {
           setTimeout(() => {
-            let x = onFulfilled(this.value);
-            resolvePromise(promise2, x, resolve, reject);
+            try {
+              let x = onFulfilled(this.value);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (e) {
+              reject(e);
+            }
           }, 0)
         });
         // onRejected传入到失败处理函数的回调数组
         this.onRejectedCallbacks.push(() => {
           setTimeout(() => {
-            let x = onRejected(this.reason);
-            resolvePromise(promise2, x, resolve, reject);
+            try {
+              let x = onRejected(this.reason);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (e) {
+              reject(e);
+            }
           }, 0)
         });
       }
@@ -719,6 +824,7 @@ function resolvePromise(promise2, x, resolve, reject) {
   if(x === promise2) {
     return reject(new TypeError('cycle error'));
   }
+  let called; // 防止多次调用，成功和失败只能调用一个
   if((typeof x === 'object' || typeof x === 'function') && x !== null) {
     try {
       // A+规定，声明then = x的then方法
@@ -727,9 +833,13 @@ function resolvePromise(promise2, x, resolve, reject) {
       if(typeof then === 'function') {
         // 让then执行 第一个参数是this   后面是成功的回调 和 失败的回调
         then.call(x, y => {
+          if(called) return;
+          called = true;
           // 继续判定是否仍为promise，是的话继续执行
           resolvePromise(promise2, y, resolve, reject);
         }, err => {
+          if(called) return;
+          called = true;
           reject(err);
         })
       } else {
@@ -737,7 +847,9 @@ function resolvePromise(promise2, x, resolve, reject) {
         resolve(x);
       }
     } catch(e) {
-      // 取then出错了就不要再继续执行
+      if(called) return;
+      called = true;
+      // 取then出错了那就不要再继续执行
       reject(e); 
     }
   } else {
@@ -746,7 +858,63 @@ function resolvePromise(promise2, x, resolve, reject) {
   }
 }
 
+//resolve方法 - 此处存在问题，如果传入的是promise，应该直接返回这个promise
+Promise.resolve = function(val) {
+  return new Promise((resolve, reject) => {
+    resolve(val);
+  });
+}
+//reject方法
+Promise.reject = function(val) {
+  return new Promise((resolve, reject) => {
+    reject(val);
+  });
+}
+//race方法 
+Promise.race = function(promises) {
+  return new Promise((resolve,reject) => {
+    for(let i = 0; i < promises.length; i++) {
+      promises[i].then(resolve, reject)
+    };
+  })
+}
+//all方法(获取所有的promise，都执行then，把结果放到数组result，一起返回)
+Promise.all = function(promises) {
+  return new Promise((resolve, reject) => {
+    let result = [];
+    let count = 0;
+    for(let [i, p] of promises) {
+      resolve(p).then(res => {
+        count++;
+        result[i] = res;
+        if(count === promises.length) {
+          resolve(result);
+        }
+      }, err => {
+        reject(err);
+      })
+    }
+  })
+}
 ```
 
+- 测试：符不符合promisesA+规范 
+    - npm 有一个promises-aplus-tests插件 用来测试自己的promise。
+    - npm i promises-aplus-tests -g 可以全局安装。
+    - 命令行 promises-aplus-tests [js文件名] 即可验证。
+
+```js
+// 进行测试之前，需要为 promises-aplus-tests 提供一个 deferred 的钩子：
+
+Promise.deferred  = function() {
+  const defer = {}
+  defer.promise = new Promise((resolve, reject) => {
+    defer.resolve = resolve
+    defer.reject = reject
+  })
+  return defer
+}
+module.exports = Promise;
+```
 
 ## AJAX的promise版

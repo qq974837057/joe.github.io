@@ -1,4 +1,5 @@
 ## Vue全流程
+![Vue全流程1](./img/frame-vueAll1.png)
 ![Vue全流程](./img/frame-vueAll.jpg)
 
 > new Vue()调用init初始化 -> $mount挂载 -> compile()解析编译 -> render function -> 响应式系统
@@ -6,13 +7,13 @@
 > 响应式系统：render -> touch -> getter -> Dep依赖收集Watcher；setter -> Dep.notify -> Watcher.update() -> patch()进行diff -> DOM
 
 - 分为四个阶段：初始化、挂载编译、响应式、视图更新
-  - 1、初始化：new Vue():调用init函数初始化，包括生命周期、事件、props、data、methods、watch等，还有重要就是Object.defineProperty设置setter和getter函数，用于依赖收集和响应式。
+  - 1、初始化：new Vue():调用init函数初始化，包括生命周期、事件、props、data、methods、watch等，还有重要就是Object.defineProperty设置setter和getter函数(同时将this.data.test代理成this.test)，用于依赖收集和响应式。
   - 2、挂载编译：初始化后调用$mount挂载组件，执行compile()模板解析，包括  parse（解析template转成AST） 、  optimize(标记静态节点、用于diff优化跳过静态节点) 与  generate（AST -> render function） 三个阶段，最终得到 render function，用来渲染 VNode 
   - 3、响应式：render function 被渲染，读取所需对象的值，触发getter函数，执行依赖收集，将订阅者Watcher添加Dep订阅器中。修改对象的值时触发setter，通知Dep订阅器中的订阅者Watcher，需要重新渲染视图，然后Watcher调用update进行更新。
   - 4、视图更新：数据变化触发update后，执行 render function 得到新的 VNode 节点，与旧的 VNode 一起传入  patch 进行比较，经过 diff 算法得到「 差异」，根据差异来修改对应的DOM。
 
 ### 响应式系统
-> 每个Vue组件都有对应的一个Watcher实例，如果一个属性在不同组件上都使用到，将把不同组件的Watcher都添加到这个属性的Dep订阅器中，表示这些视图依赖这个对象属性，如果发生改变，这些视图都要进行更新。
+> 每个Vue组件都有对应的一个Watcher实例，如果一个属性在不同组件上都使用到，将把不同组件的Watcher都添加到这个属性的Dep订阅器中，表示这些视图依赖这个对象属性，如果发生改变，这些视图都要进行更新。一个Watcher可能在多个Dep中同时存在。
 
 - 简述：基于[数据劫持+发布者-订阅者模式]，分三个步骤：数据劫持、依赖收集、通知订阅者进行更新
 - 步骤：
@@ -34,30 +35,310 @@
 
 
 ### 虚拟DOM的优缺点
-### 虚拟DOM的diff和key作用
-### Vue监测变化细粒度把控
-### nextTick原理和队列
-### 视图更新优化
-- 为什么频繁变化但只会更新一次
+- Virtual DOM即虚拟DOM，是对DOM的抽象，本质是JS对象，可以轻量级描述DOM。
+- 优点
+    - 提高开发效率：不用手动操作DOM。
+    - 利于性能优化：减少操作DOM，尽量一次性将差异更新到DOM，性能虽然不是最优，但比粗暴操作DOM要好得多。
+    - 跨平台能力：虚拟DOM是JS对象，通过适配层如 nodeOps对象判断不同平台所封装的API（如Web，Weex，Node），提供相同的接口如增加节点、删除节点，使这棵树映射到真实平台环境上。
+- 缺点
+    - 虚拟DOM + 优化 可以满足大部分应用，但是对于性能要求高的，无法做到极致优化。
 
+### 虚拟DOM的diff和key作用
+
+![vue-diff](./img/vue-diff.png)
+
+> vue和react的虚拟DOM的Diff算法大致相同
+
+- 相同：树的分层对比
+- 区别：节点diff时，react使用唯一key标记(对比是否需要增删移)，vue使用双指针。
+
+- [React diff 知乎](https://zhuanlan.zhihu.com/p/20346379)
+
+> vue和diff过程概述：通过Watcher的update产生新的虚拟DOM树，和旧虚拟DOM树一起传入patch函数，如果是sameVnode，内容存在且不同，进行updateChildren更新子节点。旧层级和新层级各有两个头尾的指针变量StartIdx和EndIdx，它们的2个变量相互比较，一共有4种比较方式：首首、尾尾、旧头新尾、旧尾新头，如果匹配上，指针对应的移动，如果4种比较都没匹配，如果设置了key，就会用key进行比较。整个diff的过程中，两个下标往中间靠，一旦其中一个的StartIdx>EndIdx表明oldCh和newCh至少有一个已经遍历完了，就会结束比较，将剩下的节点删除或者添加上去。
+
+- 过程：patch（判断子节点是否为sameVnode）-> patchVnode（sameVnode进行对比内容是否相同）-> updateChildren（更新子节点，使用双指针和key进行对比更新）
+- **patch(oldVnode,vnode,parentElm)函数：比对两个 VNode 节点，将「差异」更新到视图上，也就是以旧节点为基础，进行差异修改，增删一些DOM节点**。
+    - 旧VNode节点不存在，则将新VNode节点全部添加到父节点parentElm上
+    - 新VNode节点不存在，则将旧VNode节点全部移除
+    - **旧VNode节点和新VNode节点都存在且为sameVnode时，进行patchVnode操作**
+
+    > sameVnode:key、tag、是否注释、有无data、若为input的type类型 均一致。
+    
+    > 因为相对来说，oldVnode 自己对应的 dom总是已经存在的，新的vnode 的 dom 是不存在的，直接复用 oldVnode 对应的 dom，比如直接移动oldVnode。
+    
+- patchVnode操作：sameVnode时会执行，对比两个节点的子节点是否存在，子节点不同则需要更新子节点updateChildren，也就是进行双指针对比，进行更新下一层的节点。
+    - 新旧VNode节点相同，直接返回
+    - 新旧VNode节点都是在解析阶段标记的静态isStatic，且key相同，新的直接使用旧的内容，返回
+    - 新VNode节点文本则直接设置text，否则比较新旧VNode节点的孩子节点
+        - **新旧孩子节点都存在且不同，进行最核心的 updateChildren 也就是diff算法 更新子节点**
+        - 只有新孩子节点，将新节点全部插入父节点下
+        - 只有旧孩子节点，没有新孩子节点，将旧节点全部清除
+- updateChildren：sameVnode且子节点存在不同，进行更新子节点。
+    - 核心diff算法：**因为是同层的树节点进行比较，时间复杂度只需要O(n)**
+    - 例子：重复下面的对比过程，直到新旧数组中任一数组的头指针超过尾指针，循环结束 :
+        - 头头对比: 对比两个数组的头部，如果相同，进行patchVnode，不需要移动dom，直接更新属性或Children即可，双方头指针后移
+        - 尾尾对比: 对比两个数组的尾部，如果相同，进行patchVnode，不需要移动dom，直接更新属性或Children即可，双方尾指针前移
+        - 旧头新尾对比: 交叉对比，旧头新尾，如果相同，进行patchVnode，并把旧头节点移动到旧尾节点后面，完成当前节点差异更新，新尾指针前移，旧头指针后移
+        - 旧尾新头对比: 交叉对比，旧尾新头，如果相同，进行patchVnode，并把旧尾节点移动到旧头节点前面，完成当前节点差异更新，旧尾指针前移，新头指针后移
+        - 上面四种情况均不符合，则利用key对比: 用新指针对应节点的key去旧数组寻找对应的节点,这里分三种情况。
+            - 当没有对应的key，那么创建新的节点，插入旧层级里，新头坐标后移一位；
+            - 如果有对应的key并且是sameVnode，两个节点进行patchVnode，将该key对应的旧节点位置赋值undefined（防止 重复key），新头元素插入旧头元素前面，新头坐标后移一位；
+            - 如果有对应的key但不是sameVnode，则创建新节点，插入旧层级里，新头坐标后移一位。
+    - 循环结束后判断两个情况：
+        - 旧头超过旧尾，旧数组比较完成，将新节点剩下的未遍历的节点调用addVnodes全部插入旧尾的真实DOM。
+        - 新头超过新尾，新数组比较完成，将旧节点剩下的未遍历的节点调用removeVnodes全部删除。
+
+- Vue中的key有什么用？
+    - key是Vue标记vnode的唯一id
+    - 作用：高效更新虚拟dom，diff操作更准确、更快速
+    - 准确: 如果不加key，对于列表中每项都是sameVnode，那么vue会选择复用已经渲染好的旧节点(Vue的就地更新策略)，导致旧节点的子孙节点被保留下来，会产生一些隐藏的bug。
+    - 快速: key的唯一性可以被Map数据结构充分利用，相比于遍历查找的时间复杂度O(n)，Map的时间复杂度仅仅为O(1)。
+    - 举个例子：
+      - 比如在列表中增加item，因为列表循环生成的节点都是sameVnode，所以直接复用前面的旧节点，一些旧节点内容保留，可能会出现数据错位的情况，在列表最后再插入新的item节点。
+    ![vue-diff-nokey1](./img/vue-diff-nokey1.png)
+    ![vue-diff-nokey2](./img/vue-diff-nokey2.png)
+      - 用了key之后，能准确找到对应的位置，并插入，避免一些隐藏的bug。
+    ![vue-diff-key](./img/vue-diff-key.png)
+
+- 为什么不能使用index做key
+    - 使用index还是会导致v-for结束后仍然是同样的顺序，仍会就地复用旧节点。
+
+### Vue监测变化细粒度把控
+
+- Vue的响应式系统是中等细粒度的方案，大量的Watcher会使内存开销过大，大量diff时间太久。所以采用组件Watcher + 内部Diff的方式
+    - 在组件级别进行使用Watcher进行监测，对data进行依赖收集，一旦数据变化，就知道哪个位置发生变化。
+    - 然后在组件内部进行Virtual Dom Diff算法，获取更加具体节点的差异。
+
+- React中，我们用setState的API显式更新后，React知道发生变化后，然后暴力的Diff操作查找「哪发生变化了」，但是很多组件实际上是肯定不会发生变化的，这个时候需要用shouldComponentUpdate进行手动操作来减少diff，从而提高程序整体的性能。
+
+- Angular则是脏检查操作。
+
+### nextTick原理和队列
+- 场景：在DOM更新结束之后执行延迟回调，在修改数据之后，视图并不会立即更新，在下一个循环开始前更新视图，获得更新后的 DOM，然后执行回调。
+- 原理：nextTick函数传入callback，存储到callback数组队列中，下一个tick触发时执行队列所有的callback，清空队列。
+- 实现：2.6新版本中默认优先是microtasks,再考虑macrotasks，都不支持则用setTimeout。 Promise(microtasks)【p.then(flushCallbacks)】 -> MutationObserver(macrotasks往后也是) -> setImmediate(ie) -> setTimeout【setTimeout(flushCallbacks, 0)】
+
+### 视图更新优化
+
+>  为什么频繁变化但只会更新一次（一个number从0循环增加1000次，只更新至最后的值）
+
+- 原理：放在异步队列中，下个tick更新视图。优化：同个Watcher在同个tick中只能被执行一次。队列中不应该出现重复的Watcher对象，也就是说，number的Watcher只会执行一次更新，就是从0 -> 1000
+    - 执行++操作时，不断触发对应Dep中的Watcher 对象的 update 方法。
+    - 如果一个Watcher对象触发多次，只push一次进异步队列queue中。
+    - 下一个循环tick时，触发Watcher对象的run方法(执行patch)，执行更新DOM视图，number直接从0->1000
+    - 先完成DOM更新后，执行排在后面的nextTick(callback)内的回调，nextTick是用户定义的其他操作，本质都是异步队列。
+    
 ## Vue生命周期
+- Vue 实例从创建到销毁的过程，就是生命周期。
+- 从开始创建、初始化数据、编译模板、挂载Dom → 渲染、更新→渲染、销毁等一系列过程
+- 分为8个阶段：创建前/后, 挂载前/后,更新前/后,销毁前/销毁后。
+- 周期：前四个为第一次页面加载调用。
+    - beforeCreate：组件实例被创建之初，组件的属性生效之前
+    - created：组件实例已经完全创建，数据劫持完成，属性也绑定，但真实dom还没有生成，$el还不可用
+    - beforeMount：在挂载开始之前被调用：相关的 render 函数首次被调用
+    - mounted：el 被新创建的 vm.$el 替换（完成dom渲染），并挂载到实例上去之后调用该钩子
+    - beforeUpdate：组件数据更新之前调用，发生在虚拟 DOM 打补丁之前。适合在更新之前访问现有的 DOM，比如手动移除已添加的事件监听器。
+    - update：虚拟 DOM 重新渲染和打补丁，组件DOM更新之后
+    - activated：被keep-alive缓存的组件专属，组件被激活时调用
+    - deactivated： 被keep-alive缓存的组件专属，组件被销毁时调用
+    - beforeDestroy：组件销毁前调用，在这一步，实例仍然完全可用。
+    - destroyed：组件销毁后调用，指令解绑，监听移除，实例销毁。
+- beforeCreated和created中间都做了什么
+    - 初始化 data、props、computed、watcher、provide。
+    
+- 服务器端渲染：beforeCreate、created，其他不可调用
+
+- 父子组件渲染过程(子挂载完，父才算挂载完)
+```
+父beforeCreate->父created->父beforeMount->
+子beforeCreate->子created->子beforeMount->子mounted->父mounted
+```
+- 子组件更新过程(通过props传递，或者vuex等存在数据流向触发时)
+```
+父beforeUpdate->子beforeUpdate->子updated->父updated
+```
+- 父组件更新过程(自身组件更新，自己组件的生命周期)
+```
+父beforeUpdate->父updated
+```
+- 销毁过程 
+```
+父beforeDestroy->子beforeDestroy->子destroyed->父destroyed
+```
+
+- 实践
+    - 异步请求：官方实例的异步请求是在mounted生命周期中调用的，而实际上也可以在created生命周期中调用。 服务端渲染时不支持mounted，需要放到created中。
+    - 在created钩子中可以对data数据进行操作，这个时候可以进行ajax请求将返回的数据赋给data。
+    - 在mounted钩子对挂载的dom进行操作，此时，DOM已经被渲染到页面上。
+    - 虽然updated函数会在数据变化时被触发，但却不能准确的判断是那个属性值被改变，所以在实际情况中用computed或match函数来监听属性的变化，并做一些其他的操作。
+    - 在使用vue-router时有时需要使用<keep-alive></keep-alive>来缓存组件状态，这个时候created钩子就不会被重复调用了，如果我们的子组件需要在每次加载或切换状态的时候进行某些操作，可以使用activated钩子触发。
+    - 所有的生命周期钩子自动绑定 this 上下文到实例中，所以不能使用箭头函数来定义一个生命周期方法 (例如 created: () => this.fetchTodos())。这是导致this指向父级。
+
 
 ## Vue组件通信
+- [Vue组件通信的方法如下:](https://juejin.im/post/5d267dcdf265da1b957081a3#heading-0)
+
+- props/$emit+v-on: 父子通信：通过props将数据自上而下传递，而通过$emit和v-on(@)来向上传递信息。
+
+- vuex: 是全局数据管理库，可以通过vuex管理全局的数据流
+    - **场景：项目复杂时，多个视图依赖于同一状态、来自不同视图的行为需要变更同一状态**
+    - state：状态中心，用于数据的存储，是store中的唯一数据源，其他组件读取this.$store.state.A
+    - getters：获取状态，如vue中的计算属性，基于state数据的二次包装，常用于数据的筛选和多个数据的相关性计算
+    - mutations：更改状态，类似函数，改变state的唯一途径，且不能处理异步事件，触发状态改变this.$store.commit('test',{ A：'a' })
+    - actions：异步更改状态，类似于mutation，用于提交mutation来改变状态，而不直接变更状态，可以处理任意异步事件
+    - modules：: 将state分成多个modules,类似于命名空间，用于项目中将各个模块的状态分开定义和操作，便于维护
+    - vuex结合localStorage持久化数据
+        - vuex里数据改变的时候把数据保存到localStorage里面
+        - 刷新后，localStorage里如果有保存的数据，取出来替换store里的state。
+        ```js
+        let defaultCity = "上海"
+        try {   // 用户关闭了本地存储功能，此时在外层加个try...catch
+          if (!defaultCity){
+            defaultCity = JSON.parse(window.localStorage.getItem('defaultCity'))
+          }
+        }catch(e){}
+        export default new Vuex.Store({
+          state: {
+            city: defaultCity
+          },
+          mutations: {
+            changeCity(state, city) {
+              state.city = city
+              try {
+              window.localStorage.setItem('defaultCity', JSON.stringify(state.city));
+              // 数据改变的时候把数据拷贝一份保存到localStorage里面
+              } catch (e) {}
+            }
+          }
+        })
+
+        ```
+- EventBus: 兄弟组件或跨级：事件总线：所有组件的共同事件中心，通过EventBus进行信息的发送和监听
+    - 不适用多人协作和大项目，较难维护。 
+    - 组件没有同时显示不应该用eventbus，一般需要先on再emit。比如两个路由一个还没创建，所以监听不到。而应该使用vuex。
+```js
+// event-bus.js
+
+import Vue from 'vue'
+export const EventBus = new Vue()           // 注册事件总线
+import { EventBus } from './event-bus.js'   // 组件引入
+EventBus.$emit('test',{ num : this. num }) // A组件发送事件
+EventBus.$on('test',param => { })          // B组件接收事件
+EventBus.$off('test', { })                 // 移除监听 
+```
+
+- provide/inject：跨级：父组件中通过**provide来提供变量, 然后再子孙后代组件中通过inject来注入变**量。不论组件层次有多深，并在起上下游关系成立的时间里始终生效。
+    ```js
+    provide() {
+        return {
+          user: this.user
+        }
+    },
+      
+    inject: ['user'],
+    ```
+- $attrs/$listeners: 跨级： Vue2.4中加入的$attrs/$listeners，$attrs含有父作用域**不被prop识别的特性**（class和style除外），$listeners包含了父作用域中的 (不含 .native 修饰器的) v-on 事件监听器，并且可以通过v-bind="$attrs/$listeners"继续传入内部组件,传递下去。
+    - 适合仅传递数据的跨级通信，用vuex是大材小用。
+
+- localStorage / sessionStorage
+    - 数据和状态比较混乱，不好维护，不过可以结合vuex, 实现数据的持久保存
+    - window.localStorage.getItem(key)获取数据 
+    - 通过window.localStorage.setItem(key,value)存储数据
+    - JSON.parse() / JSON.stringify() 做数据格式转换
+
 
 ## Vue事件机制
 
 ## Vue双向绑定v-model
+vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等元素上创建双向数据绑定，我们知道 v-model 本质上不过是语法糖，v-model 在内部为不同类型的标签，绑定不同的属性并传入，并抛出不同的事件：
+
+- input 和 textarea 元素使用 value 属性和 input 事件；
+- checkbox 和 radio 使用 checked 属性和 change 事件；
+- select 字段将 value 作为 prop 并将 change 作为事件。
+
+- 例子：
+
+    ```html
+    <input v-model='something'>
+        
+    相当于绑定value属性传入组件内部，并监听组件内部emit出来的input事件
+    
+    <input v-bind:value="something" v-on:input="something = $event.target.value">
+    ```
+- 自定义组件：v-model 默认会利用名为 value 的 prop 和名为 input 的事件
+
+    ```html
+    父组件：
+    <MyInput v-model="message"></MyInput>
+    
+    子组件：
+    <div>{{value}}</div>
+    
+    props:{
+        value: String
+    },
+    methods: {
+      test() {
+         this.$emit('input', '元气')
+      },
+    }
+    ```
 
 ## options
+
 ### data为什么是函数
+- 组件被复用时，会创造多个实例。
+- 它们来自同个构造函数，如果data是对象，也就是引用类型，会影响到所有实例。
+- 为了防止实例间data的冲突，将data变为函数，用return返回值。
+
 ### computed和watch的区别
+- computed
+    - 是计算属性，依赖其他属性值来计算，将复杂逻辑放在计算属性中而不是模板。
+    - 有缓存性，依赖属性值改变后，下次获取computed的值时才会重新调用对应的getter来计算。
+- watch
+    - 观察作用，基于某些数据的监听回调，深度监听对象中的属性，deep：true选项
+    - 无缓存性，页面重新渲染时，值不变化也会执行。
+- 场景
+    - 依赖于其他数据的数值计算时，使用computed
+    - 某个数据变化时做某些异步操作（请求API），使用watch
 
 ## 常见指令
 ### v-if、v-show
+- v-if
+    - v-if如果不成立不会生成对应的vnode，render时不会渲染
+    - 场景：适合条件很少变化的数据
+    - 切换开销高
+- v-show
+    - v-show会直接生成vnode，render时也会被渲染，render过程修改display属性值
+    - 场景：适合频繁切换的数据
+    - 初始开销高
+
 ### v-html
 
+- 原理：
+    - v-html移除节点所有的内容，添加innerHTML属性，内容为v-html里的内容。
+
 ## Vue2.x 检查数组变化
-## Vue3.0 
+- 本质：Object.defineProperty无法监听到数组内部变化、也无法探测普通对象新增的属性(`this.myObject.newProperty = 'hi'`)
+- 方案：Vue采用hack的方法实现数组监听
+  ```js
+  push()
+  pop()
+  shift()
+  unshift()
+  splice()
+  sort()
+  reverse()
+  ```
+- 原理：Vue采用改变数组实例的原型对象，指向自己构造的原型对象。
+  - 1.将新加入的对象响应式化
+  - 2.数组本来的API方法如push、pop，通过`apply(this, args)`执行。
+  - 3.dep.notify()提醒观察(订阅)者进行更新。
+- 直接`vm.items[indexOfItem] = newValue`是无法检测到的，length属性不能监听因为无法触发obj的get方法。
+- 另外的方法：
+  - 实例的$set方法【vm.$set( target, propertyName/index, value )】
+  - 或者全局API 【Vue.set( target, propertyName/index, value )】：向响应式对象中添加一个 属性property，并确保这个新 property 同样是响应式的，且触发视图更新。
+- 最好方案：Vue3.0采用Proxy监听对象和数组
 
 ## Vue 路由
 ### 原理
@@ -68,12 +349,39 @@
 
 ## Vue3.0重要特性
 #### 采用proxy劫持对象
+
+#### Proxy与Object.defineProperty的优劣对比?
+- 基于数据劫持的双向绑定有两种实现
+    - 一个是目前Vue在用的Object.defineProperty
+    - 另一个是Vue3.0即将加入的ES2015中新增的Proxy
+- Proxy的优势
+    - 可以直接监听对象(Object.defineProperty遍历对象里面的属性，属性是对象还得深度遍历)
+    - 可以直接监听数组的变化(Object.defineProperty无法监听)
+    - Proxy作为新标准将受到浏览器厂商重点持续的性能优化
+- Object.defineProperty的优势如下:
+    - 兼容性好,支持IE9。而Proxy 的存在浏览器兼容性问题，且无法用 polyfill 磨平，所以在Vue3.0才能引入这个破坏性改变。
+    - 缺点：只能劫持对象的属性,需要对每个对象的每个属性进行遍历，如果属性值也是对象那么需要深度遍历。
+
 #### Composition API
 #### Tree-shaking
 #### Diff算法优化
 #### Vue3.0 对比Vue2.0的优势在哪？
 
 ## MVVM与MVC
+![MVVM](./img/MVVM.png)
+- 全称MVVM：Model–View–ViewModel；全称MVC：Model–View–Controller（MVC）
+- 核心是ViewModel 层：向上与视图层进行双向数据绑定，向下与Model层请求接口如Ajax进行数据交互。
+- 层级介绍：
+    - View 是视图层，也就是用户界面。前端主要由 HTML 和 CSS 来构建布局和结构 。
+    - Model 是指数据模型，泛指后端进行的各种业务逻辑处理和数据操控对于前端来说就是后端提供的 api 接口。
+    - ViewModel 是由前端开发人员组织生成和维护的视图数据层，对于Model数据进行处理和封装，生成符合View层使用。
+- 优点：
+    - 自动更新DOM：ViewModel的内容实时展示在View层，不需要操作DOM更新视图。
+    - 降低耦合：ViewModel解耦View 层和 Model 层，前后端分离的基础。
+- 缺点：
+    - Bug很难被调试：界面异常有可能是View有Bug，或者是Model代码有问题。不容易定位。
+    - 大型图形应用维护成本高：视图状态较多，ViewModel的构建和维护的成本都会比较高
+
 ## 单页(SPA)和多页(MPA)
 ## 观察者模式和发布-订阅模式的区别
 

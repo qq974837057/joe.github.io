@@ -1,4 +1,70 @@
 
+## 反转字符串
+```js
+let newStr = str.split('').reverse().join('');
+```
+
+## 实现一个批量请求函数 multiRequest(urls, maxNum)
+- 要求最大并发数 maxNum
+- 每当有一个请求返回，就留下一个空位，可以增加新的请求
+- 所有请求完成后，结果按照 urls 里面的顺序依次打出
+
+- 思路：
+    - 类似实现并发限制的promise.all
+- 步骤：
+    - 首先确定函数的参数，urls数组和maxNum并发限制数
+    - 设置result，填满标志位为false，方便有结果后将标志位替换为对应的res
+    - 设置count表示开始请求的个数，设置sum表示urls总数
+    - 返回一个promise
+        - promise里先while循环执行next()执行一轮最大限制的并发请求
+        - 定义一个next方法
+            - 先执行`current = count++`
+            - 判断current 比 总数sum大，则判断是否标志位都不为false，是则执行`reslove(result)`，不是就`return`
+            - 判断current 比 总数sum小，取出在current位置的url -> `urls[current]`。然后执行`fetch(url).then(res => res保存在result[current]中 + current仍小于sum继续递归next()).catch(err => err保存在result[current]中 + current仍小于sum继续递归next())`
+```js
+// 如果maxNum不限的话，实际就是promise.all
+function multiRequest(urls = [], maxNum) {
+    let result = new Array(urls.length).fill(false);
+    let sum = urls.length; // url总数
+    let count = 0; // 已经开始请求的个数
+    return new Promise((resolve, reject) => {
+        // 先开始一波最大限制的并发请求
+        while(count < maxNum) {
+            next();
+        }
+        function next() {
+            let current = count++;
+            if(current >= sum) {
+                // 请求发出还未响应完成，就等待result标志位都不为false，代表全部完成。
+                !result.includes(false) && resolve(result);
+                return
+            }
+            let url = urls[current];
+            console.log('开始' + current, new Date().toLocaleString());
+            fetch(url).then(res => {
+                console.log('结束' + current, new Date().toLocaleString());
+                result[current] = res;
+                // 还有未完成的url，进行递归。
+                if(current < sum) {
+                    next();
+                }
+            }).catch(err => {
+                console.log('结束' + current, new Date().toLocaleString());
+                result[current] = err;
+                if(current < sum) {
+                    next();
+                }
+            })
+        }
+    })
+}
+
+let url2 = `https://api.github.com/search/users?q=d`;
+let arr = new Array(20).fill(url2);
+multiRequest(arr, 10).then((res) => {
+    console.log(res);
+})
+```
 
 ## 解析URL参数
 - 解析一个URL，将query参数提取出来转为obj对象格式。
@@ -27,20 +93,12 @@ const parse = (url) => {
 } 
 console.log(parse(url));
 ```
-- 方法二：正则匹配
-  - str.replace(regexp|substr, newSubStr|function)
-  - replace(..., (match,p1,p2) => {}) 表示match匹配的子串,p1第一个括号,p2第二个括号
 
-```js
-const parse1 = (url) =>{
-  const result = {};
-  url.replace(/([^?&=]+)=([^&#]+)/g, (match, key, val) => (result[key] = decodeURIComponent(val)));
-  return result;
-}
-console.log(parse1(url));
-```
+- 方法二：字符串切割
 
-- 方法三：字符串切割
+> encodeURI()和encodeURIComponent()它们的主要区别在于，encodeURI()不会对本身属于URI的特殊字符进行编码，例如冒号:、正斜杠/、问号?和井号#；而encodeURIComponent()则会对它发现的任何非标准字符进行编码。不转义的字符：`A-Z a-z 0-9 - _ . ! ~ * ' ( )`
+
+> 为了避免服务器收到不可预知的请求，对任何用户输入的作为URI部分的内容你都需要用encodeURIComponent进行转义。比如，一个用户可能会输入"Thyme &time=again"作为comment变量的一部分。如果不使用encodeURIComponent对此内容进行转义，服务器得到的将是comment=Thyme%20&time=again。请注意，"&"符号和"="符号产生了一个新的键值对，所以服务器得到两个键值对（一个键值对是comment=Thyme，另一个则是time=again），而不是一个键值对。
 
 ```js
 const parse2 = (url) => {
@@ -54,6 +112,21 @@ const parse2 = (url) => {
 }
 console.log(parse2(url));
 ```
+
+- 方法三：正则匹配
+  - str.replace(regexp|substr, newSubStr|function)
+  - replace(..., (match,p1,p2) => {}) 表示match匹配的子串,p1第一个括号,p2第二个括号
+
+```js
+const parse1 = (url) =>{
+  const result = {};
+  url.replace(/([^?&=]+)=([^&#]+)/g, (match, key, val) => (result[key] = decodeURIComponent(val)));
+  return result;
+}
+console.log(parse1(url));
+```
+
+
 
 ## 实现add函数-闭包
 ```js
@@ -273,3 +346,43 @@ add(); // 2
 </body>
 </html>
 ```
+
+## 代码题
+
+### 异步
+```js
+setTimeout(() => {
+    console.log('a')
+}, 3000);
+
+const now = Date.now();
+while(Date.now() - now < 1500) {
+    // do nothing
+}
+
+setTimeout(() => {
+    console.log('b')
+}, 1000);
+```
+- 临界值是2000ms
+    - 同步代码执行时间超过2000ms，打印a、b
+    - 同步代码执行时间小于2000ms，打印b、a
+
+```js
+for(var i =0; i< 5;i++){
+    setTimeout(function(){
+    console.log(new Date, i);
+},1000);
+}
+
+console.log(new Date, i);
+
+// Fri Jul 10 2020 17:26:01 GMT+0800 (中国标准时间) 5
+
+// Fri Jul 10 2020 17:26:02 GMT+0800 (中国标准时间) 5
+// Fri Jul 10 2020 17:26:02 GMT+0800 (中国标准时间) 5
+// Fri Jul 10 2020 17:26:02 GMT+0800 (中国标准时间) 5
+// Fri Jul 10 2020 17:26:02 GMT+0800 (中国标准时间) 5
+// Fri Jul 10 2020 17:26:02 GMT+0800 (中国标准时间) 5
+```
+- i都是5、new Date表示打印时的时间，都是1秒后回调函数进入任务队列，所以都是2秒。
