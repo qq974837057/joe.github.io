@@ -116,7 +116,7 @@
 ### nextTick原理和队列
 - 场景：在DOM更新结束之后执行延迟回调，在修改数据之后，视图并不会立即更新，在下一个循环开始前更新视图，获得更新后的 DOM，然后执行回调。
 - 原理：nextTick函数传入callback，存储到callback数组队列中，下一个tick触发时执行队列所有的callback，清空队列。
-- 实现：2.6新版本中默认优先是microtasks,再考虑macrotasks，都不支持则用setTimeout。 Promise(microtasks)【p.then(flushCallbacks)】 -> MutationObserver(macrotasks往后也是) -> setImmediate(ie) -> setTimeout【setTimeout(flushCallbacks, 0)】
+- 实现：2.6新版本中默认优先是microtasks,再考虑macrotasks，都不支持则用setTimeout。 Promise.then(microtasks)【p.then(flushCallbacks)】 -> MutationObserver的回调(microtasks) -> setImmediate(ie&node macrotasks) -> setTimeout【setTimeout(flushCallbacks, 0)】
 
 ### 视图更新优化
 
@@ -358,8 +358,8 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
     - 可以直接监听对象(Object.defineProperty遍历对象里面的属性，属性是对象还得深度遍历)
     - 可以直接监听数组的变化(Object.defineProperty无法监听)
     - Proxy作为新标准将受到浏览器厂商重点持续的性能优化
-- Object.defineProperty的优势如下:
-    - 兼容性好,支持IE9。而Proxy 的存在浏览器兼容性问题，且无法用 polyfill 磨平，所以在Vue3.0才能引入这个破坏性改变。
+- Object.defineProperty的优势:
+    - 兼容性好,支持IE9(不能兼容IE8及以下)。而Proxy 的存在浏览器兼容性问题，且无法用 polyfill 磨平，所以在Vue3.0才能引入这个破坏性改变。
     - 缺点：只能劫持对象的属性,需要对每个对象的每个属性进行遍历，如果属性值也是对象那么需要深度遍历。
 
 #### Composition API

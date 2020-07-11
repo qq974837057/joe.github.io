@@ -235,9 +235,158 @@
 - 执行完无返回，则返回创建的对象obj。
 
 
+## 浏览器事件循环(Event Loop)
+-  浏览器多进程的，进程表示cpu资源分配的最小单位，一个进程中可以有多个线程
+-  关键为**渲染进程**（浏览器内核）分为多条线程，线程是cpu调度最小单位
+    - GUI渲染线程
+    - JS引擎线程
+    - 事件触发线程
+    - 定时触发器线程
+    - 异步http请求线程
+-  浏览器设定 GUI渲染线程和JS引擎线程为互斥关系（同时运行会导致不一致）
+
+- javascript是一门单线程语言（如果多线程操作，dom无法预期），Event Loop是js实现异步的一种方法，也是js的执行机制。
+
+- **事件循环(宏任务和微任务角度)**
+    - 整体代码作为第一次宏任务，进入主线程
+    - 遇到宏任务，指定事情完成后，将回调函数被分发到宏任务队列Event Queue
+    - 遇到微任务，指定事情完成后，将回调函数被分发到微任务队列Event Queue
+    - 第一轮宏任务执行完毕，寻找微任务队列的任务并执行所有微任务。
+    - 微任务执行过程中产生新的微任务，继续执行微任务
+    - 微任务执行完毕后，GUI线程接管渲染，更新界面
+    - 检查是否存在 Web worker 任务，有则处理
+    - 执行第二轮宏任务Event Queue（每次只读取一个宏任务）
+    - 循环反复下去
+    - 注意：一次循环中，微任务是全部清空、宏任务是只取一个出来。
+    ![JS-eventloop-2](./img/JS-eventloop-2.png)
+- **事件循环(同步异步角度)**
+    - 任务分两类，一种是同步任务，一种是异步任务
+    - 同步任务会进入主线程，异步进入Event Table注册函数，指定事情完成后，将函数移入Event Queue（任务队列）
+    - 主线程内的任务执行完毕为空，会去Event Queue（任务队列）读取对应的函数，进入主线程执行。
+    - js引擎存在monitoring process进程，持续检查主线程执行栈是否为空
+    - 一旦为空，就去任务队列那检查是否有等待被调用的函数
+    - 重复以上过程
+    ![JS-eventloop-1](./img/JS-eventloop-1.png)
+
+- 宏任务（Macro-Task）：`script`(整体代码)、I/O 操作(点击)、`setTimeout`、`setInterval`、`setImmediate`（IE&Node独有）、requestAnimationFrame(浏览器独有)
+- 微任务（Micro-Task）：`Promise.then`、`MutationObserver`的回调(监听DOM、浏览器独有)、`Process.nextTick`（Node独有）
+- （调用）栈：后进先出
+- （任务) 队列：先进先出
+- 细节
+  - setTimeout：经过指定时间，将回调函数置入Event Queue，等待主线程空闲时来执行。`setTimeout(fn, 0)`表示立即加入宏任务队列，当主线程同步任务执行完后，执行完微任务队列，立即执行。即使主线程啥也没有，规范也是最低4毫秒。（多个宏任务setTimeout记得看时间长短排序）
+  - setInterval：每隔指定的时间将注册的函数置入Event Queue。比如使用定时器每隔300ms循环执行一个promise请求，如果promise有响应，就关闭定时器，如果promise响应时间太长，定时器不断将请求加入任务队列，等到promise.then返回数据，就会清除计时器，不再往队列里添加，但此时任务队列的多个请求会依次执行完。
+  - promise：new Promise立即执行，then的回调函数分发到微任务Event Queue。
+  - 遇到resolve后，不管嵌套多少then，将最近的then加入微任务，然后继续执行其他同步代码
+  - async/await基于promise，await前面类似new promise ，后面类似promise.then
+  - 浏览器的requestAnimationFrame姑且也算是宏任务吧，requestAnimationFrame在MDN的定义为，下次页面重绘前所执行的操作，而重绘也是作为宏任务的一个步骤来存在的。
+
+- 优先级
+    - 对于微任务micro-task：process.nextTick(node) > Promise.then
+    - 对于宏任务macro-task：setTimeout > setImmediate(node)
+
+## Node事件循环
+
+> 依靠libuv引擎：是一个基于事件驱动的跨平台抽象层，封装了不同操作系统一些底层特性，对外提供统一的API，事件循环机制也是它里面的实现。
+
+- 6个阶段
+![JS-node-eventloop.png](./img/JS-node-eventloop.png)
+- 顺序：
+  - 输入数据(incoming data)->轮询阶段(poll)->检查阶段(check)->关闭事件回调阶段(close callback)->定时器检测阶段(timers)->I/O事件回调阶段(I/O callbacks)->闲置阶段(idle, prepare)->轮询阶段...
+
+- 阶段解释：
+  - 定时器阶段（timers） : 执行计时器的回调如 setTimeout / setInterval，由 poll 阶段控制。
+  - I/O事件回调阶段（I/O callbacks）: 
+      - 执行上一轮循环中的少数未被执行的 I/O 回调
+      - 处理网络、流、TCP 的错误回调
+  - 闲置阶段（idle, prepare）：仅node内部使用。
+  - 轮询阶段（poll）（重要）: 检索新的 I/O 事件;执行与 I/O 相关的回调（除了关闭的回调函数和 由计时器和 setImmediate() 调度的之外的回调），node 将在适当的时候在此阻塞一段时间。具体检测过程如下
+      ![JS-node-eventloop-poll](./img/JS-node-eventloop-poll.jpg)
+      - 如有到期的setTimeout / setInterval， 则去 timer 阶段执行
+      - 没有则进入poll的回调函数队列，不为空则将回调函数队列执行清空
+      - 如果poll队列为空
+        - 如有setImmediate的回调要执行，则去 check 阶段执行
+        - 如没有 setImmediate 回调要执行，会等待其他回调被加入到队列中并立即执行回调，这里同样会有个超时时间设置防止一直等待下去,一段时间后自动进入 check 阶段。
+  - 检查阶段（check）
+      - 执行setImmediate的回调函数
+      > setImmediate()是将事件插入到事件队列尾部，主线程和事件队列的函数执行完成之后立即执行setImmediate指定的回调函数（防止一个耗时长的操作阻塞后面操作）
+  - 关闭事件的回调阶段（close callbacks）
+      - 执行一些关闭类的回调函数。例如`socket.on('close'[,fn])`或者`http.server.on('close, fn)`。
+
+- 示例代码：
+```js
+setImmediate(() => {
+    console.log('timeout1')
+    Promise.resolve().then(() => console.log('promise resolve'))
+    process.nextTick(() => console.log('next tick1'))
+});
+setImmediate(() => {
+    console.log('timeout2')
+    process.nextTick(() => console.log('next tick2'))
+});
+setImmediate(() => console.log('timeout3'));
+setImmediate(() => console.log('timeout4'));
+
+// node10: 执行所有 setImmediate，完成之后执行 nextTick 队列，最后执行微任务队列
+// timeout1 => timeout2 => timeout3 => timeout4 => next tick1 => next tick2 => promise resolve
+
+// node11: 执行一个 setImmediate 宏任务，然后执行其微任务队列，再执行下一个宏任务及其微任务
+// timeout1 => next tick1 => promise resolve => timeout2 => next tick2 => timeout3 => timeout4
+```
+
+- Node 10以前：
+  - 一个阶段中先执行所有的宏任务，再执行微任务。
+  - TimersQueue -> 微任务队列-> I/O Queue -> 微任务队列 -> Check Queue -> 微任务队列 -> Close Callback Queue -> 微任务队列 -> TimersQueue ...
+  ![JS-node-eventloop2](./img/JS-node-eventloop2.png)
+  - 微任务队列：先执行nextTick队列（由`process.nextTick()`创建的回调优先级高于其他微任务），再执行微任务队列中其他的所有任务
+- Node 11以后：
+  - 和浏览器统一，一个阶段中每执行一个宏任务就清空当时的微任务队列。
+
+示例代码：
+```js
+function test () {
+   console.log('start')
+    setTimeout(() => {
+        console.log('children2')
+        Promise.resolve().then(() => {console.log('children2-1')})
+    }, 0)
+    setTimeout(() => {
+        console.log('children3')
+        Promise.resolve().then(() => {console.log('children3-1')})
+    }, 0)
+    Promise.resolve().then(() => {console.log('children1')})
+    console.log('end') 
+}
+
+test()
+
+// 以上代码在node11及浏览器的执行结果(取一个宏任务执行，然后清空微任务)
+// start
+// end
+// children1
+// children2
+// children2-1
+// children3
+// children3-1
+
+
+// 以上代码在node11以下版本的执行结果(先执行所有的宏任务，再执行微任务)
+// start
+// end
+// children1
+// children2
+// children3
+// children2-1
+// children3-1
+
+```
+
+### 浏览器和node事件循环的主要区别：
+- 浏览器中的微任务是在每个相应的宏任务完成后执行的，而node10中的微任务是每个阶段的宏任务都执行完毕再执行的，也就是在每个阶段之间。而在 node11之后
+，一个阶段里的一个宏任务(setTimeout,setInterval和setImmediate)就立刻执行对应的微任务队列。
+
 ## 闭包
 > 概念：闭包 =『函数』和『函数对外部作用域的变量引用』的捆绑，即闭包可以从让内部函数访问外部函数作用域。本质是当前环境中存在指向父级作用域的**引用**。
-  - 如在父函数声明a=1，在子函数console.log(a)
+  - 如在父函数声明a=1，在子函数`console.log(a)`
   - 闭包的作用域链包含着它自己的作用域，以及包含它的函数的作用域和全局作用域。
   - 通常，函数的作用域及其所有变量都会在函数执行结束后被销毁。但是，在创建了一个闭包以后，内部函数引用着外部函数的变量，这个函数的作用域就会一直保存到闭包不存在为止。
 - 理论：其实广义上所有的JavaScript函数都是闭包，可以访问全局作用域的变量
