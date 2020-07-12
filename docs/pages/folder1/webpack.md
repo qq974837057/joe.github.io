@@ -1,3 +1,23 @@
+## webpack
+
+### HMR热更新原理（hot module replacement）
+
+> 当你对代码进行修改并保存后，webpack 将对代码重新打包，并将新的模块发送到浏览器端，浏览器通过新的模块替换老的模块，这样在不刷新浏览器的前提下就能够对应用进行更新。
+
+- 在 webpack 的 watch 模式下，文件系统中某一个文件发生修改，对修改的模块重新编译打包。
+- webpack-dev-middleware处理打包后的文件存在内存里。
+- webpack-dev-server和webpack-dev-server/client（浏览器端）建立websocket长连接，利用这个连接，传递修改模块的hash和编译打包的状态信息给浏览器。
+- HMR.runtime收到新模块的hash(非最新)，Jsonp.runtime向webpack-dev-server服务端发送ajax请求，获取模块更新列表的manifest描述文件（包含更新模块的最新hash）再通过Jsonp获取最新hash对应的模块代码。
+- HotModulePlugin进行模块对比，替换模块及更新依赖树modules tree引用。
+- HMR失败，通过浏览器刷新整个页面获取最新代码。
+![webpack-hmr](./img/webpack-hmr.png)
+
+- 疑问：为什么不在socket发送更新好的模块代码
+    - 应该是为了功能解耦
+    - dev-server/client 只负责消息传递、不负责新模块的获取
+    - HMR runtime 才应该是获取新代码的地方。
+
+
 ## Git
 - 参考[廖雪峰的Git教程](https://www.liaoxuefeng.com/wiki/896043488029600/897013573512192)
 
