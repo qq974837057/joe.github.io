@@ -384,6 +384,381 @@ test()
 - 浏览器中的微任务是在每个相应的宏任务完成后执行的，而node10中的微任务是每个阶段的宏任务都执行完毕再执行的，也就是在每个阶段之间。而在 node11之后
 ，一个阶段里的一个宏任务(setTimeout,setInterval和setImmediate)就立刻执行对应的微任务队列。
 
+## 异步方案
+
+- 回调函数（callback）:如setTimeout
+    - 优点:实现异步
+    - 缺点:回调地狱（多个回调函数嵌套难以阅读调试，多个异步操作强耦合），无法try/catch错误
+    ```js
+    ajax('XXX1', () => {
+        // callback 函数体
+        ajax('XXX2', () => {
+            // callback 函数体
+            ajax('XXX3', () => {
+                // callback 函数体
+            })
+        })
+    })
+    ```
+- promise:
+    - 优点:解决回调地狱，实现链式调用then，用catch捕获错误
+    - 缺点:
+        - 错误不能被 try catch；
+        - Promise传递中间值麻烦；
+        - 无法中途取消promise，因为promise是一个状态机，只有pending和resolve和reject三个状态，没有cancel这个方法，async也一样。解决方案：Promise.race竞速方式，同时发起两个promise，返回先完成的promise，未完成的就不再监听了，比如设置一个取消按钮，当按钮取消后，在其中一个promise直接reject()，就返回这个promise，另一个promise就不会再监听了；
+    ```js
+    ajax('XXX1')
+      .then(res => {
+          // 操作逻辑
+          return ajax('XXX2')
+      }).then(res => {
+          // 操作逻辑
+          return ajax('XXX3')
+      }).then(res => {
+          // 操作逻辑
+      })
+    ```
+- generator：
+    - 优点：可以控制函数的执行（暂停/继续）流程更加直观
+    - 缺点：必须部署自动运行器，且保证yield后的表达式返回一个Promise
+    - 执行到yield时暂停，调用next()方法继续
+    ```js
+    function *fetch() {
+        yield ajax('XXX1', () => {})
+        yield ajax('XXX2', () => {})
+        yield ajax('XXX3', () => {})
+    }
+    let it = fetch()
+    let result1 = it.next()
+    let result2 = it.next()
+    let result3 = it.next()
+    ```
+- async await（ES8）:Generator 函数的语法糖，最优雅的解决方案
+    - 优点:
+      - 不需要then链，读起来更加同步；
+      - 传中间值方便；调试友好,同步代码的断点;
+      - 错误处理友好可被try.catch（包裹await）
+    - 缺点:要注意并行promise的情况，无依赖性，却用多个await(多个同时并行请求可以Promise.all)，会导致耗时长（等前面执行完再执行后面）
+    - async声明一个function是异步的、await等待异步方法执行完成。
+    - 一个函数如果加上 async ，那么该函数就会返回一个 Promise
+    - 只要一个await出现reject，后面await不会执行。
+
+    > await关键字只能在async function中使用。在任何非async function的函数中使用await关键字都会抛出错误。await关键字在执行下一行代码之前等待右侧表达式(可能是一个Promise)返回。
+    
+    ```js
+    async function test() {
+      // 以下代码没有依赖性的话，完全可以使用 Promise.all 的方式
+      // 如果有依赖性的话，其实就是解决回调地狱的例子了
+      await fetch('XXX1')
+      await fetch('XXX2')
+      await fetch('XXX3')
+    }
+    ```
+- 良好实践：
+    - 当只有一个异步请求，且需要做错误处理的情况下，更倾向于使用 promise。
+    - 有嵌套请求的情况下， async/await 更直观。
+
+- [Async/Await 如何通过同步的方式实现异步](https://juejin.im/post/5d2c814c6fb9a07ecd3d8e43#comment)
+
+## Promise
+> 表示一个尚未完成且预计在未来完成的异步操作。
+
+- 立即执行:
+    - `new Promise()`里面是立即执行的代码，位于resolve或者reject后面的同步代码仍会执行。
+- 三种状态：
+    - pending（进行中，刚完成创建）
+    - fulfilled（已成功，执行了resolve）
+    - rejected（已失败，执行了reject）
+- 状态不可逆：
+    - Promise状态的一旦变成resolved或rejected时，无论怎么调用resolve和reject方法，都无法改变状态和值。
+    
+    ```js
+    new Promise(function(resolve,reject) {
+        console.log('1');
+        resolve();
+        console.log('1.5');
+        reject();
+    }).then(function() {
+        console.log('2')
+    }).catch(()=>{
+        console.log('3')
+    })
+    
+    // 1
+    // 1.5
+    // 2
+    // Promise {<resolved>: undefined}
+    ```
+- 链式调用then：Promise对象的then方法返回一个新的Promise对象
+    - then可接收两个函数（成功回调，失败回调），只会有一个被调用。
+    - 回调函数 return 一个同步值，或者没有返回（默认return undefined），
+    - 回调函数 return 另一个Promise，根据Promise的状态执行下一个的成功或失败回调
+    - throw 一个异常，返回rejected状态的Promise（参数为异常值），执行失败的回调函数
+    - finally：不管promise最后的状态，在执行完then或catch指定的回调函数以后，都会执行finally方法指定的回调函数。没有办法知道，前面的 Promise 状态到底是fulfilled还是rejected
+- 异常捕获和多级then执行顺序
+  - 异常捕获由then第二个回调函数处理，异常信息作为值，异常在第二个回调函数中被处理后，默认return undefined，返回的Promise恢复正常，被下一轮then的成功回调函数继续处理。
+  - 注意p1、p2 多级then的回调函数是交替执行的，下一轮then加入下一轮的微任务。
+```js
+var p1 = new Promise( function(resolve,reject){
+  foo.bar();
+  resolve( 1 );	  
+});
+
+p1.then(
+  function(value){
+    console.log('p1 then value: ' + value);
+  },
+  function(err){
+    console.log('p1 then err: ' + err);
+  }
+).then(
+  function(value){
+    console.log('p1 then then value: '+value);
+  },
+  function(err){
+    console.log('p1 then then err: ' + err);
+  }
+);
+
+var p2 = new Promise(function(resolve,reject){
+  resolve( 2 );	
+});
+
+p2.then(
+  function(value){
+    console.log('p2 then value: ' + value);
+    foo.bar();
+  }, 
+  function(err){
+    console.log('p2 then err: ' + err);
+  }
+).then(
+  function(value){
+    console.log('p2 then then value: ' + value);
+  },
+  function(err){
+    console.log('p2 then then err: ' + err);
+    return 1;
+  }
+).then(
+  function(value){
+    console.log('p2 then then then value: ' + value);
+  },
+  function(err){
+    console.log('p2 then then then err: ' + err);
+  }
+);
+
+```
+```js
+p1 then err: ReferenceError: foo is not defined
+p2 then value: 2
+p1 then then value: undefined
+p2 then then err: ReferenceError: foo is not defined
+p2 then then then value: 1
+```
+
+
+- 异常捕获两种方式的区别：
+    - 由then参数中第二个回调函数处理，状态变为rejected时执行，处理**本次promise**的错误
+    - `.catch((err) => {})`捕获**前面所有promise**产生的错误(推荐)
+    - 一旦得到失败回调的处理（可以返回值），then返回的Promise恢复正常，并被下一个then处理。
+        ```js
+        // bad
+        promise
+          .then(function(data) {
+            // success
+          }, function(err) {
+            // error
+          });
+        
+        // good
+        promise
+          .then(function(data) {
+            // success
+          })
+          .catch(function(err) {
+            // error
+          });
+        ```
+- then的异步回调：
+    - new Promise的代码是同步执行的，then的回调函数是异步的(微任务)
+    - 等Promise状态完成改变后再将回调加入微任务
+- Promise.resolve()：将现有对象转为 Promise 对象
+    - 参数值为值：返回一个resolved状态的Promise对象，对象值为这个参数。
+    - 参数值为Promise对象：返回这个Promise对象
+    - 参数是一个thenable对象：将这个对象转为 Promise 对象，然后就立即执行thenable对象的then方法。
+- Promise.reject()
+    - 返回一个新的 Promise 实例，该实例的状态为rejected。
+    - Promise.reject()方法的参数，会**原封不动**地作为reject的理由（包括then对象），变成后续方法的参数。这一点与Promise.resolve方法不一致。
+
+- new Promise中的resolve和reject方法
+    - new Promise出来是个新对象。
+    - resolve的参数是Promise对象时，拆箱获得Promise的状态和值，异步的，拆箱完毕，获得里面这个Promise它自己的状态，再执行成功或失败回调。
+    - 而reject的参数是Promise对象时，没有拆箱能力，不会异步执行里面的Promise，直接将参数Promise对象传递给失败回调（值为该Promise对象）
+    ```js
+    var p1 = new Promise(function(resolve, reject){
+      resolve(Promise.resolve('resolve'));
+    });
+
+    var p2 = new Promise(function(resolve, reject){
+      resolve(Promise.reject('reject'));
+    });
+
+    var p3 = new Promise(function(resolve, reject){
+      reject(Promise.resolve('resolve'));
+    });
+
+    p1.then(
+      function fulfilled(value){
+        console.log('fulfilled: ' + value);
+      }, 
+      function rejected(err){
+        console.log('rejected: ' + err);
+      }
+    );
+
+    p2.then(
+      function fulfilled(value){
+        console.log('fulfilled: ' + value);
+      }, 
+      function rejected(err){
+        console.log('rejected: ' + err);
+      }
+    );
+
+    p3.then(
+      function fulfilled(value){
+        console.log('fulfilled: ' + value);
+      }, 
+      function rejected(err){
+        console.log('rejected: ' + err);
+      }
+    );
+    // p3 rejected: [object Promise] // 无拆箱，直接reject此Promise
+    // p1 fulfilled: resolve // 异步拆箱，执行顺序变后
+    // p2 rejected: reject
+    ```
+- **Promise.all**
+    - 多个 Promise 实例，包装成一个新的 Promise 实例。用于并发运行多个异步任务。**当这些实例的状态为成功，才会执行then方法，返回数据组成数组，只要有一个失败，就将第一个失败的值传给失败回调方法。**
+    - 如果不是 Promise 实例，就会先调用Promise.resolve()方法，将参数转为 Promise 实例
+    - `const p = Promise.all([p1, p2, p3])`;
+    - 只有p1、p2、p3的状态都变成fulfilled，p的状态才会变成fulfilled，此时p1、p2、p3的返回值组成一个数组，传递给p的回调函数。返回值将会按照参数内的 promise 顺序排列，而不是由调用 promise 的完成顺序决定。
+    - **只要p1、p2、p3之中有一个被rejected，p的状态就变成rejected，此时第一个被reject的实例的返回值，会传递给p的回调函数。**
+- **Promise.race**
+    - 多个 Promise 实例，包装成一个新的 Promise 实例。 **只要该数组中的其中一个 Promise 对象的状态发生变化（无论是resolve还是reject）该方法都会率先返回这个Promise的值。**
+    - 如果不是 Promise 实例，就会先调用Promise.resolve()方法，将参数转为 Promise 实例
+    - `const p = Promise.race([p1, p2, p3])`;
+    - **只要p1、p2、p3之中有一个实例率先改变状态，p的状态就跟着改变。那个率先改变的 Promise 实例的返回值，就传递给p的回调函数。**
+    - 场景：中止promise，或者 请求慢，在另一个promise中可以报错或者显示缓存。
+- Promise.allSettled
+    - 等到所有这些参数实例都返回结果，不管是fulfilled还是rejected，包装实例才会结束
+    - 一旦结束，状态总是fulfilled
+    - then传入数组results：该数组的每个成员都是一个对象，对应传入Promise.allSettled()的两个 Promise 实例。每个对象都有status属性，该属性的值只可能是字符串fulfilled或字符串rejected。fulfilled时，对象有value属性，rejected时有reason属性，对应两种状态的返回值。
+    - `[{ status: 'fulfilled', value: 42 },{ status: 'rejected', reason: -1 }]`
+    - 适用于不关心异步操作的结果，只关心这些操作有没有结束，确保操作都结束了。
+
+## Iterator
+Iterator（迭代器）是一种接口，也可以说是一种规范。为各种不同的数据结构提供统一的访问机制。任何数据结构只要部署Iterator接口，就可以完成遍历操作（即依次处理该数据结构的所有成员）。
+```js
+const obj = {
+    [Symbol.iterator]: function() {}
+}
+```
+- [Symbol.iterator]属性名是固定的写法，只要拥有了该属性的对象，就能够用迭代器的方式进行遍历。
+- 迭代器的遍历方法是首先获得一个迭代器的指针，初始时该指针指向第一条数据之前，接着通过调用 next 方法，改变指针的指向，让其指向下一条数据
+每一次的 next 都会返回一个对象，该对象有两个属性
+  - value 代表当前成员的值
+  - done 布尔值，false表示当前指针指向的数据有值，true表示遍历已经结束
+
+- Iterator 的作用有三个：
+  - 为各种数据结构，提供一个统一的、简便的访问接口；
+  - 使得数据结构的成员能够按某种次序排列；
+  - ES6 创造了一种新的遍历命令for…of循环，Iterator 接口主要供for…of消费。
+- 遍历过程：
+  - 创建一个指针对象，指向当前数据结构的起始位置。也就是说，遍历器对象本质上，就是一个指针对象。
+  - 第一次调用指针对象的next方法，可以将指针指向数据结构的第一个成员。
+  - 第二次调用指针对象的next方法，指针就指向数据结构的第二个成员。
+  - 不断调用指针对象的next方法，直到它指向数据结构的结束位置。
+  每一次调用next方法，都会返回数据结构的当前成员的信息。具体来说，就是返回一个包含value和done两个属性的对象。其中，value属性是当前成员的值，done属性是一个布尔值，表示遍历是否结束。
+```js
+let arr = [{num:1},2,3]
+let it = arr[Symbol.iterator]() // 获取数组中的迭代器
+console.log(it.next()) 	// { value: Object { num: 1 }, done: false }
+console.log(it.next()) 	// { value: 2, done: false }
+console.log(it.next()) 	// { value: 3, done: false }
+console.log(it.next()) 	// { value: undefined, done: true }
+```
+
+## Generator
+- Generator函数可以说是Iterator接口的具体实现方式，一般配合co库使用。
+- Generator最大的特点就是可以控制函数的执行。
+- 调用Generator函数，返回迭代器，执行迭代器的next()方法，暂停在yield处，再调用迭代器的next()方法，到下一个yield(yield后的表达式必须返回一个Promise)。
+
+```js
+function *foo(x) {
+  let y = 2 * (yield (x + 1))
+  let z = yield (y / 3)
+  return (x + y + z)
+}
+let it = foo(5)
+console.log(it.next())   // => {value: 6, done: false}
+console.log(it.next(12)) // => {value: 8, done: false}
+console.log(it.next(13)) // => {value: 42, done: true}
+```
+- 上面这个示例就是一个Generator函数，我们来分析其执行过程：
+  - 首先 Generator 函数调用时它会返回一个迭代器
+  - 当执行第一次 next 时，传参会被忽略，并且函数暂停在 `yield (x + 1)` 处，所以返回 `5 + 1 = 6`
+  - 当执行第二次 next 时，传入的参数等于上一个 yield 的返回值，如果你不传参，yield 永远返回 undefined。此时 `let y = 2 * 12`，所以第二个 yield 等于` 2 * 12 / 3 = 8`
+  - 当执行第三次 next 时，传入的参数会传递给 z，所以 `z = 13, x = 5, y = 24，`相加等于 42
+
+## async
+- Generator 的语法糖，`async function` 代替了` function*`，`await` 代替了 `yield`，不用手写run自动执行器：内置执行器。
+- 返回Promise：async执行完后返回是一个Promise，return的值，可使用then接收，指定下一步操作
+
+- async:声明一个异步函数
+    - 函数内部return语句返回的值，会成为then方法回调函数的参数。
+    - 只有async函数内部的异步操作执行完，才会执行then方法指定的回调函数。
+- await：等异步操作完成再执行后面函数，进行异步过程时async函数是暂停的。
+    - 可跟Promise和原始类型（会被转成resolved的Promise对象），
+    - 正常情况下，await命令后面是一个 Promise 对象，异步执行，返回该对象的结果。如果不是 Promise 对象，同步执行，就直接返回对应的值。
+        ```js
+         return await 123; // 等同于 return 123
+        ```
+    - 一个await后的Promise变为reject状态，中断async函数执行，不会执行下一个await    
+    - await命令只能用在async函数之中，被其他函数包裹会报错（可用for循环包裹）
+- 错误处理  
+    - 捕获错误方法：在内部使用try...catch捕获await的错误，防止async返回的Promise为rejected状态。
+    - 不影响其他await：单个await放入try，其他await写在外面，可以防止因为错误而中断后续的await异步操作。也可以在await后面的 Promise 对象再跟一个catch方法，处理前面可能出现的错误。
+    - 影响后续await：多个await可以统一放入try里面。
+        ```js
+        async function main() {
+          try {
+            const val1 = await firstStep();
+            const val2 = await secondStep(val1);
+            const val3 = await thirdStep(val1, val2);
+        
+            console.log('Final: ', val3);
+          }
+          catch (err) {
+            console.error(err);
+          }
+        }
+        ```
+- 互不依赖的异步操作可以写成同时触发，缩短程序耗时。
+    - 1:可以用Promise.all.
+    - 2:可以将函数赋值给一个变量，在await这个变量，即可同时触发。
+        ```js
+        // 写法一
+        let [foo, bar] = await Promise.all([getFoo(), getBar()]);
+        
+        // 写法二
+        let fooPromise = getFoo();
+        let barPromise = getBar();
+        let foo = await fooPromise;
+        let bar = await barPromise;
+        ```
+
 ## 闭包
 > 概念：闭包 =『函数』和『函数对外部作用域的变量引用』的捆绑，即闭包可以从让内部函数访问外部函数作用域。本质是当前环境中存在指向父级作用域的**引用**。
   - 如在父函数声明a=1，在子函数`console.log(a)`

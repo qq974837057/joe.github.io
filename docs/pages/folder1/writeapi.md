@@ -620,24 +620,22 @@ class Promise {
   // then 方法的两个参数onFulfilled onRejected
   then(onFulfilled, onRejected) {
     if(this.state === 'fulfilled') {
-      let x = onFulfilled(this.value);
-      resolvePromise(x, resolve, reject); // 实现链式调用
+      onFulfilled(this.value)
+      // let x = onFulfilled(this.value);
+      // resolvePromise(x, resolve, reject); // 实现链式调用
     }
     if(this.state === 'rejected') {
-      let x = onRejected(this.reason);
-      resolvePromise(x, resolve, reject);
+      onRejected(this.reason);
     }
     // 一个promise可以有多个then，then时state还是pending等待状态，我们就需要在then调用的时候，将成功和失败存到各自的数组，一旦reject或者resolve，就调用它们
     if(this.state === 'pending') {
       // onFulfilled传入到成功处理函数的回调数组
       this.onResolvedCallbacks.push(() => {
-        let x = onFulfilled(this.value);
-        resolvePromise(x, resolve, reject);
+        onFulfilled(this.value);
       })
       // onRejected传入到失败处理函数的回调数组
       this.onRejectedCallbacks.push(() => {
-        let x = onRejected(this.reason);
-        resolvePromise(x, resolve, reject);
+        onRejected(this.reason);
       })
     }
   }
