@@ -14,21 +14,33 @@
   - String
   - Symbol(ES6-独一无二且不可变的)
   - BigInt(ES10)
-- 引用类型
+- 引用类型(1)
   - Object 对象
-  - Array 数组
-  - Function 函数
-  - Date 日期
-  - RegExp 正则
-  - Math 数学对象
+    - Array 数组
+    - Function 函数
+    - Date 日期
+    - RegExp 正则
+    - Math 数学对象
 
 - 注意点：
-  - 基本类型保存在栈内存，引用类型保存在堆内存。
+  - 基本类型保存在栈内存。引用类型保存在栈和堆中，栈中保存指针，指向堆中该实体的起始地址。
   - Object是基础类型，其他所有引用类型都继承它的基本行为。
   - 使用 new + 构造函数 生成的实例，叫对象。构造函数上有定义默认属性和方法。
   - 函数也是对象。
-  - null不是对象，虽然typeof null 是object，但是历史Bug，以前低位存储变量的类型信息，000开头代表对象，而null为全0，所以误判。
   - 函数参数是按值传递的，和赋值是一样的。基本类型就是复制该变量的值，如果参数是引用类型，赋值对象的内存地址值给函数内的局部变量，改动这个局部变量，外部对象会跟着改变，局部对象使用完会被销毁，如果局部对象更改成另一个对象内存地址，则指向另一个对象。
+
+- null和undefined的区别
+  - undefined 表示变量声明但未初始化时的值
+  - null 表示“空对象指针”，赋值给一些可能会返回对象的变量，作为初始化
+  - 相同点:
+    - 都是基本数据类型
+    - 在 if判断语句中,值都默认为 false
+    - 大体上两者都是代表无
+  - 不同点：
+    - null转为数字类型值为0,Number(null)=0;undefined转为数字类型为 NaN(Not a Number)
+    - null的typeof 运算返回"object"，undefined的typeof 运算返回 "undefined"
+  设置为null的变量或者对象会被回收，常见用法就是作为参数传入(说明该参数不是对象)
+    - null不是对象，虽然typeof null 是object，但是历史Bug，以前低位存储变量的类型信息，000开头代表对象，而null为全0，所以误判。
 
 ## BigInt
 - 表示大于 2^53 - 1 的整数，可以表示任意大的整数。
@@ -61,6 +73,95 @@
   ```
 - [兼容性](https://www.caniuse.com/#search=bigint)：
   - 目前IE、Safari、iOS Safari不支持
+
+## 类型判断
+
+#### 1、typeof
+- 基本数据类型使用typeof可以返回其类型(字符串形式)，null类型会返回object
+- 引用数据类型使用typeof会返回object(函数会返回function)
+```js
+console.log(typeof 2);             // number
+console.log(typeof true);          // boolean
+console.log(typeof 'str');         // string
+console.log(typeof undefined);     // undefined
+console.log(typeof null);          // object - null 的数据类型被 typeof 解释为 object
+
+console.log(typeof {});            // object
+console.log(typeof []);            // object  
+console.log(typeof function(){});  // function
+```
+#### 2、instanceof
+- 判断对象是否为某个类型的实例，原理是判断当前实例对象在它的原型链中能否找到某个构造函数的 prototype 属性。
+- instanceof可以精准判断引用数据类型（Array，Function，Object）
+- 基本数据类型不能被instanceof精准判断，因为它们有些形式并非实例。
+```js
+console.log(2 instanceof Number);                    // false
+console.log(true instanceof Boolean);                // false 
+console.log('str' instanceof String);                // false  
+console.log([] instanceof Array);                    // true
+console.log(function(){} instanceof Function);       // true
+console.log({} instanceof Object);                   // true  
+```
+#### 3、Object.prototype.toString.call()
+- 使用 Object 对象的原型方法 toString ，使用 call 改变this
+- 全部类型可识别，返回形式为`[object Type]`
+```js
+const a = Object.prototype.toString;
+ 
+console.log(a.call(2));     //[object Number]
+console.log(a.call(true));  //[object Boolean]
+console.log(a.call('str')); //[object String]
+console.log(a.call([]));    //[object Array]
+console.log(a.call(function(){}));  //[object Function]
+console.log(a.call({}));            //[object Object]
+console.log(a.call(undefined));     //[object Undefined]
+console.log(a.call(null));          //[object Null]
+```
+
+#### 判断引用类型
+
+判断一：使用typeof，排除null特殊情况。
+```js
+function isObj(obj) {
+    return (typeof obj === 'object' || typeof obj === 'function') && obj !== null
+}
+```
+
+#### 判断函数
+- fun typeof function
+- fun instanceof Function
+- Object.prototype.toString.call(fun)是否为'[object Function]'
+
+#### 判断数组
+- 1、Object.prototype.toString.call()
+- 2、判断是否在Array的原型链上
+- 3、Array.isArray()是ES5新增的方法
+```js
+1.  Object.prototype.toString.call(arr) //"[object Array]"
+
+2.  [] instanceof Array; // true
+
+3.  Array.isArray(arr) // true
+```
+
+#### 判断null
+- null===x 判断是否为null
+- Object.prototype.`__proto__`===x 原始对象原型的原型即null
+
+#### 判断NaN
+- Number.isNaN()
+
+
+## 数据类型转换
+在 JS 中类型转换只有三种情况，分别是：
+  - 转换为布尔值（调用Boolean()方法）
+  - 转换为字符串（调用.toString()或者String()方法）
+  - 转换为数字（调用Number()、parseInt()和parseFloat()方法）
+
+> null和undefined没有toString方法
+
+![JS-Type-conversion](./img/JS-Type-conversion.png)
+此外还有一些操作符会存在隐式转换，不做展开。
 
 ## 0.1+0.2为什么不等于0.3？
 
@@ -1039,51 +1140,37 @@ console.log(it.next(13)) // => {value: 42, done: true}
   ```
 
 ## 运算符
+- 真值和虚值(truthy和falsy)
+  - 一个值可以被转换为 true，那么这个值就是所谓的 truthy，如果可以被转换为 false，那么这个值就是所谓的 falsy。
+  - 下面是falsy
+  ```js
+  null
+  NaN
+  0
+  空字符串（"" or '' or ``）
+  undefined
+  false
+  ```
+- 逻辑运算符：
+  - `&&` 逻辑与：`expr1 && expr2`，若 expr1 可转换为 true，则返回 expr2；否则，返回 expr1。
+    - 可做短路计算
+  - `||` 逻辑或：`expr1 || expr2`，若 expr1 可转换为 true，则返回 expr1；否则，返回 expr2。
+    - 可做短路计算
+    - 可做初始化函数中的默认参数值(ES6之后函数参数可以直接默认值)
+  - `!` 逻辑非：若 expr 可转换为 true，则返回 false；否则，返回 true。
+  - 短路计算
+    - `(some falsy expression) && (expr)` 短路计算的结果为假。
+    - `(some truthy expression) || (expr)` 短路计算的结果为真。
+    - 短路意味着上述表达式中的expr部分不会被执行，因此expr的任何副作用都不会生效（举个例子，如果expr是一次函数调用，这次调用就不会发生）。
+
+- `!!` 运算符：可以将值强制转换为布尔值，还可以使用`Boolean()`转换。
+
 - 递增 (++)
   - 概念：递增运算符为其操作数增加1，返回一个数值。
   - 两个位置：
     - 如果使用后置（postfix），即运算符位于操作数的后面（如 x++），那么将会在递增前返回数值，也就是先返回后增加。
     - 如果使用前置（prefix），即运算符位于操作数的前面（如 ++x），那么将会在递增后返回数值，也就是先增加后返回。
 
-
-## 类型判断
-
-#### typeof
-- 基本数据类型使用typeof可以返回其基本数据类型(字符串形式)，但是null类型会返回object
-- 引用数据类型使用typeof会返回object，函数会返回function，其他引用类型需要使用instanceof来检测引用数据类型。
-
-#### 判断引用类型
-
-判断一：使用typeof，排除null特殊情况。
-```js
-function isObj(obj) {
-    return (typeof obj === 'object' || typeof obj === 'function') && obj !== null
-}
-```
-
-#### 判断函数
-- fun typeof function
-- fun instanceof Function
-- Object.prototype.toString.call(fun)是否为'[object Function]'
-
-#### 判断数组
-- 1、Object.prototype.toString.call()
-- 2、判断是否在Array的原型链上
-- 3、Array.isArray()是ES5新增的方法
-```js
-1.  Object.prototype.toString.call(arr) //"[object Array]"
-
-2.  [] instanceof Array; // true
-
-3.  Array.isArray(arr) // true
-```
-
-#### 判断null
-- null===x 判断是否为null
-- Object.prototype.`__proto__`===x 原始对象原型的原型即null
-
-#### 判断NaN
-- Number.isNaN()
 
 
 ## 图片懒加载原理

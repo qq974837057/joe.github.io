@@ -571,7 +571,7 @@ promise.then(function(res) {
 - 构造函数中
    - 声明状态和回调函数数组、定义resolve、reject函数
    - `resolve/reject`中判断`pending`状态、改变state为`fulfilled/rejected`，赋值`this.value/this.reason`并遍历执行回调函数数组中的每个函数。
-   - 执行传入的参数executor函数，try...catch... 执行出错直接reject(err)
+   - 执行传入的参数executor函数，try...catch... 执行出错直接`reject(err)`
 - then方法
   - 传入两个参数，`then(onFulfilled, onRejected)`
   - 分三个状态：
