@@ -712,7 +712,7 @@ console.log(it.next(13)) // => {value: 42, done: true}
   - 当执行第二次 next 时，传入的参数等于上一个 yield 的返回值，如果你不传参，yield 永远返回 undefined。此时 `let y = 2 * 12`，所以第二个 yield 等于` 2 * 12 / 3 = 8`
   - 当执行第三次 next 时，传入的参数会传递给 z，所以 `z = 13, x = 5, y = 24，`相加等于 42
 
-## async
+## async/await
 - Generator 的语法糖，`async function` 代替了` function*`，`await` 代替了 `yield`，不用手写run自动执行器：内置执行器。
 - 返回Promise：async执行完后返回是一个Promise，return的值，可使用then接收，指定下一步操作
 

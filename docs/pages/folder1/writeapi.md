@@ -575,15 +575,11 @@ promise.then(function(res) {
 - then方法
   - 传入两个参数，`then(onFulfilled, onRejected)`
   - 分三个状态：
-    - 'fulfilled'-> 执行回调函数 `onFulfilled(this.value)` -> 链式调用 `resolvePromise(x, resolve, reject);`
-    - 'rejected' -> 执行回调函数 `onRejected(this.reason)` -> 链式调用 `resolvePromise(x, resolve, reject);`
-    - 'pending' -> 传入回调函数数组保存起来 `this.onResolvedCallbacks.push(() => {onFulfilled(this.value);})` + 链式调用 `resolvePromise(x, resolve, reject);`
-    - 'pending'-> 传入回调函数数组保存起来  `this.onRejectedCallbacks.push(() => {onRejected(this.reason);})` + 链式调用 `resolvePromise(x, resolve, reject);`
-- resolvePromise(x, resolve, reject)函数：
-  - 取x.then作为下一个then
-  - 通过then.call(x, y => { resolvePromise(y, resolve, reject); }, err => {reject(err);})
-  - 绑定x环境执行then，然后成功回调判断是否继续链式then，失败回调直接reject。
-  
+    - 'fulfilled'-> 执行回调函数 `onFulfilled(this.value)` 
+    - 'rejected' -> 执行回调函数 `onRejected(this.reason)`
+    - 'pending' -> 传入回调函数数组保存起来 `this.onResolvedCallbacks.push(() => {onFulfilled(this.value);})`
+    - 'pending'-> 传入回调函数数组保存起来  `this.onRejectedCallbacks.push(() => {onRejected(this.reason);})`
+
 ```js
 class Promise {
   constructor(executor) {
@@ -620,9 +616,13 @@ class Promise {
   // then 方法的两个参数onFulfilled onRejected
   then(onFulfilled, onRejected) {
     if(this.state === 'fulfilled') {
-      onFulfilled(this.value)
-      // let x = onFulfilled(this.value);
-      // resolvePromise(x, resolve, reject); // 实现链式调用
+      // 这里可以用setTimeout解决异步问题，放在下一个宏任务(标准是微任务)
+      // setTimeout(() => { 
+        onFulfilled(this.value)
+        // 这里可以实现链式调用（主要是then.call(x, fn, fn)的调用）
+        // let x = onFulfilled(this.value);
+        // resolvePromise(x, resolve, reject); 
+      // },0)
     }
     if(this.state === 'rejected') {
       onRejected(this.reason);
@@ -640,8 +640,13 @@ class Promise {
     }
   }
 }
+```
+- resolvePromise(x, resolve, reject)函数：实现链式调用then，让不同的promise代码互相套用
+  - 取x.then作为下一个then
+  - `then.call(x, y => { resolvePromise(y, resolve, reject); }, err => {reject(err);})`
+  - 通过上面绑定x环境执行then，然后成功回调判断是否继续链式then，失败回调直接reject。
 
-// resolvePromise 让不同的promise代码互相套用
+```js
 function resolvePromise(x, resolve, reject) {
   if((typeof x === 'object' || typeof x === 'function') && x !== null) {
       let then = x.then;
