@@ -222,7 +222,7 @@ function isObj(obj) {
 - Object.create(obj)
   - 生成一个新对象，新对象的`__proto__`为参数obj
   - 过程创建一个新的构造函数，它的prototype指向参数obj，再返回这个构造函数的实例，也就是新对象。
-  ```
+  ```js
   function create(obj) {
     function F() {}
     F.prototype = obj;
@@ -232,6 +232,26 @@ function isObj(obj) {
 
 - 在创建新的对象或者类时，方法通常应该关联于对象的原型，而不是定义到对象的构造器中。
   - 原因是这将导致每次构造器被调用时，方法都会被重新赋值一次（也就是说，对于每个对象的创建，方法都会被重新赋值）。
+
+- 创建对象
+  - 1、字面量（简洁性能好）
+  - 2、构造函数（要调用函数）
+  - 3、Object.create
+
+- 获取指定对象的原型（内部`[[Prototype]]`属性的值）
+  - `obj.__proto__`
+  - `obj.constructor.prototype`
+  - `Object.getPrototypeOf(obj)`
+```js
+var reg = /a/;
+reg.__proto__ === RegExp.prototype
+reg.constructor.prototype === RegExp.prototype
+Object.getPrototypeOf(reg) === RegExp.prototype; // true
+
+var proto = {};
+var obj = Object.create(proto);
+Object.getPrototypeOf(obj) === proto; // true
+```
 
 ## 作用域、作用域链
 - 作用域：代码中定义变量的区域，确定当前执行代码对变量的访问权限范围。可以看做一个封闭空间。
@@ -335,6 +355,258 @@ function isObj(obj) {
 - 构造函数执行完若有返回引用类型的值，则返回该对象res，返回非引用类型的值，则忽略。
 - 执行完无返回，则返回创建的对象obj。
 
+
+## this和call、apply、bind
+- 非箭头函数
+    - 执行时才确定this指向
+    - 默认情况下，this是指向全局对象的，浏览器就是指向window
+    - 隐式绑定：this指向最后调用它的那个对象（注意，如果不是通过对象调用方法，而是直接函数执行，一般都是默认window对象）
+    ```js
+    var name = "windowsName";
+    var a = {
+        name: "Joe",
+        fn : function () {
+            console.log(this.name);      // Joe
+        }
+    }
+    window.a.fn();
+    ```
+    - 显示绑定：call、apply、bind
+    - new绑定：this指向通过new 构造函数生成的新对象
+    - 优先级：new绑定 > 显式绑定 >隐式绑定 >默认绑定
+- 箭头函数
+    - this 始终指向函数定义时的 this，而非执行时
+    - 没有自己的this，通过作用域链决定this
+    - 被非箭头函数包裹，则为最近的非箭头函数的this，否则为undefined
+- 匿名函数： this 永远指向 window，一般匿名函数后面加 () 让其自执行，可以给其他函数调用。
+- 改变this的方法
+    - 1、ES6箭头函数（定义时的this ）
+    - 2、函数内部使用 var _this = this
+    - 3、apply、call、bind
+        - call: fn.call(target, 1, 2)
+        - apply: fn.apply(target, [1, 2])
+        - bind: fn.bind(target，1，2)()
+        - apply第二个参数是数组（或类数组），call和bind后面都是接单个参数
+        - call和apply默认会自动执行函数，bind需要在后面加()来自动执行
+    - 每个函数都包含call、apply、bind，设置函数内this对象的指向，改变函数的执行环境。默认是传的this是window对象。bind是创建一个函数实例，改变this指向后，新建的那个函数即使在全局作用域调用，也是指向改变后的那个this。
+    - 作用是扩充作用域，可以直接通过call那个对象，让this指向该对象。不用把方法放在一个对象中，再通过这个对象去调用里面的方法。
+    ```js
+    window.color="red";
+    var o = { color: "blue"};
+    function sayColor() {
+        alert(this.color);
+    }
+    sayColor();             // red  隐式在全局作用域window调用该函数，this指向window
+    
+    sayColor.call(this);    // red  显式在全局作用域window调用该函数
+    sayColor.call(window);  // red  显式在全局作用域window调用该函数
+    sayColor.call(o);       // blue 执行环境改变，this指向o
+    ```
+    箭头函数：
+    ```js
+      var name = "windowsName";
+      var a = {
+          name : "Joe",
+          func1: function () {
+              console.log(this.name)     
+          },
+          func2: function () {
+              setTimeout( () => {
+                  this.func1()
+              },100);
+          }
+      };
+      a.func2()     // Joe
+    ```
+    var _this = this：为了防止在 func2 中的 setTimeout 被 window 调用而导致的在 setTimeout 中的 this 为 window。
+    ```js
+        var name = "windowsName";
+        var a = {
+            name : "Joe",
+            func1: function () {
+                console.log(this.name)     
+            },
+            func2: function () {
+                var _this = this;
+                setTimeout( function() {
+                    _this.func1()
+                },100);
+            }
+        };
+        a.func2()       // Joe
+    ```
+
+## 数组
+- 切割推入排序
+    - slice(start, end): 返回选中的数据组成的新数组（从start到end），不改变原数组
+    - splice(start, number, value...): 返回删除元素组成的数组，**改变原数组**，由value 替换被删除的位置
+    - push / pop: 末尾推入/弹出，**改变原数组**， 返回推入/弹出项，一般可用作栈实现。
+    - unshift / shift: 头部推入/弹出，**改变原数组**，返回新的长度/操作项
+    - sort(fn) / reverse: 排序与反转，**改变原数组**，**不传入对比函数，元素按照转换为的字符串的各个字符的Unicode位点进行排序（从小到大）。**
+- 连接数组
+    - concat(不改变原数组，浅拷贝)
+- 转字符串
+    - join(不改变原数组，可传入连接符)
+- 迭代方法
+    - forEach((value元素,index索引,arr) => {})：数组每一项做一件事，回调函数返回 undefined 值
+    - map：每项通过某种计算返回值 回调函数每次的返回值 最后组成一个新数组，如果不想返回新数组，最好推荐forEach或者for-of替代。
+    - filter：符合条件的项生成新数组
+    - reduce(fn(pre, next){ })：前后值通过计算，累计返回最后的值
+    - every：每项都符合条件返回true
+    - some：某项符合条件就true
+![JS-array-1](./img/JS-array-1.png)
+
+- 去重
+    - [...new Set(arr)]
+- 拍平
+    - arr.flat(Infinity)  //Infinity 参数表示拍平所有层级，默认为1 会移除空项
+- 去重拍平排序
+
+```js
+[...new Set(arr.flat(Infinity))]
+.sort((a,b)=>{ return a-b})
+```
+- 判断数组是否有某个值：【indexOf()、includes()、find()、findIndex()】
+```js
+var arr=[1,2,3,4];
+var index=arr.indexOf(3); //不存在返回-1
+if(arr.indexOf(3)!== -1) {console.log("存在")} //判断不为-1，才存在
+if(arr.indexOf(3)) //注意这样判断不对，if(-1)为真 if(0)为假
+
+if(arr.includes(3)){ console.log("存在")} //存在返回true
+
+var result = arr.find(item => {
+    return item > 3
+}) //返回数组中满足条件的第一个元素值，没有返回undefined
+
+var result = arr.findIndex(item =>{
+    return item > 3
+}); //返回数组中满足条件的第一个元素的下标，没有返回-1
+```
+
+- 判断是否为数组
+    - 1、Object 的对象都有 toString方法，没有重写则返回 [Object type]，由于除了Object外，其他类型使用toString会变为字符串，所以需要call改变上下文，调用原型上的toString方法
+    - 2、判断原型链上是否有该Array的原型prototype，只能判断对象，原始类型不可以
+    - 3、Array.isArray()是ES5新增的方法，当不存在 Array.isArray() ，可以用 Object.prototype.toString.call() 实现。
+
+    ```js
+    1.  Object.prototype.toString.call(arr) //"[object Array]"
+    
+    2.  [] instanceof Array; // true
+    
+    3.  Array.isArray(arr) // true
+    ```
+
+## JS中的遍历、枚举
+
+- 标准for循环
+    - 需要维护【下标i和边界length】
+- forEach
+    - 【无法中止循环】数组太大时，无法在特定条件下`break/continue/return`退出遍历，造成资源浪费。
+- for in
+    - 普遍使用，兼容性好，支持`break/continue/return`
+    - 遍历对象【自身+继承】的可枚举(enumerable:true)的属性（不含 Symbol 属性）。
+    - 若不想获取继承的属性，可多加判断`if(obj.hasOwnProperty(key)) {...}`，不想某些原型属性被遍历，可在原型属性设置(enumerable:false)
+- for of(推荐)
+    - 简洁，支持`break/continue/return`，需要ES6以上，兼容性一般
+    - 依赖对象遍历器Iterator的遍历，每次执行遍历器的next方法
+    - 大多数JavaScript的内置对象都支持迭代，例如：Array、Set、Map、String、函数的 arguments 、NodeList等
+    - 普通对象(自己创建对象)不能直接使用`for...of`，需要配合`Object.keys()`
+    - entries()返回一个遍历器对象，用来遍历[键名, 键值]组成的数组。对于数组，键名就是索引值；对于 Set，键名与键值相同。
+    - keys() 返回一个遍历器对象，用来遍历所有的键名。
+    - values() 返回一个遍历器对象，用来遍历所有的键值。
+   
+    ```js
+    // for...in循环读取键名，for...of循环默认读取键值(对于Map结构默认为entries())。
+    let arr = ['a', 'b', 'c'];
+    for (let item in arr) {
+      console.log(item);
+    }
+    // '0'
+    // '1'
+    // '2'
+    
+    for (let item of arr) {
+      console.log(item);
+    }
+    // 'a'
+    // 'b'
+    // 'c'
+    
+    // 使用entries()返回遍历对象
+    let arr = ['a', 'b', 'c'];
+    for (let item of arr.entries()) {
+      console.log(item);
+    }
+    // [ 0, 'a' ]
+    // [ 1, 'b' ]
+    // [ 2, 'c' ]
+    
+    // 使用解构，方便读取值
+    let arr = ['a', 'b', 'c'];
+    for (let [key, value] of arr.entries()) {
+      console.log(key, value);
+    }
+    // 0 'a'
+    // 1 'b'
+    // 2 'c'
+    
+    // 下面是类数组对象具备遍历器接口
+    // 并不是所有类似数组的对象都具有 Iterator 接口，可以先使用Array.from方法将其转为数组。
+    
+    // 字符串
+    let str = "hello";
+    for (let s of str) {
+      console.log(s); // h e l l o
+    }
+    
+    // arguments对象
+    function printArgs() {
+      for (let x of arguments) {
+        console.log(x);
+      }
+    }
+    printArgs('a', 'b');
+    // 'a'
+    // 'b'
+    
+    // 自定义类数组对象
+    let arrayLike = { length: 2, 0: 'a', 1: 'b' };
+    for (let x of Array.from(arrayLike)) {
+      console.log(x);
+    }
+    // 'a'
+    // 'b'
+    ```
+- Object.keys()
+    - ES5，兼容好，返回值顺序不定，对顺序有需求，使用map结构或set集合,按成员被添加进时的顺序。
+    - 获取对象本身的可枚举属性的键名（不包括继承属性）
+    ```js
+      let joe = {
+        name:'joe',
+        age:25,
+      }
+      for (let key of Object.keys(joe)) {
+          console.log(key + ': ' + joe[key]);
+       }
+    ```
+- 属性遍历
+    - 从该属性的描述对象，看可枚举性enumerable
+        ```js
+        let obj = { foo: 123 };
+        Object.getOwnPropertyDescriptor(obj, 'foo')
+        //  {
+        //    value: 123,
+        //    writable: true,
+        //    enumerable: true,
+        //    configurable: true
+        //  }
+        ```
+    - `for...in`【自身+继承+可枚举（不含Symbol）】
+    - `Object.keys(obj)`【自身+可枚举（不含Symbol）】
+    - `Object.getOwnPropertyNames(obj)`【自身+可枚举+不可枚举（不含Symbol）】
+    - `Object.getOwnPropertySymbols(obj)`【自身Symbol属性的键名】
+    - `Reflect.ownKeys(obj)`【自身+可枚举+不可枚举+Symbol属性的键名】
 
 ## 浏览器事件循环(Event Loop)
 -  浏览器多进程的，进程表示cpu资源分配的最小单位，一个进程中可以有多个线程
