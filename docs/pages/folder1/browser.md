@@ -623,23 +623,33 @@ http://www.domain2.com/b.js        不同域名                         不允�
 - 有效期不同： Cookie 可设置为长时间保持，比如我们经常使用的默认登录功能，Session 一般失效时间较短，客户端关闭（默认情况下，sessionId被删导致失效的）或者 Session 超时都会失效。
 - 存储大小不同： 单个 Cookie 保存的数据不能超过 4K，Session 可存储数据远高于 Cookie，但是当访问量过多，会占用过多的服务器资源。
 
+- 跨域和跨站
+    - 首先要理解的一点就是跨站和跨域是不同的。同站(same-site)/跨站(cross-site)」和第一方(first-party)/第三方(third-party)是等价的。但是与浏览器同源策略（SOP）中的「同源(same-origin)/跨域(cross-origin)」是完全不同的概念。
+    - 同源策略的同源是指两个 URL 的协议/主机名/端口一致。例如，www.taobao.com/pages/...，它的协议是 https，主机名是 www.taobao.com，端口是 443。
+同源策略作为浏览器的安全基石，其「同源」判断是比较严格的，相对而言，Cookie中的「同站」判断就比较宽松：只要两个 URL 的 eTLD+1 相同即可，不需要考虑协议和端口。其中，eTLD 表示有效顶级域名，注册于 Mozilla 维护的公共后缀列表（Public Suffix List）中，例如，.com、.co.uk、.github.io 等。eTLD+1 则表示，有效顶级域名+二级域名，例如 taobao.com 等。
+    - 举几个例子，www.taobao.com 和 www.baidu.com 是跨站，www.a.taobao.com 和 www.b.taobao.com 是同站，a.github.io 和 b.github.io 是跨站(注意是跨站)。
+
 - cookie注意
+    - 用途：
+        - 会话状态管理（如用户登录状态、购物车、游戏分数或其它需要记录的信息）
+        - 个性化设置（如用户自定义设置、主题等）
+        - 浏览器行为跟踪（如跟踪分析用户行为等）
     - 无法跨域
-    - 使用 HttpOnly禁止js通过 document.cookie 读取cookie（提高安全性，防范xss）
+    - HttpOnly：禁止js通过 document.cookie 读取cookie（提高安全性，防范xss攻击）
     - Secure 设为true，在HTTPS才有效
     - MaxAge表示失效时间（秒），负数表示临时 cookie，关闭浏览器就删除。默认-1，为0表示删除。
     - Expires 设置过期时间，以客户端时间为准。不设置表示临时cookie，保存在客户端内存，关闭浏览器失效。
-    - Domain 指定cookie所属域名，默认为当前主机，如使用单点登录时设置为二级域名`.taobao.com`，子域名下(`a.taobao.com` 还是 `b.taobao.com`)都可以使用该cookie，自动发送cookie，携带登录信息。
-    - Path 指定了一个 URL 路径，子路径也会匹配，该路径下的可接收cookie。
-    - **SameSite：主流浏览器得到支持，在 Chrome80 版本中默认屏蔽了第三方的 Cookie（Lax）**
-        - 让 Cookie 在跨站请求时不会被发送
-        - Strict 这个 Cookie 在任何情况下都不可能作为第三方 Cookie，跨站请求不能携带
+    - Domain 指定cookie所属域名，默认为当前主机，如使用单点登录时设置为二级域名`.taobao.com`，子域名下(`a.taobao.com` 还是 `b.taobao.com`)都可以使用该cookie，自动发送cookie，携带登录信息。注意：不能跨域设置 Cookie，只能设置跟自己同域的。
+    - Path 指定了一个 URL 路径，子路径也会匹配，该路径下的可接收cookie。比如设置 `Path=/docs`，`/docs/Web/` 下的资源会带 Cookie 首部，`/test` 则不会携带 Cookie 首部。
+    - **SameSite：主流浏览器得到支持，在 Chrome80 版本之前是none，之后默认屏蔽了第三方的 Cookie（Lax）**
+        - SameSite 属性可以让 Cookie 在跨站请求时不会被发送，从而可以阻止跨站请求伪造攻击（CSRF）。
+        - Strict 这个 Cookie 在任何情况下都不可能作为第三方 Cookie，跨站请求不能携带（即使CORS也行不通）。
         - Lax 允许部分第三方请求携带 Cookie（比如get）
         - None 无论是否跨站都会发送 Cookie  
         - 影响：Post 表单，iframe（广告），AJAX，Image（埋点），`<script>`（jsonp）不发送三方 Cookie
         - 改造：SameSite=none，允许同站、跨站请求携带该cookie
         - 注意：SameSite=none，不支持HTTP，需要设置cookie的Secure属性，只有在HTTPS协议才发送。
-    -  三方cookie
+    - 三方cookie
         - 通常cookie的域和浏览器地址的域匹配，这被称为第一方cookie。那么第三方cookie就是cookie的域和地址栏中的域不匹配。
         - 用途：前端日志打点监控、行为分析、广告推荐
         - 实现：A站写入第三方cookie(域名为第三方)，页面操作过程将携带第三方cookie向第三方域发起请求，第三方域获取到数据。(如请求第三方广告商网站的图片，响应成功顺便设置第三方cookie，去另一个网站，还是请求同个广告商图片，会将这个第三方cookie发送到广告商，这样会收集到用户的数据)
@@ -654,7 +664,8 @@ http://www.domain2.com/b.js        不同域名                         不允�
         - 可添加过期日期expires、可添加path设置路径（默认属于当前页）
             ```js
             document.cookie = "username=Joe; expires=Sun, 31 Dec 2017 12:00:00 UTC; path=/";
-            ```    
+            ``` 
+           
 - session注意
     - session 是基于 cookie 实现的，session 存储在服务器端，sessionId 会被存储到客户端的cookie 中
     - session失效两种情况
