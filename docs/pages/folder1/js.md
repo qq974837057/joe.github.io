@@ -435,6 +435,32 @@ Object.getPrototypeOf(obj) === proto; // true
         };
         a.func2()       // Joe
     ```
+    this和作用域的区别
+    ```js
+    // 作用域 -> 查找当前作用域有该变量，直接用
+    var name = 'global';
+    function a() {
+        var name = 'joe';
+        console.log(name);
+    }
+    a(); // joe
+
+    // 作用域 -> 查找当前作用域没有该变量，向上查找
+    var name = 'global';
+    function a() {
+        console.log(name);
+    }
+    a(); // global
+
+    // this指向 -> 指向调用它的环境this，这里其实是全局window.a()
+    var name = 'global';
+    function a() {
+        var name = 'joe';
+        console.log(this.name);
+    }
+    a(); // global
+
+    ```
 
 ## 数组
 - 切割推入排序
@@ -607,6 +633,291 @@ var result = arr.findIndex(item =>{
     - `Object.getOwnPropertyNames(obj)`【自身+可枚举+不可枚举（不含Symbol）】
     - `Object.getOwnPropertySymbols(obj)`【自身Symbol属性的键名】
     - `Reflect.ownKeys(obj)`【自身+可枚举+不可枚举+Symbol属性的键名】
+
+## ES6
+- [ES6-掘金参考](https://juejin.im/post/5d9bf530518825427b27639d#heading-7)
+- 块级作用域(let,const)、（ 块级作用域、不存在变量提升、不允许重复声明、const常量）
+- 提供了定义类的语法糖(class)、类引入导出和继承( class/import/export/extends)
+- 一种基本数据类型(Symbol)
+- 变量的解构赋值:`const arr = [1, 2, 3, 4]; const [first, second] = arr;`
+- 函数参数允许设置默认值，引入了rest参数，新增了箭头函数
+- 数组新增了一些API，如 isArray / from / of 方法;数组实例新增了 entries()，keys() 和 values() 等方法
+- 对象和数组新增了扩展运算符
+- 模块化(import/export)
+-  Set 和 Map 数据结构
+- Promise的使用与实现
+- generator:
+    - yield: 暂停代码
+    - next(): 继续执行代码
+- ES8（ES2017） 提供的 Async/Await 语法糖
+- let、const、var 的区别有哪些？
+    -  1、let/const 定义的变量不会出现变量提升（暂存死区，不可访问），而 var 定义的变量会提升。（没var关键字的变量总是全局）
+    -  2、let、const 创建块级作用域, 该变量处于从块开始到初始化处理的“暂存死区”。未声明就提前使用会报错ReferenceError。
+    -  3、相同作用域中，let 和 const 不允许重复声明，var 允许重复声明。
+    -  4、const 声明只读的常量 (即指针)，必须设置初始值（基本数据不可改变值，引用值可以），只声明不赋值会报错。
+
+    >  const常量的本质：JS中复杂数据存在栈是堆的内存地址，堆里的值可以改变，但是堆内存的地址不可变。
+
+    > 暂时性死区的本质：只要一进入当前作用域，所要使用的变量就已经存在了，但是不可获取，只有等到声明变量后，才可以获取和使用该变量。
+    
+- 箭头函数
+    - 箭头函数不属于普通的 function，所以没有独立的上下文。
+    - 箭头函数是普通函数的简写，可以更优雅的定义一个函数，和普通函数相比，有以下几点差异：
+        - 1、函数体内的 this 对象，就是定义时所在的对象，而不是使用时所在的对象。
+        - 2、没有隐藏的arguments 对象。可以用 rest 参数代替。
+        - 3、不可以使用 yield 命令，因此箭头函数不能用作 Generator 函数。
+        - 4、不可以使用 new 命令，因为：没有自己的 this，无法调用 call，apply，bind。
+    - 在以下场景中不要使用箭头函数去定义：
+        - 定义对象方法、定义原型方法、定义构造函数、定义事件回调函数。
+    - 箭头函数写法：
+        - 有括号记得加return，否则出问题。
+        - 没括号才可以省略return。
+        ```js
+        // 当箭头函数只有一个参数时，可以省略参数的圆括号
+        elements.map(element => {
+         return element.length;
+        });
+        
+        // 当箭头函数的函数体只有一个 `return` 语句时，可以省略 `return` 关键字和方法体的花括号
+        elements.map(element => element.length);
+        ```
+
+#### 扩展运算符
+- 和concat一样属于浅拷贝
+```js
+//复制数组
+const a1 = [1,2]
+const a2 = [...a1] 
+//合并数组
+const arr1 = ['a', 'b'];
+const arr2 = ['c'];
+const arr3 = ['d', 'e'];
+[...arr1, ...arr2, ...arr3] // [ 'a', 'b', 'c', 'd', 'e' ]
+//解构赋值
+const [first, ...rest] = [1, 2, 3, 4, 5];
+first // 1
+rest  // [2, 3, 4, 5]
+//字符串
+[...'joe'] //["j", "o", "e"]
+
+```
+
+#### Set、Map
+- Set
+    - 成员唯一，没有重复值
+        - 判断重复值类似===，区别是NaN也会被Set认为相等
+        - 添加值时不会发生类型转换(5 !== "5")
+        - 两个对象总是不相等的
+    - 用法：const set = new Set(arr)
+    - 接受参数：数组或具有iterable接口可迭代的数据结构（如类数组对象）
+    - 常用
+        - 数组去重
+            ```js
+            [...new Set(array)]
+            // 或者
+            Array.from(new Set(arr))
+            ```
+        - 字符串去重
+            ```js
+            [...new Set('ababbc')].join('')
+            ```
+        - 实现并集、交集、差集
+            ```js
+            let a = new Set([1, 2, 3]);
+            let b = new Set([4, 3, 2]);
+            
+            // 并集
+            let union = new Set([...a, ...b]);
+            // Set {1, 2, 3, 4}
+            
+            // 交集
+            let intersect = new Set([...a].filter(x => b.has(x)));
+            // Set {2, 3}
+            
+            // 差集
+            let difference = new Set([...a].filter(x => !b.has(x)));
+            // Set {1}
+            ```
+        - 遍历改变原有set结构，先映射，再赋值回原有set
+            ```js
+            // 方法一
+            let set = new Set([1, 2, 3]);
+            set = new Set([...set].map(val => val * 2));
+            // set的值是2, 4, 6
+            
+            // 方法二
+            let set = new Set([1, 2, 3]);
+            set = new Set(Array.from(set, val => val * 2));
+            // set的值是2, 4, 6
+            ```
+    - 实例属性和方法       
+        - 属性
+            - constructor：构造函数，返回Set函数
+            - size：返回实例成员总数
+        - 方法
+            - add(value)：添加值，返回整个Set
+            - delete(value)：删除值，返回布尔
+            - has(value)：检查值，返回布尔
+            - clear()：清除所有成员，无返回值
+            - // 遍历相关方法 ：顺序就是插入顺序（比如保存回调函数列表，按顺序调用）
+            - keys()：返回键名的遍历器
+            - values()：返回键值的遍历器
+            - entries()：返回键值对的遍历器
+            - forEach()：使用回调函数遍历每个成员
+- WeakSet：弱引用
+    - 场景：适合临时存放一组对象：只要这些对象在外部消失，它在WeakSet结构中的引用就会自动消失
+    - 示例：WeakSet 中的对象都是弱引用，避免内存泄露，如储存 DOM 节点，而不用担心这些节点从文档移除时，会引发内存泄漏。垃圾回收机制不考虑 WeakSet
+    - 规则1：WeakSet 的成员只能是对象
+    - 规则2：WeakSet **不可遍历**（成员可能随时消失）
+    - 原理：WeakSet对该对象的引用，如果其他对象都不再引用该对象，那么垃圾回收机制会自动回收该对象所占用的内存，不考虑该对象还存在于 WeakSet 之中。
+    - 用法：`const set = new WeakSet(arr)`
+    - 属性
+        - constructor：构造函数，返回WeakSet函数
+    - 方法
+        - add()：添加值，返回实例
+        - delete()：删除值，返回布尔
+        - has()：检查值，返回布尔
+- Map
+    - 传统的对象只能用字符串做键名，Map不限于字符串，可以包括对象或其他类型（包括函数）。
+    - 简单类型（数字、字符串、布尔值），如果符合===，就为同个键（特殊情况NaN,在Map也是同一个键）
+    - 如果是对象（包括数组），Map 的键实际上是跟内存地址绑定的，只要内存地址不一样，即使同名同值，也视为两个键。解决扩展库的同名属性冲突问题
+    - 用法：const map = new Map(arr) //双元素数组的数据结构, Set和Map都可以用来生成新的 Map。
+        ```js
+        // 数组
+        const map = new Map([
+          ['name', '张三'],
+          ['title', 'Author']
+        ]);
+        map.get('name') // "张三"
+        
+        // Set入参
+        const set = new Set([
+          ['foo', 1],
+          ['bar', 2]
+        ]);
+        const m1 = new Map(set);
+        m1.get('foo') // 1
+        
+        // Map入参
+        const m2 = new Map([['baz', 3]]);
+        const m3 = new Map(m2);
+        m3.get('baz') // 3
+        ```
+    - 属性
+        - constructor：构造函数，返回Map函数
+        - size：返回成员总数
+    - 方法
+        - set(key,value)：添加键名为key，对应键值为value，若已存在则更新键值，返回整个Map对象，可链式set
+        - get(key)：读取key对应的键值，找不到key，返回undefined
+        - has(key)：返回布尔值，表示某个键名是否在当前Map对象中
+        - delete(key)：删除值，返回布尔，失败返回false
+        - clear()：清除所有成员，无返回值
+        - 遍历相关方法：遍历顺序就是插入顺序
+        - keys()：返回键名的遍历器。
+        - values()：返回键值的遍历器。
+        - entries()：返回所有成员的遍历器。
+        - forEach()：遍历 Map 的所有成员。
+            ```js
+            const map = new Map([
+              ['F', 'no'],
+              ['T',  'yes'],
+            ]);
+            
+            for (let key of map.keys()) {
+              console.log(key);
+            }
+            // "F"
+            // "T"
+            
+            for (let value of map.values()) {
+              console.log(value);
+            }
+            // "no"
+            // "yes"
+            
+            for (let item of map.entries()) {
+              console.log(item[0], item[1]);
+            }
+            // "F" "no"
+            // "T" "yes"
+            
+            // 或者
+            for (let [key, value] of map.entries()) {
+              console.log(key, value);
+            }
+            // "F" "no"
+            // "T" "yes"
+            
+            // 等同于使用map.entries()
+            for (let [key, value] of map) {
+              console.log(key, value);
+            }
+            // "F" "no"
+            // "T" "yes"
+            ```
+    - Map转为数组结构：扩展运算符
+        ```js
+        const map = new Map([
+          [1, 'one'],
+          [2, 'two'],
+          [3, 'three'],
+        ]);
+        [...map.keys()]
+        // [1, 2, 3]
+        
+        [...map.values()]
+        // ['one', 'two', 'three']
+        
+        [...map.entries()]
+        // [[1,'one'], [2, 'two'], [3, 'three']]
+        
+        [...map]
+        // [[1,'one'], [2, 'two'], [3, 'three']]
+        ```
+    - 数组转为Map：传入Map构造函数
+        ```js
+        new Map([
+          [true, 7],
+          [{foo: 3}, ['abc']]
+        ])
+        // Map {
+        //   true => 7,
+        //   Object {foo: 3} => ['abc']
+        // }
+        ```
+    - Map转为对象：遍历给obj赋值（前提是Map键名都是字符串）
+        ```js
+        function strMapToObj(strMap) {
+          let obj = Object.create(null);
+          for (let [k,v] of strMap) {
+            obj[k] = v;
+          }
+          return obj;
+        }
+        ```
+    - 对象转为Map：Object.entries()
+        ```js
+        let obj = {"a":1, "b":2};
+        let map = new Map(Object.entries(obj));
+        ```
+- WeakMap：弱引用
+    - 场景：键名可能会消失时，防止内存泄漏
+    - 示例1：存储DOM节点，DOM节点被移除释放该成员，不会引发内存泄漏
+    - 示例2：部署私有属性，类的内部属性是实例的弱引用，删除实例时它们也随之消失，不会造成内存泄漏
+    - 用法：const set = new WeakMap(arr)
+    - 规则1：WeakMap的键名只接受对象作为键名（null除外）
+    - 规则2：WeakMap不可遍历
+    - WeakMap的**键名所指向的对象，是弱引用**，不计入垃圾回收机制。键名对应的对象其他引用清除，WeakMap 里面的键名对象和所对应的键值对会自动消失，不用手动删除引用。但键值是正常引用，如果外部消除对键值的引用，内部依然会存在对键值的引用。
+    - 属性
+        - constructor：构造函数，返回WeakMap函数
+    - 方法
+        - set(key,value)：添加键名为key，对应键值为value，若已存在则更新键值，返回整个WeakMap对象，可链式set
+        - get(key)：读取key对应的键值，找不到key，返回undefined
+        - has(key)：返回布尔值，表示某个键名是否在当前WeakMap对象中
+        - delete()：删除键值对，返回布尔
+        - 无遍历方法、无清空（即没有keys()、values()和entries()、clear()方法）
+- Map/Set、WeakMap，什么作用【描述】
+    - Map可以用对象做key，重复的话更新键值，Set是用作保证值不重复的集合。WeakSet的值、WeakMap的键名都必须是对象，且它们是弱引用，可以防止内存泄露。
 
 ## 浏览器事件循环(Event Loop)
 -  浏览器多进程的，进程表示cpu资源分配的最小单位，一个进程中可以有多个线程

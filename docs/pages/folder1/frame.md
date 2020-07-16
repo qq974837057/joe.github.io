@@ -289,7 +289,7 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 ### data为什么是函数
 - 组件被复用时，会创造多个实例。
 - 它们来自同个构造函数，如果data是对象，也就是引用类型，会影响到所有实例。
-- 为了防止实例间data的冲突，将data变为函数，用return返回值。
+- 为了防止实例间data的冲突，将data变为函数，用return返回值，让每个实例维护一份返回对象的独立拷贝。
 
 ### computed和watch的区别
 - computed

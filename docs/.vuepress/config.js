@@ -27,7 +27,7 @@ module.exports = {
               { text: '随笔', link: '/pages/folder2/test4.md' },
           ]
       },
-      { text: '功能演示', link: '/pages/folder2/test5.md' },
+      // { text: '功能演示', link: '/pages/folder2/test5.md' },
 
       //格式三：跳转至外部网页，需http/https前缀
       { text: 'Github', link: 'https://github.com/qq974837057' },
@@ -38,7 +38,7 @@ module.exports = {
       '/pages/folder1/':[         
           {
               title: '前端基础',   // 一级菜单名称
-              collapsable: false, // false为默认展开菜单, 默认值true是折叠,
+              collapsable: true, // false为默认展开菜单, 默认值true是折叠,
               sidebarDepth: 2,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
               children: [
                   ['html.md', 'HTML'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
@@ -71,14 +71,14 @@ module.exports = {
 						collapsable: false, // false为默认展开菜单, 默认值true是折叠,
 						sidebarDepth: 2,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
 						children: [
-								['test4.md', '子菜单4'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
+								['test4.md', '建设中'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
 						]
 				},
 				{
 						title: '日常记录',
 						collapsable: false, 
 						children: [
-								['test5.md', '子菜单5']
+								['test5.md', '建设中']
 						]
 				}
 		],
