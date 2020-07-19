@@ -379,15 +379,17 @@ Object.getPrototypeOf(obj) === proto; // true
     - 没有自己的this，通过作用域链决定this
     - 被非箭头函数包裹，则为最近的非箭头函数的this，否则为undefined
 - 匿名函数： this 永远指向 window，一般匿名函数后面加 () 让其自执行，可以给其他函数调用。
-- 改变this的方法
+
+- 改变this的方法（call、apply、bind）
     - 1、ES6箭头函数（定义时的this ）
     - 2、函数内部使用 var _this = this
-    - 3、apply、call、bind
+    - 3、call、apply、bind
         - call: fn.call(target, 1, 2)
         - apply: fn.apply(target, [1, 2])
         - bind: fn.bind(target，1，2)()
         - apply第二个参数是数组（或类数组），call和bind后面都是接单个参数
         - call和apply默认会自动执行函数，bind需要在后面加()来自动执行
+        - call比apply的性能要好，使用扩展运算符let params = [1,2,3,4] ；xx.call(obj, ...params)
     - 每个函数都包含call、apply、bind，设置函数内this对象的指向，改变函数的执行环境。默认是传的this是window对象。bind是创建一个函数实例，改变this指向后，新建的那个函数即使在全局作用域调用，也是指向改变后的那个this。
     - 作用是扩充作用域，可以直接通过call那个对象，让this指向该对象。不用把方法放在一个对象中，再通过这个对象去调用里面的方法。
     ```js
@@ -634,6 +636,43 @@ var result = arr.findIndex(item =>{
     - `Object.getOwnPropertySymbols(obj)`【自身Symbol属性的键名】
     - `Reflect.ownKeys(obj)`【自身+可枚举+不可枚举+Symbol属性的键名】
 
+## 类数组对象
+- 概念：JS中，对于一个普通的对象来说，如果它的所有键名均为正整数（由0开始1、2...），同时拥有length属性，则为“类数组对象”。
+- 例子：(函数中的) arguments /  (querySelector获得的) nodeList
+- 转为数组：类数组 -> 数组
+    - ES5
+        ```js
+        let args = [].slice.call(arguments);
+        let args = [].splice.call(arguments,0);
+        let args = [].concat.apply([],arguments);
+        let args =  Array.prototype.slice.call(arguments) //使用Array.prototype原型上的方法也可以
+        ```
+    - ES6
+        ```js
+        let args = Array.from(arguments)  // ES6 的Array.from()
+        let args = [...arguments]         // ES6展开运算符
+        ```
+
+- 剩余参数和 arguments对象的区别
+  - 剩余参数只包含那些没有对应形参的实参，而 arguments 对象包含了传给函数的所有实参。
+  - arguments对象不是一个真正的数组，而剩余参数是真正的 Array实例，也就是说你能够在它上面直接使用所有的数组方法，比如 sort，map，forEach或pop。
+
+```js
+function sortRestArgs(...theArgs) {
+  var sortedArgs = theArgs.sort();
+  return sortedArgs;
+}
+alert(sortRestArgs(5,3,7,1)); // 弹出 1,3,5,7
+
+// 为了在arguments对象上使用Array方法，它必须首先被转换为一个真正的数组。
+function sortArguments() {
+  var args = Array.prototype.slice.call(arguments);
+  var sortedArgs = args.sort();
+  return sortedArgs;
+}
+console.log(sortArguments(5, 3, 7, 1)); // shows 1, 3, 5, 7
+```
+
 ## ES6
 - [ES6-掘金参考](https://juejin.im/post/5d9bf530518825427b27639d#heading-7)
 - 块级作用域(let,const)、（ 块级作用域、不存在变量提升、不允许重复声明、const常量）
@@ -682,8 +721,8 @@ var result = arr.findIndex(item =>{
         elements.map(element => element.length);
         ```
 
-#### 扩展运算符
-- 和concat一样属于浅拷贝
+- 扩展运算符
+  - 和concat一样属于浅拷贝
 ```js
 //复制数组
 const a1 = [1,2]
@@ -702,13 +741,14 @@ rest  // [2, 3, 4, 5]
 
 ```
 
-#### Set、Map
+## Map、Set、WeakMap、WeakSet
+
 - Set
     - 成员唯一，没有重复值
-        - 判断重复值类似===，区别是NaN也会被Set认为相等
-        - 添加值时不会发生类型转换(5 !== "5")
+        - 判断重复值类似`===`，区别是NaN也会被Set认为相等
+        - 添加值时不会发生类型转换(`5 !== "5"`)
         - 两个对象总是不相等的
-    - 用法：const set = new Set(arr)
+    - 用法：`const set = new Set(arr)`
     - 接受参数：数组或具有iterable接口可迭代的数据结构（如类数组对象）
     - 常用
         - 数组去重
@@ -779,9 +819,9 @@ rest  // [2, 3, 4, 5]
         - has()：检查值，返回布尔
 - Map
     - 传统的对象只能用字符串做键名，Map不限于字符串，可以包括对象或其他类型（包括函数）。
-    - 简单类型（数字、字符串、布尔值），如果符合===，就为同个键（特殊情况NaN,在Map也是同一个键）
+    - 简单类型（数字、字符串、布尔值），如果符合`===`，就为同个键（特殊情况NaN,在Map也是同一个键）
     - 如果是对象（包括数组），Map 的键实际上是跟内存地址绑定的，只要内存地址不一样，即使同名同值，也视为两个键。解决扩展库的同名属性冲突问题
-    - 用法：const map = new Map(arr) //双元素数组的数据结构, Set和Map都可以用来生成新的 Map。
+    - 用法：`const map = new Map(arr)` //双元素数组的数据结构, Set和Map都可以用来生成新的 Map。
         ```js
         // 数组
         const map = new Map([
@@ -895,7 +935,7 @@ rest  // [2, 3, 4, 5]
           return obj;
         }
         ```
-    - 对象转为Map：Object.entries()
+    - 对象转为Map：`Object.entries()`
         ```js
         let obj = {"a":1, "b":2};
         let map = new Map(Object.entries(obj));
@@ -904,7 +944,7 @@ rest  // [2, 3, 4, 5]
     - 场景：键名可能会消失时，防止内存泄漏
     - 示例1：存储DOM节点，DOM节点被移除释放该成员，不会引发内存泄漏
     - 示例2：部署私有属性，类的内部属性是实例的弱引用，删除实例时它们也随之消失，不会造成内存泄漏
-    - 用法：const set = new WeakMap(arr)
+    - 用法：`const map = new WeakMap(arr)`
     - 规则1：WeakMap的键名只接受对象作为键名（null除外）
     - 规则2：WeakMap不可遍历
     - WeakMap的**键名所指向的对象，是弱引用**，不计入垃圾回收机制。键名对应的对象其他引用清除，WeakMap 里面的键名对象和所对应的键值对会自动消失，不用手动删除引用。但键值是正常引用，如果外部消除对键值的引用，内部依然会存在对键值的引用。
@@ -918,6 +958,34 @@ rest  // [2, 3, 4, 5]
         - 无遍历方法、无清空（即没有keys()、values()和entries()、clear()方法）
 - Map/Set、WeakMap，什么作用【描述】
     - Map可以用对象做key，重复的话更新键值，Set是用作保证值不重复的集合。WeakSet的值、WeakMap的键名都必须是对象，且它们是弱引用，可以防止内存泄露。
+
+- 弱引用和强引用
+  - 一个对象若只被弱引用所引用，不可访问（或弱可访问），可能在任何时刻被回收。
+  - 可用于深拷贝中，当拷贝对象非常大时，使用Map造成内存消耗，需要手动清除Map 的属性。使用WeakMap可以成为弱引用，引用的对象释放后，拷贝的属性就会自动释放。
+  - 如使用Map，对象间是存在强引用关系，手动释放obj，map对obj存在强引用，无法释放该内存。
+  ```js
+  let obj = { name : 'Joe'}
+  const map = new Map();
+  map.set(obj,'Joo');
+  obj = null;
+  ```
+  - 使用WeakMap，weak对obj存在弱引用，下一次垃圾回收时，该内存会被释放。
+  ```js
+  let obj = { name : 'Joe'}
+  const weak = new WeakMap();
+  weak.set(obj,'Joo');
+  obj = null;
+  ```
+
+
+## JS代码执行过程
+- JS 引擎首先创建一个执行栈
+- JS引擎会创建一个全局执行上下文，并push到执行栈中，所有变量分配内存并赋一个初始值（undefined）
+- JS引擎会进入执行阶段，这个过程JS引擎会逐行的执行代码，即为之前分配好内存的变量逐个赋值(真实值)。
+- 函数：如果这段代码中存在function的声明和调用，那么JS引擎会创建一个函数执行上下文，并push到执行栈中。
+- 闭包：当函数中存在对其它函数的调用时，JS引擎会在父函数执行的过程中，将子函数的全局执行上下文push到执行栈。
+- 当子函数执行的过程中，父函数已经return了，JS引擎会将父函数的上下文从执行栈中移除，与此同时，JS引擎会为还在执行的子函数上下文创建一个闭包，这个闭包里保存了父函数内声明的变量及其赋值，子函数仍然能够在其上下文中访问并使用这边变量/常量。当子函数执行完毕，JS引擎才会将子函数的上下文及闭包一并从执行栈中移除。
+- 异步：JS引擎是单线程的，当代码中存在异步调用时，比如setTimeout或ajax请求都是非阻塞(non-blocking)的，执行到异步任务，JS引擎会将需要异步执行的代码移出调用栈，等到有返回结果时，JS引擎会立即将回调函数push进任务队列中等待被调用，当监视进程检查到执行栈中已经为空时，JS引擎会立刻将任务队列中的回调函数逐个push进调用栈并执行。这个过程我们也称之为事件循环。
 
 ## 浏览器事件循环(Event Loop)
 -  浏览器多进程的，进程表示cpu资源分配的最小单位，一个进程中可以有多个线程
@@ -1703,24 +1771,19 @@ console.log(it.next(13)) // => {value: 42, done: true}
   // 手写递归 - 详见手写API
   ```
 
-## Map、Set、WeakMap、WeakSet
-- 弱引用和强引用
-  - 一个对象若只被弱引用所引用，不可访问（或弱可访问），可能在任何时刻被回收。
-  - 可用于深拷贝中，当拷贝对象非常大时，使用Map造成内存消耗，需要手动清除Map 的属性。使用WeakMap可以成为弱引用，引用的对象释放后，拷贝的属性就会自动释放。
-  - 如使用Map，对象间是存在强引用关系，手动释放obj，map对obj存在强引用，无法释放该内存。
-  ```js
-  let obj = { name : 'Joe'}
-  const map = new Map();
-  map.set(obj,'Joo');
-  obj = null;
-  ```
-  - 使用WeakMap，weak对obj存在弱引用，下一次垃圾回收时，该内存会被释放。
-  ```js
-  let obj = { name : 'Joe'}
-  const weak = new WeakMap();
-  weak.set(obj,'Joo');
-  obj = null;
-  ```
+## 防抖节流
+- 防抖debounce：连续触发只执行一次，停止触发N秒后，才能继续执行。
+    - 事件触发后，计时n秒后执行回调，n秒内再次触发，重新计时。
+    - 场景：
+        - search搜索联想:不断输入值时，用防抖来节约请求资源，如隔350ms。用户注册验证，输入校验。实时保存，如无更改操作1s后进行保存。
+        - 按钮提交：防止多次点击按钮发多次请求，只执行最后提交的一次。
+- 节流throttle：连续触发事件，每隔一段时间只执行一次。
+    - 一个单位时间内只能触发一次函数，多次触发只有一次生效，通常每隔 100~500 ms执行一次即可，多次快速点击也只执行一次。
+    - 场景：
+        - 监听滚动scroll事件：鼠标滚动，触发很多次时，页面滚动就会间隔一段时间(1s)判断一次，比如滑到底部自动加载更多。
+        - 缩放场景：监控浏览器调整窗口时，触发resize，用防抖来让其只触发一次。
+        - 以固定的速率执行，比较适合应用于动画相关的场景，避免短时间内多次触发动画引起性能问题。
+        
 
 ## 运算符
 - 真值和虚值(truthy和falsy)
@@ -1972,4 +2035,218 @@ function add() {
     - Heap snapshot 堆快照，可截操作前后的内存快照，进行对比分析。
     - on timeline 时间线，可开始录制操作，执行一段操作，选择内存增大的时间点分析。
 
+## Web Worker
+现代浏览器为JavaScript创造的 多线程环境。可以新建并将部分任务分配到worker线程并行运行，两个线程可 独立运行，互不干扰，可通过自带的 **消息机制** 相互通信，等worker完成计算任务，再将结果返回主线程，为了节省系统资源，使用完毕记得关闭。
 
+- 基本用法:
+  - 主线程
+    ```js
+    const worker = new Worker('work.js') // 来自网络的js文件
+    worker.postMessage('Hello World') //主线程传给 Worker 的数据
+    worker.onmessage = function(event) { //监听函数，接收子线程发回来的消息
+        console.log('Received message' + event.data)
+    }
+    // 错误监控
+    worker.onerror(function (event) {
+      console.log([
+        'ERROR: Line ', e.lineno, ' in ', e.filename, ': ', e.message
+      ].join(''));
+    });
+
+    worker.terminate(); //任务完成，关闭
+    ```
+  - Worker线程(self代表子线程自身，即子线程的全局对象)
+    ```js
+    self.addEventListener('message', function (e) { // 监听message事件
+      self.postMessage('You said: ' + e.data); // self.postMessage()方法用来向主线程发送消息。
+    }, false);
+
+    // 示例：
+    self.addEventListener('message', function (e) {
+      var data = e.data;
+      switch (data.cmd) {
+        case 'start':
+          self.postMessage('WORKER STARTED: ' + data.msg);
+          break;
+        case 'stop':
+          self.postMessage('WORKER STOPPED: ' + data.msg);
+          self.close(); // self.close()用于在 Worker 内部关闭自身。
+          break;
+        default:
+          self.postMessage('Unknown command: ' + data.msg);
+      };
+    }, false);
+
+    // 加载其他脚本：
+    importScripts('script1.js', 'script2.js');
+    ```
+- API
+主线程
+```js
+Worker.onerror：指定 error 事件的监听函数。
+Worker.onmessage：指定 message 事件的监听函数，发送过来的数据在Event.data属性中。
+Worker.onmessageerror：指定 messageerror 事件的监听函数。发送的数据无法序列化成字符串时，会触发这个事件。
+Worker.postMessage()：向 Worker 线程发送消息。
+Worker.terminate()：立即终止 Worker 线程。
+```
+Worker
+```js
+self.name： Worker 的名字。该属性只读，由构造函数指定。
+self.onmessage：指定message事件的监听函数。
+self.onmessageerror：指定 messageerror 事件的监听函数。发送的数据无法序列化成字符串时，会触发这个事件。
+self.close()：关闭 Worker 线程。
+self.postMessage()：向产生这个 Worker 线程发送消息。
+self.importScripts()：加载 JS 脚本。
+```
+- 优势：
+    - 能够执行处理器密集型的运算而不会阻塞 UI 线程。
+- 应用：
+    - 
+- 限制:
+    - 同源限制：与主线程的脚本同源
+    - DOM限制：无法使用 document / window / alert / confirm
+    - 文件限制：无法读取本地资源
+
+## 设计模式
+- 面向对象的软件设计原则：开放封闭原则。
+    - 对扩展开放，意味着有新的需求或变化时，可以对现有代码进行扩展，以适应新的情况。
+    - 对修改封闭，意味着类一旦设计完成，就可以独立完成其工作，而不要对类进行任何修改。
+    - 实现思路：通过面向对象的继承和对多态机制实现开放，让类依赖于固定的抽象实现封闭。
+- 一句话：软件设计开发过程中，针对特点场景和问题的，更优解决方案。
+- 核心操作：逻辑的变和不变分离，变的灵活，不变的稳定。
+- 前端常见几种：
+    - 策略模式
+    - 发布-订阅模式
+    - 装饰器模式
+    - 适配器模式
+    - 代理模式
+    - 责任链模式
+- 策略模式
+    - 要实现某一个功能，有多种方案可以选择。我们定义策略，把它们一个个封装起来，并且使它们可以相互转换。
+    - 场景：各判断条件下的策略相互独立且可复用；策略内部逻辑相对复杂；策略需要灵活组合
+    - 例子：权限验证（多项条件封装成单独的函数，通过添加，可搭配组合）、表单验证
+- 发布-订阅模式
+    - 消息发布，通过event事件中心，进行广播，通知订阅者。
+    - 场景：各模块相互独立；存在一对多的依赖关系；依赖模块不稳定、依赖关系不稳定；各模块由不同的人员、团队开发
+    - 例子：流程启动成功后，发送消息中心，更新流程列表，通知审核。
+        ```js
+        // 简单实现：订阅事件中心
+        const EventEmit = function() {
+          this.events = {};
+          this.on = function(name, cb) {
+            if (this.events[name]) {
+              this.events[name].push(cb);
+            } else {
+              this.events[name] = [cb];
+            }
+          };
+          this.trigger = function(name, ...arg) {
+            if (this.events[name]) {
+              this.events[name].forEach(eventListener => {
+                eventListener(...arg);
+              });
+            }
+          };
+        };
+        // 业务代码
+        let event = new EventEmit();
+        event.trigger('success');
+        
+        MessageCenter.fetch() {
+          event.on('success', () => {
+            console.log('更新消息中心');
+          });
+        }
+        Order.update() {
+          event.on('success', () => {
+            console.log('更新订单信息');
+          });
+        }
+        Checker.alert() {
+          event.on('success', () => {
+            console.log('通知管理员');
+          });
+        }
+
+        ```
+- 装饰器模式
+    -  一句话：在装饰器中传入一个要装饰的对象，动态的添加对象的行为。
+    -  例子：赋予写英文的能力
+        ```js
+        const kuanWrite = function() {
+          this.writeChinese = function() {
+            console.log('我只会写中文');
+          };
+        };
+        
+        // 通过装饰器给阿宽加上写英文的能力
+        const Decorator = function(old) {
+          this.oldWrite = old.writeChinese;
+          this.writeEnglish = function() {
+            console.log('给阿宽赋予写英文的能力');
+          };
+          this.newWrite = function() {
+            this.oldWrite();
+            this.writeEnglish();
+          };
+        };
+        
+        const oldKuanWrite = new kuanWrite();
+        const decorator = new Decorator(oldKuanWrite);
+        decorator.newWrite();
+
+        ```
+- 适配器模式
+    - 一句话：解决我们不兼容的问题，把一个类的接口换成我们想要的接口。类似转接口
+- 代理模式
+    - 一句话：为其它对象提供一种代理以控制这个对象的访问，具体执行的功能还是这个对象本身
+    - 场景：模块职责单一且可复用；两个模块间的交互需要一定限制关系
+    - 例子：发邮件，通过代理模式，那么代理者可以控制，决定发还是不发，但具体发的执行功能，是外部对象所决定。
+        ```js
+        // 屏蔽邮箱list
+        const emailList = ['qq.com', '163.com', 'gmail.com'];
+        // 代理
+        const ProxyEmail = function(email) {
+          if (emailList.includes(email)) {
+            // 屏蔽处理
+          } else {
+            // 转发，进行发邮件
+            SendEmail.call(this, email);
+          }
+        };
+        
+        const SendEmail = function(email) {
+          // 发送邮件
+        };
+        
+        // 外部调用代理
+        ProxyEmail('cvte.com');
+        ProxyEmail('ojbk.com');
+
+        ```
+- 责任链模式
+    - 避免请求发送者里面执行请求接受者，让多个对象都有可能接收请求，将这些对象连接成一条链，并且沿着这条链传递请求。
+    - 场景：你负责的是一个完整流程；各环节可复用；各环节有一定的执行顺序；各环节可重组
+    - 例子：流程，上一个通过才能执行下一个。通过一个责任链的类，封装fn，setNext，run等方法，通过执行setNext设定下一步流程，执行run 方法开始启动流程。
+        ```js
+        // 解耦各节点：执行该流程：申请设备之后，接下来要选择收货地址，然后选择责任人
+        const Chain = function(fn) {
+          this.fn = fn;
+          
+          this.setNext = function() {}
+        
+          this.run = function() {}
+        }
+        
+        const applyDevice = function() {}
+        const chainApplyDevice = new Chain(applyDevice);
+        
+        const selectAddress = function() {}
+        const chainSelectAddress = new Chain(selectAddress);
+        
+        const selectChecker = function() {}
+        const chainSelectChecker = new Chain(selectChecker);
+        
+        chainApplyDevice.setNext(chainSelectAddress).setNext(chainSelectChecker);
+        chainApplyDevice.run();
+        ```
