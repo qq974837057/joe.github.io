@@ -2100,8 +2100,6 @@ self.importScripts()：加载 JS 脚本。
 ```
 - 优势：
     - 能够执行处理器密集型的运算而不会阻塞 UI 线程。
-- 应用：
-    - 
 - 限制:
     - 同源限制：与主线程的脚本同源
     - DOM限制：无法使用 document / window / alert / confirm
