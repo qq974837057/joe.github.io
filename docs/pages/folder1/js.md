@@ -387,7 +387,7 @@ Object.getPrototypeOf(obj) === proto; // true
         - call: fn.call(target, 1, 2)
         - apply: fn.apply(target, [1, 2])
         - bind: fn.bind(target，1，2)()
-        - apply第二个参数是数组（或类数组），call和bind后面都是接单个参数
+        - apply第二个参数是数组（或类数组对象如arguments，ES5支持），call和bind后面都是接单个参数
         - call和apply默认会自动执行函数，bind需要在后面加()来自动执行
         - call比apply的性能要好，使用扩展运算符let params = [1,2,3,4] ；xx.call(obj, ...params)
     - 每个函数都包含call、apply、bind，设置函数内this对象的指向，改变函数的执行环境。默认是传的this是window对象。bind是创建一个函数实例，改变this指向后，新建的那个函数即使在全局作用域调用，也是指向改变后的那个this。

@@ -360,8 +360,28 @@ function instance_of(L, R) {
 
 ## 防抖
 - [木易杨](https://muyiy.cn/blog/7/7.2.html#underscore-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90)
+- 带立即执行的防抖
+```js
+function debounce(fn, wait = 100, immediate) {
+    // 创建一个定时器
+    let timer = null;
+    return function() {
+        if(immediate && !timer) { // 首次触发，立即执行
+            fn.apply(this, arguments);
+        }
+        //  如果持续触发，清除定时器，不会执行 fn 函数
+        clearTimeout(timer);
+        // 创建一个新的 setTimeout
+        timer = setTimeout(() => {
+            fn.apply(this, arguments);
+        }, wait)
+    }
+}
+```
 
 ## 节流
+- 时间戳版
+- 定时器版
 
 ## 浅拷贝、深拷贝
 ### 浅拷贝
