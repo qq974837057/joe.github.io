@@ -287,7 +287,7 @@ Object.getPrototypeOf(obj) === proto; // true
         Scope = [AO].concat([[Scope]]);
         ```
 - 函数执行上下文的变量对象和作用域创建全过程：
-    - **函数创建时保存父级作用域-准备执行时创建变量(形参/函数/变量)->自身的变量对象压入作用域头部形成作用域链->执行时修改变量->执行完毕弹出执行栈**
+    - **函数创建时保存父级作用域 -> 准备执行时创建变量(形参/函数/变量) -> 自身的变量对象压入作用域头部形成作用域链 -> 执行时修改变量 -> 执行完毕弹出执行栈**
     - 函数定义，保存整个父级作用域(变量对象)到函数的内部属性[[scope]]
     - 函数准备执行，创建上下文，压入执行栈
     - 准备工作1：Scope:[[scope]]创建整个作用域，先将父级作用域存入，进入上下文
@@ -675,11 +675,24 @@ function sortArguments() {
 console.log(sortArguments(5, 3, 7, 1)); // shows 1, 3, 5, 7
 ```
 
+## ECMAScript
+
+ECMAScript和JavaScript的关系
+- 布兰登·艾克于1995年设计，1996年JavaScript由欧洲计算机制造商协会(ECMA)标准化
+- 前者是标准，后者是实现和扩展
+- 完整的JavaScript包括以下几个部分：
+  - ECMAScript，描述了该语言的语法和基本对象
+  - 文档对象模型（DOM），描述处理网页内容的方法和接口
+  - 浏览器对象模型（BOM），描述与浏览器进行交互的方法和接口
+
+- 历史：ES5(2011) -> ES6(2015) -> ES7(2016) -> ES8(2017)
+
 ## ES6
 - [ES6-掘金参考](https://juejin.im/post/5d9bf530518825427b27639d#heading-7)
 - 块级作用域(let,const)：（ 块级作用域、不存在变量提升、不允许重复声明、const常量）
 - Symbol：新基本数据类型
-- 函数相关: 箭头函数、函数参数允许设置默认值、引入了rest参数
+- 箭头函数
+- 函数参数允许设置默认值、引入了rest参数（形式为...变量名）获取函数的多余参数
 - ES Module:模块化(import / export)
 - Set 和 Map 数据结构
 - Promise的使用与实现
@@ -689,13 +702,14 @@ console.log(sortArguments(5, 3, 7, 1)); // shows 1, 3, 5, 7
 - ES8（ES2017） 提供的 Async/Await 语法糖
 
 - 扩展运算符`...` : 对象和数组新增
+- 模板字符串
 - 变量的解构赋值:`const arr = [1, 2, 3, 4]; const [first, second] = arr;`
 - 数组新API: 如 isArray / from / of 方法; 数组实例新增了 entries()，keys() 和 values() 等方法
 - 类：提供了定义类的语法糖(class)、类引入导出和继承( class/import/export/extends)
 
 - let、const、var 的区别有哪些？
     -  1、let/const 定义的变量不会出现变量提升（暂存死区，不可访问），而 var 定义的变量会提升。（没var关键字的变量总是全局）
-    -  2、let、const 创建块级作用域, 该变量处于从块开始到初始化处理的“暂存死区”。未声明就提前使用会报错ReferenceError。
+    -  2、let、const 创建块级作用域, 外部访问不到该变量，该变量处于从块开始到初始化处理的“暂存死区”。未声明就提前使用会报错ReferenceError。
     -  3、相同作用域中，let 和 const 不允许重复声明，var 允许重复声明。
     -  4、const 声明只读的常量 (即指针)，必须设置初始值（基本数据不可改变值，引用值可以），只声明不赋值会报错。
 
@@ -706,8 +720,8 @@ console.log(sortArguments(5, 3, 7, 1)); // shows 1, 3, 5, 7
 - 箭头函数
     - 箭头函数不属于普通的 function，所以没有独立的上下文。
     - 箭头函数是普通函数的简写，可以更优雅的定义一个函数，和普通函数相比，有以下几点差异：
-        - 1、函数体内的 this 对象，就是定义时所在的对象，而不是使用时所在的对象。
-        - 2、没有隐藏的arguments 对象。可以用 rest 参数代替。
+        - 1、没有自己的this，函数体内的 this 对象，是定义时所在的对象，而不是使用时所在的对象。
+        - 2、没有 arguments 对象。可以用 rest 参数代替。
         - 3、不可以使用 yield 命令，因此箭头函数不能用作 Generator 函数。
         - 4、不可以使用 new 命令，因为：没有自己的 this，无法调用 call，apply，bind。
     - 在以下场景中不要使用箭头函数去定义：
@@ -744,6 +758,117 @@ rest  // [2, 3, 4, 5]
 [...'joe'] //["j", "o", "e"]
 
 ```
+
+- 模板字符串
+
+  - 使用${expr}嵌入一个表达式
+  ```js
+  //ES5 Version
+  function greet(name) {
+    return 'Hello ' + name + '!';
+  }
+
+
+  //ES6 Version
+  function greet(name) {
+    return `Hello ${name} !`;
+  }
+  ```
+
+  - 不需要使用转义字符来做多行处理
+  ```js
+  //ES5 Version
+  var lastWords = '\n'
+    + '   I  \n'
+    + '   Am  \n'
+    + 'Iron Man \n';
+
+  //ES6 Version
+  let lastWords = `
+      I
+      Am
+    Iron Man   
+  `;
+  ```
+
+- 解构
+  - 从对象或数组中获取或提取值更简洁的方法
+```js
+const employee = {
+  name: "Joe",
+  position: "Software Developer"
+};
+
+var firstName = employee.firstName;
+var position = employee.position;
+
+// ES6 简洁取出对应的属性，且可以取别名和默认值
+let { firstName: fName, position="默认" } = employee;
+
+```
+
+- rest参数(剩余参数)
+  - rest 参数（形式为...变量名），用于获取函数的多余参数
+  - 该变量名是一个数组，可以直接使用数组方法
+  - rest 参数之后不能再有其他参数，即只能是最后一个参数
+  ```js
+  // arguments变量的写法
+  function sortNumbers() {
+    return Array.prototype.slice.call(arguments).sort();
+  }
+
+  // rest参数的写法
+  const sortNumbers = (...numbers) => numbers.sort();
+  ```
+
+- 类
+  - 是个语法糖，底层是基于原型的继承
+  - 在类的实例上面调用方法，其实就是调用原型上的方法。
+  ```js
+  // ES5
+  function Point(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  Point.prototype.toString = function () {
+    return '(' + this.x + ', ' + this.y + ')';
+  };
+
+  var p = new Point(1, 2);
+
+  // ES6
+  class Point {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+    }
+
+    toString() {
+      return '(' + this.x + ', ' + this.y + ')';
+    }
+  }
+
+  class Point {
+    constructor() {
+      // ...
+    }
+    toString() {
+      // ...
+    }
+    toValue() {
+      // ...
+    }
+  }
+
+  // 等同于
+  Point.prototype = {
+    constructor() {},
+    toString() {},
+    toValue() {},
+  };
+  ```
+
 
 ## Map、Set、WeakMap、WeakSet
 
@@ -1643,6 +1768,41 @@ console.log(it.next(13)) // => {value: 42, done: true}
 // 外部无法访问变量 name
 ```
 
+## 高阶函数
+- 高阶函数是一个可以接收函数作为参数，甚至返回一个函数的函数。 它就像常规函数一样，只是多了接收和返回其他函数的附加能力，即参数和输出。
+
+- 例如内置的一些高阶函数
+  - Array.prototype.map
+  - Array.prototype.filter
+  - Array.prototype.reduce 
+- 使用高阶函数使我们的代码更清晰简洁。
+- 实现一个高阶函数map
+```js
+function map(arr, fn) {
+  const result = [];
+  // 每次调用此函数时，我们都会创建一个 result 数组
+  // 因为我们不想改变原始数组。
+  for (let i = 0; i < arr.length; i++) {
+    result.push( 
+      fn(arr[i], i, arr) 
+    ); 
+    // 将 fn 返回的结果 push 到 result 数组中
+  }
+  return result;
+}
+
+```
+
+#### 函数式编程
+- 函数式是一种编程形式，你可以将函数作为参数传递给其他函数，并将它们作为值返回。 在函数式编程中，我们以函数的形式思考和编程。
+
+#### JavaScript 将函数视为一等公民，也叫一等函数(First-class Function)
+- 在 JavaScript 中，函数是一种特殊类型的对象。 它们是 Function objects。
+- 在JavaScript中，函数不仅拥有一切传统函数的使用方式（声明和调用），而且可以做到像简单值一样:
+  - 赋值`const func = function() {}`
+  - 传参`function func(x, callback) { callback(); }`
+  - 返回`function() { return function(){} }`
+
 ## 模块规范分类
 - 第一种是 CommonJS 方案，它通过 require 来引入模块，通过 module.exports 定义模块的输出接口。这种模块加载方案是服务器端的解决方案，它是以同步的方式来引入模块的，因为在服务端文件都存储在本地磁盘，所以读取非常快，所以以同步的方式加载没有问题。但如果是在浏览器端，由于模块的加载是使用网络请求，因此使用异步加载的方式更加合适。
 - 第二种是 AMD 方案，这种方案采用异步加载的方式来加载模块，模块的加载不影响后面语句的执行，所有依赖这个模块的语句都定义在一个回调函数里，等到加载完成后再执行回调函数。require.js 实现了 AMD 规范。
@@ -2047,9 +2207,9 @@ function add() {
     - on timeline 时间线，可开始录制操作，执行一段操作，选择内存增大的时间点分析。
 
 ## JS加载方式
-`<script src="script.js"></script>`：浏览器会立即加载并执行指定的脚本，读到就加载并执行，此时HTML全程阻塞渲染。
-`<script defer>`: 延迟加载，加载时不阻塞，等元素解析完成后再执行、
-`<script async>`: 异步加载，加载时不阻塞，加载完成后立即执行、执行时会阻塞元素渲染。
+- `<script src="script.js"></script>`：浏览器会立即加载并执行指定的脚本，读到就加载并执行，此时HTML全程阻塞渲染。
+- `<script defer>`: 延迟加载，加载时不阻塞，等元素解析完成后再执行、
+- `<script async>`: 异步加载，加载时不阻塞，加载完成后立即执行、执行时会阻塞元素渲染。
 
 ![JS-script-async](./img/JS-script-async.png)
 
