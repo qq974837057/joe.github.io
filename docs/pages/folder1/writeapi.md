@@ -941,3 +941,22 @@ module.exports = Promise;
 ```
 
 ## AJAX的promise版
+```js
+var newAjax = function(url, data) {
+    return new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.send(data);
+        xhr.onreadystatechange = function() {
+            if(xhr.readyState === 4 && xhr.status === 200){
+                var json = JSON.parse(xhr.responseText);
+                resolve(json);
+            } else if(xhr.readyState === 4 && xhr.status !== 200){
+                reject("Error: "+ xhr.status);
+            } else {
+              reject('Error');
+            }
+        }
+   })
+}
+```

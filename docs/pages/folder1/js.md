@@ -165,7 +165,7 @@ function isObj(obj) {
 
 ## 0.1+0.2为什么不等于0.3？
 
-- 一句话：部分浮点数转二进制时因为标准位数的限制丢失了精度，计算完再转回十进制时和理论结果不同。
+- 一句话：部分浮点数转二进制时因为标准位数52位尾数(1位符号，11位指数偏移)的限制丢失了精度，计算完再转回十进制时和理论结果不同。
   - 0.1和0.2在转换成二进制后会无限循环，由于标准位数的限制后面多余的位数会被截掉，四舍五入，出现了精度的损失。
   - 相加后再转换为十进制就会变成0.30000000000000004。
 
@@ -195,33 +195,34 @@ function isObj(obj) {
 - 原型：用来实现对象的属性继承的对象（instance的`__proto__`）（构造函数的prototype）
 - 构造函数：通过new新建一个对象的函数（instance.constructor）（原型的constructor）
 - 实例：通过new 和构造函数创建的对象
-- 原型链：每个对象都有`__proto__`属性， 指向该对象构造函数的原型，`__proto__`属性 将对象连接起来组成原型链。
-  - 查找：一个对象的属性不存在，沿着原型链上一级查找，找到就输出，找不到继续找，直到顶级的原型对象Object.prototype，没找到就输出undefined。
-  - 修改：只会修改实例本身的属性，不存在则添加该属性。修改原型属性时，可以b.prototype.x=1，继承该对象的属性都会改变。
+- 原型链：每个对象都有`__proto__`属性， 指向该对象构造函数的原型，`__proto__`属性 将对象连接起来组成原型链，有两个特性。
+  - 查找特性：一个对象的属性不存在，沿着原型链上一级查找，找到就输出，找不到继续找，直到顶级的原型对象Object.prototype，没找到就输出undefined。
+  - 修改特性：只会修改实例本身的属性，不存在则添加该属性。修改原型属性时，可以通过构造函数fn.prototype.x = 1来修改，继承该对象的属性都会改变。
   - 关系：instance（实例）.constructor.prototype = instance（实例）的`__proto__`
-  - 例子：const instance = new Object() //instance为实例，Object为构造函数，Object.prototype为原型
+  - 例子：`const instance = new Object()` // instance为实例，Object为构造函数，Object.prototype为原型
 - 继承
   - 借助构造函数
-      - 父类构造函数在子类执行，this指向子类构造函数的实例
-      - 缺点：只能继承属性，无法继承父类的原型上的方法
+      - 父类的构造函数通过call(this)，在子类构造函数中执行，this指向子类构造函数的实例
+      - 缺点：只能继承父类的属性(拷贝属性副本)，无法继承父类的原型上的方法
   - 借助原型链
       - 使用父类的实例，作为子类构造函数的prototype
       - 缺点：父类生成的实例属性如果是引用类型(也就是子类原型对象上有引用类型)，则会被子类生成的每个实例共享，改动引用类型的属性会影响其他实例。
   - 组合：构造+原型链
       - 通过构造函数继承属性，通过原型链继承方法，保证每个子类的实例有自己的父类属性副本，而且可以通过原型链复用方法。
-      - 缺点：执行了两次父类构造函数
+      - 缺点：执行了两次父类构造函数，产生多余实例属性，且构造函数指的是父类的构造函数。
   - 寄生组合式
-      - 通过构造函数继承属性，通过原形链继承方法，创造一个父类原型的副本作为子类构造函数的原型【Object.create(Parent.prototype)+子类构造函数Child.prototype.constructor = Child】。
-      - 解决：组合式中无法区分是父类创造还是子类创造出来的对象，因为instanceof都为true
-      - 实现：创建的中间对象以父类的原型作为原型对象，中间对象又是子类的原型对象，形成原型链
-      - 由于共用一个原型对象【Child.prototype = Parent.prototype】，子类无自己构造函数，向上找构造函数是Parent，所以用Object.create隔离开原型
-      - 使父类原型对象和子类原型对象不再是同一个，而是增加一级，然后再给子类添加自己的构造函数
+      - 通过构造函数继承属性，通过原形链继承方法，为了隔离开父类原型，让子类拥有自己的构造函数，再创造一个以父类的原型作为原型对象的中间对象，作为子类构造函数的原型对象，再将构造函数放入该原型【Object.create(Parent.prototype)+子类构造函数Child.prototype.constructor = Child】。
+      - 解决：之前组合式中无法区分是父类还是子类直接new出来的对象，因为共用了原型对象【`Child.prototype = Parent.prototype`】，构造函数指的都是父类的构造函数，子类无自己构造函数。改进后子类有自己的构造函数，可通过实例的constructor查看其构造函数，来看看是由谁直接new得到的。
+      - 实现：创建的中间对象以父类的原型作为原型对象，中间对象又是子类的原型对象，形成原型链。使父类原型对象和子类原型对象不再是同一个，而是增加一级，然后再给子类添加自己的构造函数。
       ![寄生组合式](./img/inherit-4.png)
 
 
 - Object.create(obj)
-  - 生成一个新对象，新对象的`__proto__`为参数obj
-  - 过程创建一个新的构造函数，它的prototype指向参数obj，再返回这个构造函数的实例，也就是新对象。
+  - 作用：创建一个新对象，是以参数obj作为它的原型对象`__proto__`
+  - 实现：
+    - 定义了一个临时构造函数F()
+    - 将这个临时构造函数F()的原型`prototype`指向了传入进来的对象obj。
+    - 返回这个构造函数的一个实例。该实例拥有obj的所有属性和方法。
   ```js
   function create(obj) {
     function F() {}
@@ -255,8 +256,9 @@ Object.getPrototypeOf(obj) === proto; // true
 
 ## 作用域、作用域链
 - 作用域：代码中定义变量的区域，确定当前执行代码对变量的访问权限范围。可以看做一个封闭空间。
-- 作用域链和变量查找(只能下往上查找，不能由上往下，找到就停止，不会继续向上找)
-    - 当查找变量的时候，会先从**当前上下文（作用域）的变量对象**中查找，如果没有找到，就会从父级(词法层面上的父级)执行上下文的变量对象中查找，一直找到全局上下文的变量对象，也就是全局对象。这样由多个执行上下文的变量对象构成的链表就叫做作用域链。
+- 作用域链：由**多个执行上下文(作用域)的变量对象构成的链表**就叫做作用域链。
+  - 变量查找特性：(只能下往上查找，不能由上往下，找到就停止，不会继续向上找)
+    - 当查找变量的时候，会先从**当前上下文（作用域）的变量对象**中查找，如果没有找到，就会从**父级(词法层面上的父级)**执行上下文的变量对象中查找，一直找到全局上下文的变量对象，也就是全局对象。
 - JavaScript 采用静态(词法)作用域：函数作用域在函数定义时决定的，基于函数创建的位置。
 - 执行上下文栈：执行一个函数的时候，就会创建一个执行上下文，并且压入执行上下文栈，当函数执行完毕的时候，就会将函数的执行上下文从栈中弹出，底部有globalContext全局上下文。
 - 执行上下文（作用域）：(全局上下文、函数上下文)
@@ -285,7 +287,7 @@ Object.getPrototypeOf(obj) === proto; // true
         Scope = [AO].concat([[Scope]]);
         ```
 - 函数执行上下文的变量对象和作用域创建全过程：
-    - **保存父级作用域-创建变量(形参/函数/变量)-压入作用域头部-修改变量-弹出执行栈**
+    - **函数创建时保存父级作用域-准备执行时创建变量(形参/函数/变量)->自身的变量对象压入作用域头部形成作用域链->执行时修改变量->执行完毕弹出执行栈**
     - 函数定义，保存整个父级作用域(变量对象)到函数的内部属性[[scope]]
     - 函数准备执行，创建上下文，压入执行栈
     - 准备工作1：Scope:[[scope]]创建整个作用域，先将父级作用域存入，进入上下文
@@ -294,7 +296,7 @@ Object.getPrototypeOf(obj) === proto; // true
     - 开始执行：修改AO属性值
     - 执行完毕：弹出上下文栈
 - 变量提升
-    - 概念：JS引擎解析代码，获取所有声明的变量，再一行一行运行。所有变量声明都会提升到代码头部。
+    - 概念：JS引擎解析代码，获取所有声明的变量，再一行一行运行。所有变量声明都会提升到自身作用域的代码头部。
     - 例子： 引擎将var a = 1拆解为var a = undefined和 a = 1，并将var a = undefined放到最顶端，a = 1还在原来的位置
         ```js
             var a = undefined // (声明提到代码头部)
@@ -360,7 +362,7 @@ Object.getPrototypeOf(obj) === proto; // true
 - 非箭头函数
     - 执行时才确定this指向
     - 默认情况下，this是指向全局对象的，浏览器就是指向window
-    - 隐式绑定：this指向最后调用它的那个对象（注意，如果不是通过对象调用方法，而是直接函数执行，一般都是默认window对象）
+    - 隐式绑定：this指向最后调用它的那个对象，也就是离得最近的对象（注意，如果不是通过对象调用方法，而是直接函数执行，一般都是默认window对象）
     ```js
     var name = "windowsName";
     var a = {
@@ -371,11 +373,11 @@ Object.getPrototypeOf(obj) === proto; // true
     }
     window.a.fn();
     ```
-    - 显示绑定：call、apply、bind
+    - 显式绑定：call、apply、bind
     - new绑定：this指向通过new 构造函数生成的新对象
-    - 优先级：new绑定 > 显式绑定 >隐式绑定 >默认绑定
+    - 优先级：new绑定 > 显式绑定 > 隐式绑定 > 默认绑定
 - 箭头函数
-    - this 始终指向函数定义时的 this，而非执行时
+    - 指向函数定义时的 this，而非执行时
     - 没有自己的this，通过作用域链决定this
     - 被非箭头函数包裹，则为最近的非箭头函数的this，否则为undefined
 - 匿名函数： this 永远指向 window，一般匿名函数后面加 () 让其自执行，可以给其他函数调用。
@@ -384,12 +386,12 @@ Object.getPrototypeOf(obj) === proto; // true
     - 1、ES6箭头函数（定义时的this ）
     - 2、函数内部使用 var _this = this
     - 3、call、apply、bind
-        - call: fn.call(target, 1, 2)
-        - apply: fn.apply(target, [1, 2])
-        - bind: fn.bind(target，1，2)()
+        - call: `fn.call(target, 1, 2)`
+        - apply: `fn.apply(target, [1, 2])`
+        - bind: `fn.bind(target，1，2)()`
         - apply第二个参数是数组（或类数组对象如arguments，ES5支持），call和bind后面都是接单个参数
         - call和apply默认会自动执行函数，bind需要在后面加()来自动执行
-        - call比apply的性能要好，使用扩展运算符let params = [1,2,3,4] ；xx.call(obj, ...params)
+        - call比apply的性能要好，使用扩展运算符`let params = [1, 2, 3, 4] ；xx.call(obj, ...params)`
     - 每个函数都包含call、apply、bind，设置函数内this对象的指向，改变函数的执行环境。默认是传的this是window对象。bind是创建一个函数实例，改变this指向后，新建的那个函数即使在全局作用域调用，也是指向改变后的那个this。
     - 作用是扩充作用域，可以直接通过call那个对象，让this指向该对象。不用把方法放在一个对象中，再通过这个对象去调用里面的方法。
     ```js
@@ -466,38 +468,38 @@ Object.getPrototypeOf(obj) === proto; // true
 
 ## 数组
 - 切割推入排序
-    - slice(start, end): 返回选中的数据组成的新数组（从start到end），不改变原数组
-    - splice(start, number, value...): 返回删除元素组成的数组，**改变原数组**，由value 替换被删除的位置
-    - push / pop: 末尾推入/弹出，**改变原数组**， 返回推入/弹出项，一般可用作栈实现。
-    - unshift / shift: 头部推入/弹出，**改变原数组**，返回新的长度/操作项
-    - sort(fn) / reverse: 排序与反转，**改变原数组**，**不传入对比函数，元素按照转换为的字符串的各个字符的Unicode位点进行排序（从小到大）。**
+    - `slice(start, end)`: 返回选中的数据组成的新数组（从start到end），不改变原数组
+    - `splice(start, number, value...)`: 返回删除元素组成的数组，**改变原数组**，由value 替换被删除的位置，无需替换则直接删除。
+    - `push / pop`: 末尾推入/弹出，**改变原数组**， 返回推入/弹出项，一般可用作栈实现。
+    - `unshift / shift`: 头部推入/弹出，**改变原数组**，返回新的长度/操作项
+    - `sort(fn) / reverse`: 排序与反转，**改变原数组**，**不传入对比函数，元素按照转换为的字符串的各个字符的Unicode位点进行排序（从小到大）。**
 - 连接数组
-    - concat(不改变原数组，浅拷贝)
+    - `concat`(不改变原数组，浅拷贝)
 - 转字符串
-    - join(不改变原数组，可传入连接符)
+    - `join`(不改变原数组，可传入连接符)
 - 迭代方法
-    - forEach((value元素,index索引,arr) => {})：数组每一项做一件事，回调函数返回 undefined 值
-    - map：每项通过某种计算返回值 回调函数每次的返回值 最后组成一个新数组，如果不想返回新数组，最好推荐forEach或者for-of替代。
-    - filter：符合条件的项生成新数组
-    - reduce(fn(pre, next){ })：前后值通过计算，累计返回最后的值
-    - every：每项都符合条件返回true
-    - some：某项符合条件就true
+    - `forEach((value元素,index索引,arr) => {})`：数组每一项做一件事，回调函数返回 undefined 值
+    - `map`：每项通过某种计算返回值 回调函数每次的返回值 最后组成一个新数组，如果不想返回新数组，最好推荐forEach或者for-of替代。
+    - `filter`：符合条件的项生成新数组
+    - `reduce( fn(pre, next) {} )`：前后值通过计算，累计返回最后的值
+    - `every`：每项都符合条件返回true
+    - `some`：某项符合条件就true
 ![JS-array-1](./img/JS-array-1.png)
 
 - 去重
-    - [...new Set(arr)]
+    - `[...new Set(arr)]`
 - 拍平
-    - arr.flat(Infinity)  //Infinity 参数表示拍平所有层级，默认为1 会移除空项
-- 去重拍平排序
+    - `arr.flat(Infinity)`  //Infinity 参数表示拍平所有层级，默认为1 会移除空项
+- 先拍平再去重然后排序
 
 ```js
 [...new Set(arr.flat(Infinity))]
-.sort((a,b)=>{ return a-b})
+.sort((a, b)=>{ return a - b })
 ```
-- 判断数组是否有某个值：【indexOf()、includes()、find()、findIndex()】
+- 判断数组是否有某个值：【`indexOf()、includes()、find()、findIndex()`】
 ```js
 var arr=[1,2,3,4];
-var index=arr.indexOf(3); //不存在返回-1
+var index=arr.indexOf(3); //不存在返回-1,存在返回该字符串首次出现的位置
 if(arr.indexOf(3)!== -1) {console.log("存在")} //判断不为-1，才存在
 if(arr.indexOf(3)) //注意这样判断不对，if(-1)为真 if(0)为假
 
@@ -675,20 +677,22 @@ console.log(sortArguments(5, 3, 7, 1)); // shows 1, 3, 5, 7
 
 ## ES6
 - [ES6-掘金参考](https://juejin.im/post/5d9bf530518825427b27639d#heading-7)
-- 块级作用域(let,const)、（ 块级作用域、不存在变量提升、不允许重复声明、const常量）
-- 提供了定义类的语法糖(class)、类引入导出和继承( class/import/export/extends)
-- 一种基本数据类型(Symbol)
-- 变量的解构赋值:`const arr = [1, 2, 3, 4]; const [first, second] = arr;`
-- 函数参数允许设置默认值，引入了rest参数，新增了箭头函数
-- 数组新增了一些API，如 isArray / from / of 方法;数组实例新增了 entries()，keys() 和 values() 等方法
-- 对象和数组新增了扩展运算符
-- 模块化(import/export)
--  Set 和 Map 数据结构
+- 块级作用域(let,const)：（ 块级作用域、不存在变量提升、不允许重复声明、const常量）
+- Symbol：新基本数据类型
+- 函数相关: 箭头函数、函数参数允许设置默认值、引入了rest参数
+- ES Module:模块化(import / export)
+- Set 和 Map 数据结构
 - Promise的使用与实现
 - generator:
     - yield: 暂停代码
     - next(): 继续执行代码
 - ES8（ES2017） 提供的 Async/Await 语法糖
+
+- 扩展运算符`...` : 对象和数组新增
+- 变量的解构赋值:`const arr = [1, 2, 3, 4]; const [first, second] = arr;`
+- 数组新API: 如 isArray / from / of 方法; 数组实例新增了 entries()，keys() 和 values() 等方法
+- 类：提供了定义类的语法糖(class)、类引入导出和继承( class/import/export/extends)
+
 - let、const、var 的区别有哪些？
     -  1、let/const 定义的变量不会出现变量提升（暂存死区，不可访问），而 var 定义的变量会提升。（没var关键字的变量总是全局）
     -  2、let、const 创建块级作用域, 该变量处于从块开始到初始化处理的“暂存死区”。未声明就提前使用会报错ReferenceError。
@@ -1639,6 +1643,13 @@ console.log(it.next(13)) // => {value: 42, done: true}
 // 外部无法访问变量 name
 ```
 
+## 模块规范分类
+- 第一种是 CommonJS 方案，它通过 require 来引入模块，通过 module.exports 定义模块的输出接口。这种模块加载方案是服务器端的解决方案，它是以同步的方式来引入模块的，因为在服务端文件都存储在本地磁盘，所以读取非常快，所以以同步的方式加载没有问题。但如果是在浏览器端，由于模块的加载是使用网络请求，因此使用异步加载的方式更加合适。
+- 第二种是 AMD 方案，这种方案采用异步加载的方式来加载模块，模块的加载不影响后面语句的执行，所有依赖这个模块的语句都定义在一个回调函数里，等到加载完成后再执行回调函数。require.js 实现了 AMD 规范。
+- 第三种是 CMD 方案，这种方案和 AMD 方案都是为了解决异步模块加载的问题，sea.js 实现了 CMD 规范。它和require.js的区别在于模块定义时对依赖的处理不同和对依赖模块的执行时机的处理不同。
+- 第四种方案是 ES6 提出的方案，使用 import 和 export 的形式来导入导出模块。
+
+
 ## ES6模块与CommonJS模块有什么区别？
 > 其实也就是import（ES6 Module）和require（CommonJS）的区别
 
@@ -2034,6 +2045,21 @@ function add() {
   ![JS-heap-2](./img/JS-heap-2.png)
     - Heap snapshot 堆快照，可截操作前后的内存快照，进行对比分析。
     - on timeline 时间线，可开始录制操作，执行一段操作，选择内存增大的时间点分析。
+
+## JS加载方式
+`<script src="script.js"></script>`：浏览器会立即加载并执行指定的脚本，读到就加载并执行，此时HTML全程阻塞渲染。
+`<script defer>`: 延迟加载，加载时不阻塞，等元素解析完成后再执行、
+`<script async>`: 异步加载，加载时不阻塞，加载完成后立即执行、执行时会阻塞元素渲染。
+
+![JS-script-async](./img/JS-script-async.png)
+
+> 蓝色线代表网络读取，红色线代表执行时间，这俩都是针对脚本的；绿色线代表 HTML 解析。JS的加载、解析和执行会阻塞页面的渲染过程。
+
+- 同时使用defer和async，如果浏览器两个属性都支持，则会忽视defer属性,按照async执行。
+- defer 和 async 在网络读取（下载）这块儿是一样的，都是异步的（相较于 HTML 解析）。
+- defer 是最接近我们对于应用脚本加载和执行的要求的，先加载，等待html加载完再执行。
+
+- JS延迟加载还有另外两种：JS脚本放在文档底部、动态创建标签插入script标签引入脚本。
 
 ## Web Worker
 现代浏览器为JavaScript创造的 多线程环境。可以新建并将部分任务分配到worker线程并行运行，两个线程可 独立运行，互不干扰，可通过自带的 **消息机制** 相互通信，等worker完成计算任务，再将结果返回主线程，为了节省系统资源，使用完毕记得关闭。

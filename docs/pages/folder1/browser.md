@@ -444,17 +444,19 @@
             空调
             ------WebKitFormBoundary1XNKw5IGSxIzisBM--
             ```
+
 ## AJAX
+- [XMLHttpRequest](https://developer.mozilla.org/zh-CN/docs/Web/API/XMLHttpRequest)
 - 概念：异步JS和XML缩写，现在一般用JSON代替XML。
 - 用处：在不刷新页面的情况下，向浏览器发起请求和接受响应，最后局部更新页面。
 - 实现：基于XMLHttpRequest对象，可发起HTTP请求，监听readystate的变化获得响应，然后执行刷新。
 - 使用：
     ```js
-    var xhr = new XMLHttpRequest(); // 声明一个请求对象
-    xhr.open('GET', 'url/xxxx',true);(默认为true，异步请求)
-    // 如何设置请求头? xhr.setRequestHeader(header, value);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.send(); // get方法 send null(亦或者不传) ,post 的 send 则是传递值("fname=Henry&lname=Ford")
+    var xhr = new XMLHttpRequest();      // 声明一个请求对象
+    xhr.open('GET', 'url/xxxx', true);   // (默认为true，异步请求)
+    xhr.setRequestHeader('Content-Type', 'application/json'); 
+    // 设置请求头 xhr.setRequestHeader(header, value);
+    xhr.send(null); // get方法 send null(亦或者不传) , post 的 send 则是传递值("firstName=Henry&lastName=Ford")
     
     xhr.onreadystatechange = function() {
         if(xhr.readyState === 4) {     // readyState 4 代表已向服务器发送请求
