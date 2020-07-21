@@ -657,7 +657,7 @@ var result = arr.findIndex(item =>{
 
 - 剩余参数和 arguments对象的区别
   - 剩余参数只包含那些没有对应形参的实参，而 arguments 对象包含了传给函数的所有实参。
-  - arguments对象不是一个真正的数组，而剩余参数是真正的 Array实例，也就是说你能够在它上面直接使用所有的数组方法，比如 sort，map，forEach或pop。
+  - arguments对象不是一个真正的数组，而剩余参数rest(...rest)是真正的 Array实例，可以在它上面直接使用所有的数组方法，比如 sort，map，forEach或pop。
 
 ```js
 function sortRestArgs(...theArgs) {
@@ -1943,6 +1943,7 @@ function map(arr, fn) {
   ```
 
 ## 防抖节流
+- 作用：节约性能开销，避免业务逻辑复杂造成卡顿。
 - 防抖debounce：连续触发只执行一次，停止触发N秒后，才能继续执行。
     - 事件触发后，计时n秒后执行回调，n秒内再次触发，重新计时。
     - 场景：

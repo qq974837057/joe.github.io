@@ -269,6 +269,7 @@ function joe(name, age) {
 joe.apply2(test, ['joe', 25]);
 // 'joe' 25 666
 ```
+
 ## bind
 
 > bind() 方法会创建一个新函数。当这个新函数被调用时，bind() 的第一个参数将作为它运行时的 this，之后的一序列参数将会在传递的实参前传入作为它的参数。(来自于 MDN )
@@ -360,28 +361,109 @@ function instance_of(L, R) {
 
 ## 防抖
 - [木易杨](https://muyiy.cn/blog/7/7.2.html#underscore-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90)
-- 带立即执行的防抖
+- 立即执行版的防抖
 ```js
 function debounce(fn, wait = 100, immediate) {
-    // 创建一个定时器
+    // 创建一个定时器，是下面返回函数的闭包中的变量，不被销毁
     let timer = null;
     return function() {
         if(immediate && !timer) { // 首次触发，立即执行
             fn.apply(this, arguments);
         }
-        //  如果持续触发，清除定时器，不会执行 fn 函数
-        clearTimeout(timer);
-        // 创建一个新的 setTimeout
-        timer = setTimeout(() => {
+        clearTimeout(timer);      // 如果持续触发，不断清除定时器，不会执行 fn 函数
+        timer = setTimeout(() => { // 计时器重新赋值，再计时
             fn.apply(this, arguments);
         }, wait)
     }
 }
 ```
+```js
+// DEMO: 调用 debounce 函数，返回新函数
+const betterFn = debounce(() => console.log('fn 防抖执行'), 1000, true)
+// 滚动立即执行1次，停止滚动 1 秒后再次执行 () => console.log('fn 防抖执行')
+document.addEventListener('scroll', betterFn)
+```
 
 ## 节流
-- 时间戳版
+
 - 定时器版
+  - 设置一个标志位flag，初始为true
+  - 返回一个函数
+    - 首先判断flag是否false，是则return直接返回。
+    - flag不是false，先置为false，然后开始setTimeout计时，准备执行fn。
+    - 时间到，则执行`fn.apply(this, arguments)`，再把flag置为true，继续下一轮的计时。
+```js
+function throttle(fn, wait = 500) {
+    let flag = true; // 利用闭包声明flag开关标志位，不被销毁
+    return function() {
+        if(!flag) {
+          return;       // 如果开关关闭，不执行下边的代码
+        }
+        flag = false;   // 持续触发的话，flag一直是false
+        setTimeout(() => {
+            fn.apply(this, arguments);
+            flag = true;  // 到时间之后，函数执行，flag设为true，可进行下一轮计时
+        }, wait);
+    };
+};
+```
+
+```js
+// DEMO: 调用 throttle 函数，返回新函数
+const betterFn = throttle(() => console.log('fn 节流执行'), 1000);
+// 即使快速触发多次，也是每隔 1 秒后再执行 () => console.log('fn 节流执行')
+document.addEventListener('scroll', betterFn);
+```
+
+- 时间戳版
+  - 设置一个prev保存当前时间`new Date()`
+  - 返回一个函数
+    - 首先设置一个now为函数触发时间`new Date()`
+    - 比较`now - prev `是否大于wait (也就是当前时间与上次执行时间的时间差大于设置间隔值wait)
+    - 大于wait则执行`fn.apply(this, arguments)`，再将prev设为上次执行的时间`new Date()`，以供下次作比较。
+```js
+function throttle(fn, wait = 500) {
+	  let prev = new Date();
+	  return function() {
+        let now = new Date();
+        // 判断上次触发的时间和本次触发的时间差是否大于时间间隔wait
+		    if (now - prev > wait) {
+			      fn.apply(this, arguments); // 执行回调
+			      prev = new Date();
+		    }
+	  }
+}
+```
+
+#### 防抖节流结合版
+- maxWait最大等待时间，如果防抖时间wait一直不执行的话，到了最大时间必须执行一次。
+```js
+function combine(fn, wait, maxWait) {
+  let prev = new Date(), timer = null
+  return function() {
+    let now = new Date();
+    if (now - prev > maxWait) {
+      fn.apply(this, arguments);
+      prev = new Date();
+    } else {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        fn.apply(this, arguments);
+        prev = new Date();
+      }, wait)
+    }
+  }
+}
+```
+```js
+const betterFn = combine(() => console.log('fn 结合版执行'), 1000, 10000)
+// 停止滑动 1 秒后执行fn，10秒内一直没停止滑动，在10秒时刻执行一次fn
+document.addEventListener('scroll', betterFn)
+```
+#### Lodash的防抖节流
+- 防抖函数(节流函数的封装，传入了一些配置，最后也是调用防抖函数)
+- 节流有个maxWait最大等待时间，相当于防抖一直不执行的话，到最大等待时间就必须执行一次，里面会根据配置去判断剩余等待时间。
+- 对外暴露一些方法cancel(取消、清除定时器)、flush(立即执行)、pending(检查是否在计时)
 
 ## 浅拷贝、深拷贝
 ### 浅拷贝
