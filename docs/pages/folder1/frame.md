@@ -341,7 +341,146 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 - 最好方案：Vue3.0采用Proxy监听对象和数组
 
 ## Vue 路由
-### 原理
+- mode模式有三种（页面不重新加载，只切换显示的组件）
+    - hash：【兼容性好、URL不美观】
+        - hash就是URL中#号后面的内容，改变hash会向浏览器添加记录。
+        - 通过location.hash改变hash，用hashchange监听，然后跳转，创建一个history保存记录自己维护，点击前进后退可切换历史hash。
+        - 原理：用一个routes对象存储路由，定义route方法，保存每个hash对应的回调方法，监听hashchange，有变化就执行对应location.hash的回调函数，进行刷新。
+    - history：【兼容性一般、URL美观】
+        - 使用HTML5提供history.pushState、history.repalceState 等 API ，不刷新页面的情况下，操作浏览器的历史记录（如新增、替换），他们都会使当前地址URL进行变更，区别只是有无往历史记录添加此地址。
+        - popstate 事件来监听 url 的变化（浏览器前进后退按钮或JS触发history.back(),history.forward()等方法会触发popstate），执行监听回调，进行页面进行跳转（渲染）
+        - 但是history.pushState、history.repalceState不会触发popstate 事件，我们需要手动触发路由的回调，进行跳转，切换显示内容。
+        - 原理：初始化路由使用repalceState该路径并执行该路径的回调，定义go方法，执行pushState并手动执行回调，进行刷新。
+        - 这个模式**有坑要注意**：服务器没有对应路径的资源会直接返回404，所以需要服务器进行配置，对匹配不到的资源路径要返回index.html，也就是我们APP依赖的页面，根据当前url匹配对应的路由，去执行对应的回调和显示。然后前端需要先配置404路由，放在路由列表最后。如果当所有路由匹配不到，就进入我们自己的404页面。
+        ```js
+        // http://mozilla.org/foo.html 
+        let stateObj = {
+            foo: "bar",
+        };
+        history.pushState(stateObj, "page 2", "bar.html");
+        // 状态对象、标题、URL路径(相对或绝对)
+        // http://mozilla.org/bar.html, 但并不会导致浏览器加载 bar.html
+        ```
+    - abstract：没有浏览器api，进入此模式。如Node.js服务器
+- 跳转
+    - `this.$router.push()`
+    - `<router-link to=""></router-link>`
+- 占位
+    - `<router-view></router-view>`
+- 路由懒（按需）加载
+    - 没配置路由懒加载的情况下，我们的路由组件在打包的时候，都会打包到同一个js文件去，导致越来越大，请求时间变长
+    - 把不同路由对应的组件分割成不同的代码块，然后当路由被访问的时候才加载对应的组件， 首屏时不用加载过度的资源，从而减少首屏加载速度。
+    - import()方法由ES6提出，import()方法是动态加载。
+    ```js
+    // webpack< 2.4 时
+    {
+      path:'/',
+      name:'home',
+      components:resolve=>require(['@/components/home'],resolve)
+    }
+    
+    // webpack> 2.4 时
+    {
+      path:'/',
+      name:'home',
+      components:()=>import('@/components/home')
+    }
+    ```
+
+### 实现原理
+
+> react-router/vue-router都是基于前端路由的拓展和封装，原理有两种，hash和history
+
+> 回调指的是对应的路由路径，执行对应的页面跳转，或渲染对应的页面。
+    ```js
+    Router.route('/', function() {
+      changeBgColor('yellow');
+    });
+    ```
+
+- hash
+    - 优点：兼容性好
+    - 缺点：#符合不够美观，原理像Hack
+    - 步骤：
+        - 简版：不带前进/回退
+        - 完整：创建一个history保存记录，创建index指针指向前进后退的位置，定义后退方法，通过location.hash设置回对应的hash，再执行刷新方法执行回调。
+        ```js
+        // 简版
+        class Routers {
+          constructor() {
+            // 保存对应路径和回调
+            this.routes = {};
+            // 当前url
+            this.currentUrl = '';
+            this.refresh = this.refresh.bind(this);
+            // 监听路由hash变化
+            window.addEventListener('load', this.refresh, false);
+            window.addEventListener('hashchange', this.refresh, false);
+          }
+            // route方法定义回调
+          route(path, callback) {
+            // 将path路径与对应的callback函数储存
+            this.routes[path] = callback || function() {};
+          }
+            // 刷新方法，执行回调
+          refresh() {
+            this.currentUrl = location.hash.slice(1) || '/';
+            this.routes[this.currentUrl]();
+          }
+        }
+        
+        html：
+        <li><a href="#/blue">turn blue</a></li>
+        <li><a href="#/green">turn green</a></li>
+        js:
+        window.Router = new Routers();
+        Router.route('/blue', function() {
+          changeBgColor('blue');
+        });
+        Router.route('/green', function() {
+          changeBgColor('green');
+        });
+        ```
+- history
+    - 优点：url美观,实现简洁
+    - 缺点：HTML5 兼容性一般 IE10+ Chrome：5+
+    - 实现：
+        - 跳转history.pushState(添加历史记录,修改当前url,不跳转，执行回调)
+        - 初始化history.replaceState(不加历史记录,修改当前url地址，执行回调)
+        - 监听popstate(监听回退和前进,触发pop,执行路由回调)
+        - 触发popstate：只有用户点击浏览器倒退按钮和前进按钮，或者使用 JavaScript 调用back、forward、go方法时才会触发。
+        ```js
+        class Routers {
+          constructor() {
+            this.routes = {};
+            // 在初始化时监听popstate事件
+            this._bindPopState();
+          }
+          // 初始化路由
+          init(path) {
+            history.replaceState({path: path}, null, path);
+            this.routes[path] && this.routes[path]();
+          }
+          // 将路径和对应回调函数加入hashMap储存
+          route(path, callback) {
+            this.routes[path] = callback || function() {};
+          }
+        
+          // 判断链接被点击，触发go函数，执行路由对应回调
+          go(path) {
+            history.pushState({path: path}, null, path);
+            this.routes[path] && this.routes[path]();
+          }
+          // 监听popstate事件
+          _bindPopState() {
+            window.addEventListener('popstate', e => {
+              const path = e.state && e.state.path;
+              this.routes[path] && this.routes[path]();
+            });
+          }
+        }
+        ```
+
 ### 路由守卫
 
 ## React和Vue的区别
@@ -382,8 +521,26 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
     - Bug很难被调试：界面异常有可能是View有Bug，或者是Model代码有问题。不容易定位。
     - 大型图形应用维护成本高：视图状态较多，ViewModel的构建和维护的成本都会比较高
 
-## 单页(SPA)和多页(MPA)
-## 观察者模式和发布-订阅模式的区别
+## 单页(SPA)和多页(MPA)的区别
+- 单页：指只有一个主页面的应用，刷新局部资源，只加载一次js.css资源(不过也存在懒加载情况)，每次跳转只是切换显示的组件。
+- 多页：多个独立页面html，跳转是整页资源刷新，每个页面都需要加载js.css。
+- 场景：对体验和流程度要求高的使用单页，对SEO要求较高使用多页。
+    - 路由（原理）：**单页是hash或者history**，多页是链接跳转。
+    - SEO: 单页较差，多页较好。
+    - 体验：单页切换快，多页切换慢。
+    - 数据传递：单页Vuex，多页使用本地缓存。
+
+## 【观察者】和【发布-订阅】模式的区别
+相同：都是某个对象(subject, publisher)改变，使依赖于它的多个对象(observers, subscribers)得到通知。
+不同：
+- 观察者模式【subject-observers】：
+    - 主体和观察者是互相感知的
+    - 例子：奶农和个人
+- 发布-订阅模式【publisher-subscribers】：
+    - 发布者和订阅者是互不感知的，它们借助第三方来实现调度的。
+    - 例子：像报社，邮局，个人，第三方就是邮局，负责报纸的订阅和发放。
+    - Vue中发布-订阅中的dep(邮局)，负责添加订阅者watcher(个人)，一旦发生修改(报社更新)，通知更新。
+    - 适合更复杂的场景
 
 ## Vue的插槽理解
 - [来自掘金](https://juejin.im/post/5ef6d1325188252e75366ab5#heading-1)
