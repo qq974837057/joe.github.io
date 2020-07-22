@@ -1,5 +1,98 @@
 ## webpack
 
+### 构建流程
+- 1、初始化参数：配置文件package.json和shell语句读取与合并参数，得到最终参数
+- 2、开始编译：初始化Compiler编译对象，加载插件，执行run开始编译。
+- 3、确定入口：根据entry找到入口文件
+- 4、编译模块：用loader进行翻译后，找出对应依赖模块
+- 5、完成编译：确定了翻译的内容和依赖关系
+- 6、输出准备：根据入口和模块的依赖关系，组装成包含多个模块的chunk，每个chunk转成一个文件加载到输出列表。
+- 7、执行输出：根据output路径和文件名，写入文件系统。
+- 执行run开始编译：过程中触发一些钩子beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出dist目录）【编写插件的时候，就可以将自定义的方挂在对应钩子上，按照编译的顺序被执行】
+- 插件过程中调用：Webpack 会在特定的时间点广播出特定的事件，插件在监听到感兴趣的事件后会执行特定的逻辑，并且插件可以调用 Webpack 提供的 API 改变 Webpack 的运行结果
+
+### bundle，chunk，module分别指什么
+- Entry：作为构建依赖图的入口文件
+- Output：输出创建的bundle到指定文件夹
+- bundle（包）：webpack打包出来的文件
+- chunk（代码块）：代码分割（如webpack4的SplitChunksPlugin）的产物，将一些代码单独打包为一个 Chunk ，由多个模块组合而成,用于缓存、按需加载等。
+- module（模块）：Webpack 里一切皆模块（图片、ES6模块）、一个模块对应一个文件。Webpack 会从配置的 Entry 开始递归找出所有依赖的模块。
+
+### Loader和Plugin的区别
+- Loader(加载器)
+    - 用于文件转换
+    - webpack原生只能解析js，loader使webpack可以加载和解析非js文件(css、图片)
+    - 用法：module.rules配置，数组里面每项都是object，描述了{ test针对类型、loader使用什么加载、options使用的参数 }
+        ```js
+        module: {
+            rules: [
+                {
+                    test: /\.vue$/,
+                    loader: 'vue-loader',
+                    options: vueLoaderConfig
+                },
+                {
+                    test: /\.scss$/,
+                    loaders: ['style-loader', 'css-loader', 'sass-loader']
+                },
+            ]
+        }
+        ```
+- 常见Loader
+    - url-loader：小文件以 base64 的方式把文件内容注入到代码中去
+    - css-loader：加载 CSS，支持模块化、压缩、文件导入等特性
+    - style-loader：把外部 CSS 代码注入到 html 中，通过 DOM 操作去加载 CSS。
+    - sass-loader: sass语法转换
+    - babel-loader:把 ES6 转换成 ES5
+    - eslint-loader： ESLint 检查 JavaScript 代码
+
+- Plugin(插件)
+    - 用于扩展webpack的功能（如打包优化、压缩、定义变量）
+    - 在webpack打包过程广播很多事件，Plugin监听事件并在合适的时机使用webpack的api改变输出结果。
+    - 用法：plugins中单独配置，数组里每项都是一个plugin实例，参数由构造函数传入。
+        ```js
+        plugins: [
+            new HtmlWebpackPlugin(),
+            new ProgressBarPlugin(),
+            new webpack.LoaderOptionsPlugin({
+                minimize: true
+            }),
+            new VueLoaderPlugin(),
+        ]
+        ```
+- 常见Plugin
+    - define-plugin：定义环境变量（或全局版本号：通过日期时间计算拼接，代码中直接使用）
+    ```js
+    new webpack.DefinePlugin({
+        'WEIGHT_VERSION': JSON.stringify(getPluginVersion())
+    })
+    ```
+    - banner-plugin: 给每个chunk头部添加banner，如注释
+    ```js
+    new webpack.BannerPlugin({
+        banner: '// { "framework": "Vue" }\n',
+        raw: true // banner内容直出，不以注释出现
+    }),
+    ```
+    - html-webpack-plugin：简化html文件创建，设置loading
+    - TerserWebpackPlugin：webpack4默认的代码压缩插件，默认开启多进程和缓存
+    - uglifyjs-webpack-plugin：通过UglifyES压缩ES6代码
+    ```js
+    const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
+
+    module.exports = {
+      plugins: [
+        new UglifyJsPlugin({
+        cache: true, //缓存
+        sourceMap: false, //压缩 
+        parallel: 4,//多核
+        })
+      ]
+    }
+    ```
+    - webpack-parallel-uglify-plugin: 多核压缩,提高压缩速度
+    - webpack-bundle-analyzer: 可视化webpack输出文件的体积
+
 ### HMR热更新原理（hot module replacement）
 
 > 当你对代码进行修改并保存后，webpack 将对代码重新打包，并将新的模块发送到浏览器端，浏览器通过新的模块替换老的模块，这样在不刷新浏览器的前提下就能够对应用进行更新。
@@ -17,9 +110,356 @@
     - dev-server/client 只负责消息传递、不负责新模块的获取
     - HMR runtime 才应该是获取新代码的地方。
 
+### webpack打包体积优化
+- 分析打包后的模块文件大小
+    - webpack-bundle-analyzer 
+    ```
+    npm i -D webpack-bundle-analyzer
+    npm run build -- --report
+    ```
+- Tree-shaking
+    - webpack4默认开启Tree-shaking（mode为production）：清除代码中无用的部分。
+    ```js
+    //index.js
+    import {add, minus} from './math';
+    add(2,3);//minus不会参与构建
+    ```
+    - 原理：
+        - 基于ES6 modules 的静态检测也就是import 语法（确保引用的模块都是ES6规范）
+        - 来清除未使用的代码（比如引入但没有该变量的引用）
+    
+    - modules: false
+        - 失效原因：**使用babel插件babel-preset-env，将es6模块转成commonjs了，无法检测**
+        - 解决：.babelrc 或webpack.config.js里设置 `modules: false` ，避免module被转换commonjs
+            ```js
+            // .babelrc
+            {
+              "presets": [
+                ["@babel/preset-env",
+                  {
+                    "modules": false
+                  }
+                ]
+              ]
+            }
+            // 或者
+            // webpack.config.js
+            module: {
+                rules: [
+                    {
+                        test: /\.js$/,
+                        use: {
+                            loader: 'babel-loader',
+                            options: {
+                                presets: ['@babel/preset-env', { modules: false }]
+                            }
+                        }，
+                        exclude: /(node_modules)/
+                    }
+                ]
+            }
+    
+            ```
+    - sideEffects: false
+        - webpack 4在package.json 文件中设置 sideEffects: false表示模块是无副作用的（是否修改了 window 上的属性，是否复写了原生对象方法等），可以放心进行判断删除。
+        - 我这个包在设计的时候就是期望没有副作用的，即使他打完包后是有副作用的，webpack 同学你摇树时放心的当成无副作用包摇就好啦！
+        - 使用：
+            ```js
+            // 第三方npm模块 的 package.json
+            {
+                "name": "your-project",
+                "sideEffects": false
+            }
+            // 业务代码的 webpack.prod.conf.js
+            module.exports = {
+                module: {
+                    rules: [
+                        {
+                            test: /\.jsx?$/,
+                            exclude: /(node_modules|bower_components)/,
+                            use: {
+                                loader: 'babel-loader',
+                            },
+                            sideEffects: false || []
+                        }
+                    ]
+                },
+            }
+            ```
+
+### webpack打包加速优化
+- 提高热更新速度：
+    - 提高热更新速度，上百页 2000ms内搞定，10几页面区别不大
+    ```js
+    //在.env.development环境变量配置
+    VUE_CLI_BABEL_TRANSPILE_MODULES:true
+    ```
+    - 原理：利用插件，在开发环境中将异步组件变为同步引入，也就是import()转化为require())
+    - 一般页面到达几十上百，热更新慢的情况下需要用到。
+    - webpack5 即将发布，大幅提高了打包和编译速度
+- 分析打包时长：
+    - 速度分析插件[speed-measure-webpack-plugin](https://www.npmjs.com/package/speed-measure-webpack-plugin)
+    ```
+    npm install --save-dev speed-measure-webpack-plugin
+    ```
+    ```js
+    //vue.config.js
+    //导入速度分析插件
+    const SpeedMeasurePlugin = require("speed-measure-webpack-plugin");
+    //实例化插件
+    const smp = new SpeedMeasurePlugin();
+    
+    module.exports = {
+    configureWebpack: smp.wrap({
+            plugins: [
+                // 这里是自己项目里需要使用到的其他插件
+                new yourOtherPlugin()
+            ]
+        })
+    }
+    ```
+- 较耗时：代码的编译或压缩（转化 AST树 -> 遍历AST树 -> 转回JS代码）
+    - 编译 JS、CSS 的 Loader 
+    - 压缩 JS、CSS 的 Plugin 
+- 缓存：让二次构建时，不需要再去做重复的工作[没有变化的直接使用缓存，速度更快]
+    - 开启Loader、压缩插件的cache配置【如babel-loader的`cacheDirectory:true`】，uglifyjs-webpack-plugin【如`cache: true`】，构建完将缓存存放在`node_modules/.cache/..`。
+    - [cache-loader](https://www.npmjs.com/package/cache-loader)：将 loader 的编译结果写入硬盘缓存，再次构建如果文件没有发生变化则会直接拉取缓存,添加在时间长的 loader 的最前面。
+    ```js
+    module: {
+        rules: [
+            {
+                test: /\.ext$/,
+                use: ['cache-loader', ...loaders],
+                include: path.resolve('src'),
+            },
+        ],
+    }
+    ```
+- 多核：充分利用了硬件本身的优势
+    - happypack：
+        - 原理：将Loader转换分解到多个子进程中去并行处理，子进程处理完成后把结果发送到主进程中，从而减少总的构建时间
+        - 使用方法：开启系统CPU最大线程，通过插件将loader包装，暴露id，直接module.rules引用该id。
+        - happypack 默认开启 CPU核数 - 1 个进程，当然，我们也可以传递 threads 给 happypack。
+        ```js
+        //安装：npm install happypack -D
+        //引入：const Happypack = require('happypack');
+        exports.plugins = [
+          new Happypack({
+            id: 'jsx',
+            threads: 4,
+            loaders: [ 'babel-loader' ]
+          }),
+        
+          new Happypack({
+            id: 'styles',
+            threads: 2,
+            loaders: [ 'style-loader', 'css-loader', 'less-loader' ]
+          })
+        ];
+        
+        exports.module.rules = [
+          {
+            test: /\.js$/,
+            use: 'Happypack/loader?id=jsx'
+          },
+        
+          {
+            test: /\.less$/,
+            use: 'Happypack/loader?id=styles'
+          },
+        ]
+        ```
+    - thread-loader：添加在此loader后面的放入单独的 worker 池里运行，配置简单
+        ```js
+        //安装：npm install thread-loader -D
+        module.exports = {
+            module: {
+                    //我的项目中,babel-loader耗时比较长，所以我给它配置 thread-loader
+                    rules: [
+                        {
+                            test: /\.jsx?$/,
+                            use: ['thread-loader', 'cache-loader', 'babel-loader']
+                        }
+                    ]
+            }
+        }
+        ```
+    - 多进程压缩    
+        - 默认的TerserWebpackPlugin（比uglifyjs性能更好）：默认开启了多进程和缓存，缓存文件 `node_modules/.cache/terser-webpack-plugin`
+        - 其他并行压缩插件：
+            - webpack-parallel-uglify-plugin:子进程并发执行把结果送回主进程，多核并行压缩来提升代码压缩速度
+            - uglifyjs-webpack-plugin自带的parallel：【如`parallel: true`】配置项开启多核编译
+- 抽离：
+    - dll：内置webpack的 DllPlugin编译 和 DllReferencePlugin 引入dll，提高打包速度
+        - Vue全家桶、element-ui、echarts、工具库lodash不常变更的依赖 【几十秒】，避免每次构建都进行打包
+        - 通过DllPlugin来对那些我们引用但是不会经常修改的npm包来进行预编译，
+        - 再通过DllReferencePlugin将预编译的模块加载进来,避免反复编译浪费时间，提高打包速度。
+        - 步骤：
+            - 新建一个webpack.dll.config.js 的配置文件(与webpack配置同级)，配置DllPlugin插件和打包的库和输出文件的位置
+            - package.json 添加 dll命令，执行webpack.dll.config.js文件
+            - npm run dll命令，生成第三方代码集合js文件
+            - webpack.config.js里配置DllReferencePlugin插件、找到manifest.json文件映射到依赖并打包引入
+            - 修改index.html，加入script标签，写上对应dll路径
+            - 如果更新依赖包，执行`npm run dll`,新的dll文件名便会加上新的hash
+            ```js
+            // webpack.config.dll.js
+            const webpack = require('webpack');
+            const path = require('path');
+            
+            module.exports = {
+                entry: {
+                    react: ['react', 'react-dom']
+                },
+                mode: 'production',
+                output: {
+                    filename: '[name].dll.[hash:6].js',
+                    path: path.resolve(__dirname, 'dist', 'dll'),
+                    library: '[name]_dll' //暴露给外部使用
+                    //libraryTarget 指定如何暴露内容，缺省时就是 var
+                },
+                plugins: [
+                    new webpack.DllPlugin({
+                        //name和library一致
+                        name: '[name]_dll', 
+                        path: path.resolve(__dirname, 'dist', 'dll', 'manifest.json') //manifest.json的生成路径
+                    })
+                ]
+            }
+            
+            // package.json 中新增 dll 命令
+            {
+                "scripts": {
+                    "build:dll": "webpack --config webpack.config.dll.js"
+                },
+            }
+
+            // npm run build:dll 后，会生成 
+            dist
+                └── dll
+                    ├── manifest.json
+                    └── react.dll.9dcd9d.js
+            
+            // manifest.json 用于让 DLLReferencePlugin 映射到相关依赖上。至此 dll 准备工作完成，接下来在 webpack 中引用即可。
+            
+            // webpack.config.js
+            const webpack = require('webpack');
+            const path = require('path');
+            module.exports = {
+                //...
+                devServer: {
+                    contentBase: path.resolve(__dirname, 'dist')
+                },
+                plugins: [
+                    new webpack.DllReferencePlugin({
+                        manifest: path.resolve(__dirname, 'dist', 'dll', 'manifest.json')
+                    }),
+                    new CleanWebpackPlugin({
+                        cleanOnceBeforeBuildPatterns: ['**/*', '!dll', '!dll/**'] //不删除dll目录
+                    }),
+                    //...
+                ]
+            }
+            // 修改 public/index.html 文件，在其中引入 react.dll.js
+            <script src="/dll/react.dll.9dcd9d.js"></script>
+            // 使用 npm run build 构建，可以看到 bundle.js 的体积大大减少，提高打包速度。
+            ```
+    - 配置Externals（推荐）：外部引入，将不需要打包的库或静态资源从构建逻辑中剔除，使用 **CDN** 的方式去引用。
+        - 步骤：在externals中配置key[包名]+value[CDN全局变量名]，然后在HTML中引入CDN的script 标签。就能实现import引入了。
+        ```js
+        // index.html
+        <script
+          src="https://code.jquery.com/jquery-3.1.0.js"
+          integrity="sha256-slogkvB1K3VOkzAI8QITxV3VzpOnkeNVsKvtkYLMjfk="
+          crossorigin="anonymous">
+        </script>
+        //webpack.config.js
+            module.exports = {
+                //...
+                externals: {
+                    //jquery通过script引入之后，全局中即有了 jQuery 变量
+                    'jquery': 'jQuery'
+                }
+            }
+        ```
+        - 常见CDN链接由host域名+包名+版本号+路径
+        ```js
+        <script src="https://cdn.bootcss.com/react/16.9.0/umd/react.production.min.js"></script>
+        ```
+        - 有些 CDN 服务不稳定，尽量选择成熟的CDN服务。
+
+- Vue关闭在vue.config.js： `module.exports= { productionSourceMap:false （表示生产环境进行代码压缩） }`
+    - 优点：构建速度快，体积变小，不需要源码map文件，进行代码压缩加密
+    - 缺点：运行时有错误，无法准确定位哪一行。
+- 更直接：
+    - 升级机器配置
+    - 升级webpack5或node版本 
+- 效果提升：(20页)
+    - 初次打包：20s
+    - 二次打包：8s
 
 ## Git
 - 参考[廖雪峰的Git教程](https://www.liaoxuefeng.com/wiki/896043488029600/897013573512192)
+
+### git flow 工作流
+- 两个长期分支
+    - 主分支master:稳定的发布版（已发布代码）（一般有保护功能）
+    - 主开发分支develop:最新的开发代码
+- 三个短期分支（用完该删除）
+    - 新功能分支feature:开发新功能（由develop分支上面分出来，开发完并入Develop）
+    - 预发布分支release:发布前的测试复查、版本控制、缺陷修复、（由Develop分支上面分出来，结束后并入develop和master）
+    - 补丁分支hotfix:紧急修复bug(issue编号+名字)，从master上某个tag创建，修补结束，写上"fixes #14" 合并如master和develop。
+- 特点：
+    - 基于版本发布
+    - 优点是清晰可控
+    - 缺点是相对复杂，需要同时维护两个长期分支。
+    - Github flow 适合持续发布，只有一个长期分支就是master
+    - GitLab flow 上游master优先，由master分出其他分支如production，去发布版本。上游没问题，才合并到下游。
+- 总流程
+    - 并行开发：新功能新建feature分支，开发完后合并到主开发分支develop
+    - 协作开发：从develop上创建新分支，即包括所有已完成的feature
+    - 预发布：develop上创建一个release分支，发布到测试环境测试，有问题在此分支修复，修复完毕合并到develop和master分支。
+    - 紧急修复：在已发布的tag上新建修复hotfix分支，修补结束合并如master和develop。
+- tag 
+    - 概念：对某个提交点打上标签，如发布版本后打 tag。
+    - 作用：便于以后回滚特定版本，而不需要 revert。
+
+![Git-flow](./img/Git-flow.png)
+
+### git merge合并的几种模式
+
+- git merge (默认--ff,fast-farward)
+    - 结果：被merge的分支和当前分支在图形上并为一条线，被merge的提交点commit合并到当前分支，没有新的提交点merge。
+    - 缺点：主分支混入其他分支的零碎commit点。而且删除分支，会丢失分支信息。
+
+- git merge --no-ff (不快速合并)(推荐)
+    - 结果：被merge的分支和当前分支不在一条线上，被merge的提交点commit还在原来的分支上，并在当前分支产生一个新提交点merge。
+    - 优点：利于回滚整个大版本(主分支自己的commit点)。
+
+- git merge --squash
+    - 结果：把多次分支commit历史压缩为一次
+
+![Git-merge-no-ff](./img/Git-merge-no-ff.png)
+
+- 回退的区别：
+    - 执行`git reset HEAD^ --hard` 回退最近一次提交时，如果是将dev合并进master，那使用--ff模式后，回退到dev的提交点，因为commit历史已合并。而--no-ff模式后，会回退到master的提交点，因为主分支只有merge进来的提交点，剩下的是主分支自己的提交点。
+
+- pull Request （Merge Request）发起合并请求
+    ```js
+        //从master上创建develop出来
+        git checkout -b develop master
+        
+        //合并：先切换到Master分支
+    　　git checkout master
+    　　
+    　　//合并：再把Develop分支合并进来Master
+    　　git merge --no-ff develop
+    　　
+    　　//打上tag标签
+    　　git tag -a 1.2
+    　　
+    　　//删除功能分支
+    　　git branch -d feature-x
+    ```
 
 ### git checkout / git reset / git revert的区别
 - 查找对应版本commit_id
@@ -69,32 +509,49 @@
 - [知乎解释](https://zhuanlan.zhihu.com/p/75499871)
 - [git解释](https://github.com/geeeeeeeeek/git-recipes/wiki/5.1-%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%EF%BC%9AMerge%E3%80%81Rebase-%E7%9A%84%E9%80%89%E6%8B%A9)
 - [其他解释](https://www.html.cn/archives/10077)
-- 较好实践：就是dev在merge进主分支（如master）之前，最好将自己的dev分支给rebase到最新的主分支（如master）上，然后用pull request创建merge请求。用rebase整理成重写commit历史，所有修改拉到master的最新修改前面，保证dev运行在当前最新的主branch的代码。避免了合并的交织。
-- 一句话：rebase将多次commit一起拉到要合并进来分支最新提交的前面，变成一条线。merge会保留两个分支的commit信息，而且是交叉着的，即使是ff模式，两个分支的commit信息会混合在一起。
-- git merge ：自动创建一个新的合并commit，且包含两个分支记录， 如果合并的时候遇到冲突，仅需要修改后重新commit
-    - 场景：如dev要合并进主分支master，保留详细的合并信息。
-    - 优点：真实的commit情况
+
+- 一句话：
+    - rebase意思是变基，改变分支的起始位置，在dev上`git rebase master`，将dev的多次commit一起拉到要master最新提交的后面(时间最新)，变成一条线，用于整理自己的dev提交历史，把master最新代码合进来。
+    - merge会保留两个分支的commit信息，而且是交叉着的，即使是ff模式，两个分支的commit信息会混合在一起，用于自己dev合并进master。
+- git merge ：自动创建一个新的合并(merge-commit)，且包含两个分支记录， 如果合并的时候遇到冲突，仅需要修改后重新commit
+    - 场景：如**dev要合并进主分支master**，保留详细的合并信息。
+    - 优点：展示真实的commit情况
     - 缺点：分支杂乱
         ```
-        $ git checkout feature
-        $ git merge master
+        $ git checkout master
+        $ git merge dev
         ```
-- git rebase：不产生merge commit，重写提交历史，“整理”成一条直线。
-    - 如在develop上git rebase master 就会拉取到master上的最新代码合并进来，也就是将分支的起始时间指向master上最新的commit上。自动保留的最新近的修改，不会遇到合并冲突。而且可交互操作（执行合并删除commit），可通过交互式变基来合并分支之前的commit历史git rebase -i HEAD~3
-    - 场景：主要发生在个人分支上，如 git rebase master整理自己的dev变成一条线。频繁进行了git commit提交，可用交互操作drop删除一些提交，squash提交融合前一个提交中。
+        ![git-merge-no-ff](./img/git-merge-no-ff-min.gif)
+
+- git rebase：不产生merge commit，变换起始点位置，“整理”成一条直线，且能使用命令合并多次commit。
+    - 如在develop上git rebase master 就会拉取到master上的最新代码合并进来，也就是将分支的起始时间指向master上最新的commit上。自动保留的最新近的修改，不会遇到合并冲突。而且可交互操作（执行合并删除commit），可通过交互式变基来合并分支之前的commit历史`git rebase -i HEAD~3`
+    - 场景：主要**发生在个人分支**上，如 git rebase master整理自己的dev变成一条线。频繁进行了git commit提交，可用交互操作`drop`删除一些提交，`squash`提交融合前一个提交中。
     - 优点：简洁的提交历史
     - 缺点：发生错误难定位
         ```
-        $ git checkout feature
+        $ git checkout dev
         $ git rebase master
         ```
+        ![git-rebase-min](./img/git-rebase-min.gif)
+        ![git-rebase-drop-min](./img/git-rebase-drop-min.gif)
+
+- 使用rebase还是merge更多的是管理风格的问题，有个较好实践：就是dev在merge进主分支（如master）之前，最好将自己的dev分支给rebase到最新的主分支（如master）上，然后用pull request创建普通merge请求。用rebase整理成重写commit历史，所有修改拉到master的最新修改前面，保证dev运行在当前最新的主branch的代码。避免了git历史提交里无意义的交织。
+    - 假设场景：从 dev 拉出分支 feature-a。
+        - 那么当 dev 要合并 feature-a 的内容时，使用 `git merge feature-a`。
+        - 反过来当 feature-a 要更新 dev 的内容时，使用 `git rebase dev`。
+
 - review（强制+发版前+小片段+线上交流+高频率）（代码交流和人员成长，辅助产品质量）
     - 代码规范：明确Coding规则
     - 检视指南：消除困惑和迷茫
     - 总结优化：透明问题，持续优化（非常重要）
     - 激励机制：激发主观能动性
+
+- git merge图示
 ![测试图](./img/git-merge.png)
+- git rebase图示
 ![测试图](./img/git-rebase.png)
+
+
 
 ### 编码风格-分号
 

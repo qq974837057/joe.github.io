@@ -38,7 +38,7 @@ module.exports = {
       '/pages/folder1/':[         
           {
               title: '前端基础',   // 一级菜单名称
-              collapsable: true, // false为默认展开菜单, 默认值true是折叠,
+              collapsable: false, // false为默认展开菜单, 默认值true是折叠,
               sidebarDepth: 2,    //  设置侧边导航自动提取markdown文件标题的层级，默认1为h2层级
               children: [
                   ['html.md', 'HTML'],  //菜单名称为'子菜单1'，跳转至/pages/folder1/test1.md
