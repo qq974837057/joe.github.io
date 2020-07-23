@@ -461,6 +461,9 @@
     　　git branch -d feature-x
     ```
 
+- git pull 实际上是两个命令合成了一个：git fetch 和 git merge。
+    - 当我们从来源拉取修改时，我们首先是像 git fetch 那样取回所有数据，然后最新的修改会自动合并到本地分支中。
+
 ### git checkout / git reset / git revert的区别
 
 

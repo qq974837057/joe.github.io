@@ -406,24 +406,28 @@
 > 取决后端需要什么格式的数据，但是文件必须使用multipart/form-data
 
 - JSON
-    - application/json
+    - application/json(一般为接口请求和响应数据的头部)
         - 格式为json字符串
-            ```
+            ```js
             {"id":"123","name":"joe"}
             ```
-- 两种表单数据提交方式
-    - application/x-www-form-urlencoded
-        - 键值对格式：key=value&key=value
+- 三种表单数据编码方式
+    - form标签的enctype属性：form表单在发送到服务器时候编码方式
+        - 1、`application/x-www-form-urlencoded`。默认的编码方式。其实不是不能上传文件，是只能上传文本格式的文件。
+        - 2、`multipart/form-data` 。表单数据有多部分构成，既有文本数据，又有文件等二进制数据的意思。将文件以二进制的形式上传，这样可以实现多种类型的文件上传。
+        - 3、`text/plain`。纯文本的传输。空格转换为 “+” 加号，但不对特殊字符编码。
+    - application/x-www-form-urlencoded(默认，不可用于文件上传)
+        - 键值对格式：`key=value&key=value`
         - get方式放在url后面，用?分割；post放在http body中。
-        - 会进行url编码（键值对的参数用&连接；空格转为+加号；字符"a"-"z"，"A"-"Z"，"0"-"9"，"."，"-"，"*"，和"_"都不会被编码；其他符号(&@#)转为 【% + ASCII十六进制值】如%xy;）
+        - 会进行url编码（键值对的参数用&连接；空格转为+加号；字符`"a"-"z"，"A"-"Z"，"0"-"9"，"."，"-"，"*"`，和`"_"`都不会被编码；其他符号(&@#)转为 【% + ASCII十六进制值】如%xy;）
             ```
             First name:Joe&Joan
             Last name:
             如：FirstName=Joe%26Joan&LastName=6+6+6
             ```
-    - multipart/form-data(可用于文件上传，如有type=file)
-        - 每个表单控件元素变为独立资源
-        - 每部分会有http头描述如Content-Type(默认为text/plain)、Content-Disposition(form-data或者file)、name(控件name)、boundary值表示分割符：最后以加上--结尾。
+    - multipart/form-data(混合资源由多种元素组成，可用于文件上传，或者大数据json传输如埋点)
+        - 每个表单控件元素变为独立资源，同时method必须为post方法。
+        - 每部分会有http头描述如`Content-Type`(默认为text/plain，表示内容的 MIME 类型，是图片还是文本还是二进制数据)、`Content-Disposition`(form-data表示一个表单元素或者file)、name(表单元素name)、name 表示表单元素的 名称，回车换行后面就是name的值，如果是上传文件就是文件的二进制内容。`boundary`值表示分割符：最后以加上--结尾。
             ```
             // headers
             Content-Type: multipart/form-data; boundary=----WebKitFormBoundary1XNKw5IGSxIzisBM
@@ -444,6 +448,7 @@
             空调
             ------WebKitFormBoundary1XNKw5IGSxIzisBM--
             ```
+
 
 ## AJAX
 - [XMLHttpRequest](https://developer.mozilla.org/zh-CN/docs/Web/API/XMLHttpRequest)

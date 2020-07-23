@@ -2,13 +2,13 @@
 ![Vue全流程1](./img/frame-vueAll1.png)
 ![Vue全流程](./img/frame-vueAll.jpg)
 
-> new Vue()调用init初始化 -> $mount挂载 -> compile()解析编译 -> render function -> 响应式系统
+> new Vue()调用init初始化 -> $mount挂载 -> compile()编译模板 -> render function -> 响应式系统 -> 视图更新
 
 > 响应式系统：render -> touch -> getter -> Dep依赖收集Watcher；setter -> Dep.notify -> Watcher.update() -> patch()进行diff -> DOM
 
 - 分为四个阶段：初始化、挂载编译、响应式、视图更新
   - 1、初始化：new Vue():调用init函数初始化，包括生命周期、事件、props、data、methods、watch等，还有重要就是Object.defineProperty设置setter和getter函数(同时将this.data.test代理成this.test)，用于依赖收集和响应式。
-  - 2、挂载编译：初始化后调用$mount挂载组件，执行compile()模板解析，包括  parse（解析template转成AST） 、  optimize(标记静态节点、用于diff优化跳过静态节点) 与  generate（AST -> render function） 三个阶段，最终得到 render function，用来渲染 VNode 
+  - 2、编译挂载：初始化后调用$mount挂载组件，有template的情况下，内部执行compile()编译，包括  parse（解析template转成AST） 、  optimize(标记静态节点、用于diff优化跳过静态节点) 与  generate（AST -> render function） 三个阶段，最终得到 render function，用来渲染 VNode，然后生成真实DOM显示在页面上。
   - 3、响应式：render function 被渲染，读取所需对象的值，触发getter函数，执行依赖收集，将订阅者Watcher添加Dep订阅器中。修改对象的值时触发setter，通知Dep订阅器中的订阅者Watcher，需要重新渲染视图，然后Watcher调用update进行更新。
   - 4、视图更新：数据变化触发update后，执行 render function 得到新的 VNode 节点，与旧的 VNode 一起传入  patch 进行比较，经过 diff 算法得到「 差异」，根据差异来修改对应的DOM。
 
@@ -130,23 +130,73 @@
     
 ## Vue生命周期
 - Vue 实例从创建到销毁的过程，就是生命周期。
-- 从开始创建、初始化数据、编译模板、挂载Dom → 渲染、更新→渲染、销毁等一系列过程
-- 分为8个阶段：创建前/后, 挂载前/后,更新前/后,销毁前/销毁后。
-- 周期：前四个为第一次页面加载调用。
-    - beforeCreate：组件实例被创建之初，组件的属性生效之前
-    - created：组件实例已经完全创建，数据劫持完成，属性也绑定，但真实dom还没有生成，$el还不可用
-    - beforeMount：在挂载开始之前被调用：相关的 render 函数首次被调用
-    - mounted：el 被新创建的 vm.$el 替换（完成dom渲染），并挂载到实例上去之后调用该钩子
-    - beforeUpdate：组件数据更新之前调用，发生在虚拟 DOM 打补丁之前。适合在更新之前访问现有的 DOM，比如手动移除已添加的事件监听器。
-    - update：虚拟 DOM 重新渲染和打补丁，组件DOM更新之后
-    - activated：被keep-alive缓存的组件专属，组件被激活时调用
-    - deactivated： 被keep-alive缓存的组件专属，组件被销毁时调用
-    - beforeDestroy：组件销毁前调用，在这一步，实例仍然完全可用。
-    - destroyed：组件销毁后调用，指令解绑，监听移除，实例销毁。
-- beforeCreated和created中间都做了什么
-    - 初始化 data、props、computed、watcher、provide。
-    
+- 从开始创建、初始化数据、编译模板、挂载DOM → 渲染、更新 → 渲染、销毁一系列过程
+- 分为4个阶段：创建阶段(前/后), 挂载阶段(前/后), 运行阶段(更新前/后), 销毁阶段(前/后)。
+- 周期：前四个钩子为第一次页面加载调用。
+    - `beforeCreate`：刚创建Vue空实例，只有一些生命周期函数和默认事件，data、methods、el都不可访问。
+    - `created`：完整的实例创建好，数据劫持完成，data、methods可访问、el不可访问，没有生成真实DOM。
+    - `beforeMount`：完成编译模板的工作，生成一个render function并调用，生成虚拟DOM，没有生成真实DOM。
+    - `mounted`：完成挂载，生成真实DOM，data、method可访问、el可访问。
+    - `beforeUpdate`：data数据是新的，但页面是旧的，发生在虚拟 DOM 打补丁之前。适合在更新之前访问现有的 DOM，比如手动移除已添加的事件监听器。
+    - `updated`：虚拟 DOM 重新渲染和打补丁，组件真实DOM更新之后，页面和data都是最新的。
+    - `beforeDestroy`：组件销毁前调用，实例仍然完全可用。
+    - `destroyed`：组件销毁后调用，解绑指令，移除监听，子组件销毁，都不可用。
+    - keep-alive相关的：
+      - `activated`：被keep-alive缓存的组件专属，组件被激活时调用
+      - `deactivated`： 被keep-alive缓存的组件专属，组件被销毁时调用
+
+- 关键节点简述
+  - 创建阶段
+    - `beforeCreate`：【data、methods、el均不可访问】
+    - 中间执行：初始化 data、methods、props、computed、watcher、provide。
+    - `created`：【data、methods可访问、el不可访问】【最早可访问data】
+    ```js
+    created() { 
+      // 允许并推荐    
+      this.$http.get(xxx).then(res => {
+          this.data = res.data    
+      })    
+      // 不允许    
+      this.$el    
+      this.$ref.demo    
+      const a = document.getElementById('demo')
+    }
+    ```
+  - 挂载阶段
+    - `beforeMount`：【data、methods可访问、el不可访问】
+    - `mounted`：【data、methods可访问、el可访问】【最早可操作DOM】
+    ```js
+    mounted() {
+        // 允许
+        this.$el
+        this.$ref.demo
+        let a = document.getElementById('')
+    }
+    ```
+  - 运行阶段：
+    - `beforeUpdate`：【data数据是新的，但页面是旧的】
+    - 中间执行：`re-render和patch`进行虚拟DOM的diff和更新渲染
+    - `updated`：【data和页面都是最新的】
+  - 销毁阶段
+    - `beforeDestroy`：【实例的data、methods、指令完全可用】
+    - `destroyed`：【实例的data、methods、指令都不可用】
+    - 触发销毁钩子的方法
+      - 手动调用`$destory()`
+      - v-if 与 v-for 指令（v-show 不行）
+      - 路由切换、关闭或刷新浏览器
+
+![vue-created](./img/vue-created.png)
+
 - 服务器端渲染：beforeCreate、created，其他不可调用
+
+- 实践
+    - 【异步请求】：官方推荐在mounted中调用的，实际上可以在created生命周期中调用。 服务端渲染时不支持mounted，需要放到created中。
+    - 【最早访问data】：在created钩子中可以对data数据进行操作，可以进行ajax请求将返回的数据赋给data。
+    - 【最晚修改data】：beforeMount，此时还未挂载到页面。
+    - 【最早操作DOM】：在mounted钩子对挂载的DOM进行操作，此时，DOM已经被渲染到页面上。
+    - 【updated函数注意】：在数据变化时被触发，但不能准确的判断是那个属性值被改变，可以用computed或watch函数来监听属性的变化，并做一些其他的操作。
+    - 【缓存组件使用activated】：在使用vue-router时有时需要使用`<keep-alive></keep-alive>`来缓存组件状态，这个时候created钩子就不会被重复调用了，如果我们的子组件需要在每次加载或切换状态的时候进行某些操作，可以使用activated钩子触发。
+    - 所有的生命周期钩子自动绑定 this 上下文到实例中，所以不能使用箭头函数来定义一个生命周期方法 (例如 `created: () => this.fetchTodos()`)。这会导致this指向父级。
 
 - 父子组件渲染过程(子挂载完，父才算挂载完)
 ```
@@ -165,15 +215,6 @@
 ```
 父beforeDestroy->子beforeDestroy->子destroyed->父destroyed
 ```
-
-- 实践
-    - 异步请求：官方实例的异步请求是在mounted生命周期中调用的，而实际上也可以在created生命周期中调用。 服务端渲染时不支持mounted，需要放到created中。
-    - 在created钩子中可以对data数据进行操作，这个时候可以进行ajax请求将返回的数据赋给data。
-    - 在mounted钩子对挂载的dom进行操作，此时，DOM已经被渲染到页面上。
-    - 虽然updated函数会在数据变化时被触发，但却不能准确的判断是那个属性值被改变，所以在实际情况中用computed或match函数来监听属性的变化，并做一些其他的操作。
-    - 在使用vue-router时有时需要使用<keep-alive></keep-alive>来缓存组件状态，这个时候created钩子就不会被重复调用了，如果我们的子组件需要在每次加载或切换状态的时候进行某些操作，可以使用activated钩子触发。
-    - 所有的生命周期钩子自动绑定 this 上下文到实例中，所以不能使用箭头函数来定义一个生命周期方法 (例如 created: () => this.fetchTodos())。这是导致this指向父级。
-
 
 ## Vue组件通信
 - [Vue组件通信的方法如下:](https://juejin.im/post/5d267dcdf265da1b957081a3#heading-0)
@@ -248,6 +289,97 @@ EventBus.$off('test', { })                 // 移除监听
 
 
 ## Vue事件机制
+- 四个事件API，分别是$on，$once，$off，$emit。
+- `$on( event, callback )`
+  - 监听当前实例上的自定义事件。事件可以由 vm.$emit 触发，在模板上可使用v-on:event="fn"。
+- `$once( event, callback )`
+  - 监听一个自定义事件，但是只触发一次。一旦触发之后，监听器就会被移除。
+- `$off( [event, callback] )`
+  - 移除自定义事件监听器。没有参数移除所有监听器；只提供了事件，则移除该事件所有的监听器；提供了事件与回调，则只移除这个回调的监听器。
+- `$emit( eventName, […args] )`
+  - 触发当前实例上的事件。附加参数都会传给监听器回调。
+
+```js
+vm.$on('test', function (msg) {
+  console.log(msg)
+})
+vm.$emit('test', 'hi')
+// => "hi"
+```
+
+- 手写解析：
+  - on判断事件是数组则遍历执行on方法，不是则将对应的fn回调push进对应事件名的事件调度中心events数组。
+  - once封装一下on回调（执行一次fn回调时，调用off方法关闭监听），然后调用on方法将on回调push进对应事件名的事件调度中心events数组。
+  - off判断事件是数组则遍历执行off方法，不是则判断有无传入fn回调，没传则清空该事件所有的回调函数events中的fn。有传fn回调，则移除在events上对应的fn回调。
+  - emit取出对应events中的fn回调，遍历执行所有注册的fn回调。
+
+
+```js
+class Vue {
+  constructor() {
+    this._events = Object.create(null);
+  }
+  $on(event, fn) {
+    if (Array.isArray(event)) {
+      event.map(item => {
+        this.$on(item, fn);
+      });
+    } else {
+      (this._events[event] || (this._events[event] = [])).push(fn);
+    }
+    return this;
+  }
+  $once(event, fn) {
+    function on() {
+      this.$off(event, on);
+      fn.apply(this, arguments);
+    }
+    on.fn = fn;
+    this.$on(event, on);
+    return this;
+  }
+  $off(event, fn) {
+    if (!arguments.length) {
+      this._events = Object.create(null);
+      return this;
+    }
+    if (Array.isArray(event)) {
+      event.map(item => {
+        this.$off(item, fn);
+      });
+      return this;
+    }
+    const cbs = this._events[event];
+    if (!cbs) {
+      return this;
+    }
+    if (!fn) {
+      this._events[event] = null;
+      return this;
+    }
+    let cb;
+    let i = cbs.length;
+    while (i--) {
+      cb = cbs[i];
+      if (cb === fn || cb.fn === fn) {
+        cbs.splice(i, 1);
+        break;
+      }
+    }
+    return this;
+  }
+  $emit(event) {
+    let cbs = this._events[event];
+    if (cbs) {
+      const args = [].slice.call(arguments, 1);
+      cbs.map(item => {
+        args ? item.apply(this, args) : item.call(this);
+      });
+    }
+    return this;
+  }
+}
+```
 
 ## Vue双向绑定v-model
 vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等元素上创建双向数据绑定，我们知道 v-model 本质上不过是语法糖，v-model 在内部为不同类型的标签，绑定不同的属性并传入，并抛出不同的事件：
@@ -485,6 +617,8 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 
 ## React和Vue的区别
 ## Vuex 的原理
+## keep-alive
+## mixin混入
 
 ## Vue3.0重要特性
 #### 采用proxy劫持对象
@@ -522,13 +656,17 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
     - 大型图形应用维护成本高：视图状态较多，ViewModel的构建和维护的成本都会比较高
 
 ## 单页(SPA)和多页(MPA)的区别
-- 单页：指只有一个主页面的应用，刷新局部资源，只加载一次js.css资源(不过也存在懒加载情况)，每次跳转只是切换显示的组件。
-- 多页：多个独立页面html，跳转是整页资源刷新，每个页面都需要加载js.css。
+- 单页：只有一个主页面html，局部刷新，只加载一次公共资源(js、css)，每次跳转只是切换显示的组件。
+- 多页：多个独立页面html，整页刷新，每个页面都要加载公共资源(js、css)。
 - 场景：对体验和流程度要求高的使用单页，对SEO要求较高使用多页。
-    - 路由（原理）：**单页是hash或者history**，多页是链接跳转。
-    - SEO: 单页较差，多页较好。
+    - 路由模式：**单页是hash或者history**，多页是普通链接跳转。
+    - SEO: 单页较差，页面内容等待异步获取(需要单独方案如SSR、预渲染)，多页较好，较多静态内容(实现方法简单)。
     - 体验：单页切换快，多页切换慢。
-    - 数据传递：单页Vuex，多页使用本地缓存。
+    - 数据传递：单页Vuex即可，多页使用缓存(localStorage)或URL参数等。
+    - 成本：单页开发成本高要用框架，维护简单。多页前期开发成本低，维护麻烦，一个功能改动需要多处更改。
+- SEO优化
+  - 网站设计优化：关键词、布局、代码拼写
+  - 网站内容优化：栏目关键词、分析用户需求的内容
 
 ## 【观察者】和【发布-订阅】模式的区别
 相同：都是某个对象(subject, publisher)改变，使依赖于它的多个对象(observers, subscribers)得到通知。
