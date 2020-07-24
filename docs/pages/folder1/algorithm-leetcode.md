@@ -1,3 +1,34 @@
+## 链表
+### LeetCode-206 反转链表
+反转一个单链表。
+
+```
+输入: 1->2->3->4->5->NULL
+输出: 5->4->3->2->1->NULL
+```
+
+##### 法1：双指针迭代
+- 思路
+设置一个前指针pre和当前指针cur，推进直到当前指针cur为空，返回pre，完成反转
+
+- 实现
+```js
+var reverseList = function(head) {
+    let [pre, cur] = [null, head];  // 0. 一开始pre指向null，cur指向head
+    while (cur) {
+        let tmp = cur.next;         // 1. 临时变量保存当前节点的下一个节点
+        cur.next = pre;             // 2. 然后将当前节点的next指向pre
+        pre = cur;                  // 3. pre移到cur的位置(前进一步)
+        cur = tmp;                  // 4. cur移到tmp的位置(前进一步)
+    }
+    return pre;
+};
+```
+- 时间复杂度：遍历了一次链表，这将耗费 O(n) 的时间。
+- 空间复杂度：O(1)，常数级额外空间。
+
+![leetcode-206](./img/leetcode-206.png)
+
 ## 堆栈
 ### LeetCode-20 有效的括号
 ##### 法1：栈结构 + map保存括号对应关系

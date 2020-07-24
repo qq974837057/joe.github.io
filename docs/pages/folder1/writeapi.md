@@ -77,7 +77,7 @@
   ```
 #### 寄生组合继承：使用构造函数继承属性，使用原型链继承方法，创造一个父类原型的副本作为子类构造函数的原型。
 - 前面组合式由于共用一个原型对象(Parent.prototype)，子类无自己构造函数，向上找构造函数是Parent。所以用Object.create隔离开原型，再给子类添加自己的构造函数）
-- Object.create(obj) 创建的中间对象以参数为原型对象，形成原型链
+- `Object.create(obj)`创建的中间对象以参数为原型对象，形成原型链
 - 内部原理：创建一个新的构造函数，它的prototype指向参数obj，再返回这个构造函数的实例，也就是新对象Obj。
   ```js
   function Parent() {
@@ -107,22 +107,26 @@
   ```
 ![寄生组合继承](./img/inherit-4.png)
 #### ES6 : class / extends 语法糖
+
+- 子类构造函数先调用super方法(相当于执行父类构造函数`Parent.call(this)`，this指向子类)
+- 然后可以在子类的构造函数中定义自己的属性。
   ```js
   class Parent {
-        constructor(name) {
-          this.name = name;
-        }
-        sayHello() {
-          console.log("I'm parent!" + this.name);
-        }
-      }
+    constructor(name) {
+      this.name = name;
+    }
+    sayHello() {
+      console.log("I'm parent!" + this.name);
+    }
+  }
 
   class Child extends Parent {
-    constructor(name) {
+    constructor(name, position) {
       super(name);
+      this.position = position;
     }
     sayChildHello() {
-      console.log("I'm child " + this.name)
+      console.log("I'm child " + this.name + this.position)
     }
     // 重新声明父类同名方法会覆写,ES5的话就是直接操作自己的原型链上
     sayHello(){
@@ -130,7 +134,9 @@
     }
   }
 
-  let testA = new Child('Joe')
+  let testA = new Child('Joe', '广州')
+  testA.sayChildHello();
+  // I'm child Joe 广州
   ```
 #### 区别
   - ES5 的继承使用借助构造函数实现，实质是先创造子类的实例对象this，然后再将父类的方法添加到this上面。ES6 的继承机制完全不同，实质是先创造父类的实例对象this（所以必须先调用super方法），然后再用子类的构造函数修改this。
@@ -1040,5 +1046,49 @@ var newAjax = function(url, data) {
             }
         }
    })
+}
+```
+
+## 模拟一个字符串的trim函数
+
+- 去除字符串的头尾空格
+
+> 做法：正则匹配头尾的空格，替换成''。
+
+```js
+    // 函数写法
+    function myTrim(str) {
+        // ^表示开头 $表示结尾 +表示一个或多个 \s表示空白符
+      let reg = /(^\s+)|(\s+$)/g;
+      return str.replace(reg, '');
+    }
+
+    // 原型方法
+    String.prototype.myTrim = function() {
+        return this.replace(/(^\s+)|(\s+$)/g, '');
+    }
+    
+```
+
+## 数组indexOf的实现
+
+- 判断this是否为null或者没传参val，返回-1
+- 循环当前数组，遍历到i位置的值===参数val，返回i
+- 不存在返回-1
+
+```js
+Array.prototype.myIndexOf= function (val) {  
+    if(this == null || !val) {  	
+        return -1;
+    }
+    let i = 0;  
+    let len = this.length;  
+    while(i < len) {     
+        if(this[i] === val) {
+            return i;
+        } 
+        i++;
+    } 
+    return -1;
 }
 ```

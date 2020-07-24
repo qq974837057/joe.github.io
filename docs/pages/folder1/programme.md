@@ -17,22 +17,6 @@ async function test() {
 test();
 ```
 
-## 模拟一个字符串的trim函数
-
-> 正则匹配头尾的空格，替换成''。
-
-```js
-    String.prototype.emuTrim = function(){
-        // ^表示开头 $表示结尾 +表示一个或多个 \s表示空白符
-        return this.replace(/(^\s+)|(\s+$)/g, '');
-    }
-    
-    // 函数写法
-    function myTrim(str) {
-      let reg = /(^\s+)|(\s+$)/g;
-      return str.replace(reg, '');
-    }
-```
 
 ## 实现一个批量请求函数 multiRequest(urls, maxNum)
 - 要求最大并发数 maxNum

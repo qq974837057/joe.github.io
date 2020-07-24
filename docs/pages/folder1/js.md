@@ -117,7 +117,15 @@ console.log(a.call({}));            //[object Object]
 console.log(a.call(undefined));     //[object Undefined]
 console.log(a.call(null));          //[object Null]
 ```
-
+- 获取Type的封装：使用上面API + 正则匹配将Type取出来
+```js
+function getType (obj) {
+  return Object.prototype.toString
+    .call(obj)
+    .replace(/^\[\w+ (\w+)\]$/, '$1') // w+ 匹配字母数组下划线一个或多个 ()表示子表达式 用$1取出整体匹配表达式后的第一个子表达式，替换掉整体。
+    .toLowerCase()
+}
+```
 #### 判断引用类型
 
 判断一：使用typeof，排除null特殊情况。
@@ -496,11 +504,11 @@ Object.getPrototypeOf(obj) === proto; // true
 [...new Set(arr.flat(Infinity))]
 .sort((a, b)=>{ return a - b })
 ```
-- 判断数组是否有某个值：【`indexOf()、includes()、find()、findIndex()`】
+- 判断数组是否有某个值：【`indexOf(element, fromIndex)、includes()、find()、findIndex()`】
 ```js
-var arr=[1,2,3,4];
-var index=arr.indexOf(3); //不存在返回-1,存在返回该字符串首次出现的位置
-if(arr.indexOf(3)!== -1) {console.log("存在")} //判断不为-1，才存在
+var arr = [1,2,3,4];
+var index = arr.indexOf(3); //不存在返回-1,存在返回该字符串首次出现的位置,fromIndex代表开始查找的位置
+if(arr.indexOf(3) !== -1) {console.log("存在")} //判断不为-1，才存在
 if(arr.indexOf(3)) //注意这样判断不对，if(-1)为真 if(0)为假
 
 if(arr.includes(3)){ console.log("存在")} //存在返回true
@@ -509,7 +517,7 @@ var result = arr.find(item => {
     return item > 3
 }) //返回数组中满足条件的第一个元素值，没有返回undefined
 
-var result = arr.findIndex(item =>{
+var result = arr.findIndex(item => {
     return item > 3
 }); //返回数组中满足条件的第一个元素的下标，没有返回-1
 ```
@@ -620,7 +628,7 @@ var result = arr.findIndex(item =>{
           console.log(key + ': ' + joe[key]);
        }
     ```
-- 属性遍历
+- 对象的属性遍历
     - 从该属性的描述对象，看可枚举性enumerable
         ```js
         let obj = { foo: 123 };
@@ -632,11 +640,11 @@ var result = arr.findIndex(item =>{
         //    configurable: true
         //  }
         ```
-    - `for...in`【自身+继承+可枚举（不含Symbol）】
-    - `Object.keys(obj)`【自身+可枚举（不含Symbol）】
-    - `Object.getOwnPropertyNames(obj)`【自身+可枚举+不可枚举（不含Symbol）】
-    - `Object.getOwnPropertySymbols(obj)`【自身Symbol属性的键名】
-    - `Reflect.ownKeys(obj)`【自身+可枚举+不可枚举+Symbol属性的键名】
+    - `for...in`【返回键值，自身+继承+可枚举（不含Symbol）】
+    - `Object.keys(obj)`【返回键名数组，自身+可枚举（不含Symbol）】
+    - `Object.getOwnPropertyNames(obj)`【返回键名数组，自身 + 可枚举 + 不可枚举（不含Symbol）】
+    - `Object.getOwnPropertySymbols(obj)`【返回键名数组，里面是自身Symbol属性】
+    - `Reflect.ownKeys(obj)`【返回键名数组，自身 + 可枚举 + 不可枚举 + Symbol属性】
 
 ## 类数组对象
 - 概念：JS中，对于一个普通的对象来说，如果它的所有键名均为正整数（由0开始1、2...），同时拥有length属性，则为“类数组对象”。
@@ -1639,6 +1647,36 @@ console.log(it.next(13)) // => {value: 42, done: true}
         let foo = await fooPromise;
         let bar = await barPromise;
         ```
+- 和promise写法对比，每个step加200，然后传值给下个step。
+  ```js
+  //promise写法
+  function doIt() {
+      const time1 = 300;
+      step1(time1)
+          .then(time2 => step2(time2))
+          .then(time3 => step3(time3))
+          .then(result => {
+              console.log(`result is ${result}`);
+          });
+  }
+  doIt();
+
+  //async写法
+  async function doIt() {
+      const time1 = 300;
+      const time2 = await step1(time1);
+      const time3 = await step2(time2);
+      const result = await step3(time3);
+      console.log(`result is ${result}`);
+  }
+  doIt();
+
+  
+  // step1 with 300
+  // step2 with 500
+  // step3 with 700
+  // result is 900
+  ```
 
 ## 闭包
 > 概念：闭包 =『函数』和『函数对外部作用域的变量引用』的捆绑，即闭包可以从让内部函数访问外部函数作用域。本质是当前环境中存在指向父级作用域的**引用**。
@@ -1948,6 +1986,7 @@ function map(arr, fn) {
     - 事件触发后，计时n秒后执行回调，n秒内再次触发，重新计时。
     - 场景：
         - search搜索联想:不断输入值时，用防抖来节约请求资源，如隔350ms。用户注册验证，输入校验。实时保存，如无更改操作1s后进行保存。
+        - 插件设备温度控制：来回拖动，不能连续发控制请求，等2s左右不再拖动，再发出控制请求。
         - 按钮提交：防止多次点击按钮发多次请求，只执行最后提交的一次。
 - 节流throttle：连续触发事件，每隔一段时间只执行一次。
     - 一个单位时间内只能触发一次函数，多次触发只有一次生效，通常每隔 100~500 ms执行一次即可，多次快速点击也只执行一次。

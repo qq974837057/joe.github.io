@@ -59,7 +59,7 @@ module.exports = {
                   ['algorithm-leetcode.md', '数据结构和算法-leetcode'],
                   ['writeapi.md', '手写API实现'],
                   ['programme.md', '编程实现'],
-                  ['nodejs.md', 'NodeJS'],
+                  ['nodejs.md', '其他'],
               ]
           }
       ],
