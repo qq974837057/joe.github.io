@@ -583,3 +583,20 @@
             semi: ["error", "never"]
             ```
         - 也可以用数字表示：0，1，2分别表示off, warning, error    
+
+
+## 前端工程化
+- 模块化
+    - JS模块化
+    - CSS模块化
+    - 资源模块化
+- 组件化
+    - 复杂页面按功能拆分成多个独立的组件
+    - 通用组件
+    - 业务组件
+- 规范化
+    - UI 规范
+    - 接口规范
+    - 编码规范(eslint)
+    - 提交规范(commitizen 工具 + cz-conventional-changelog 规范适配器)
+    - 开发流程(GitFlow工作流、CodeReview、测试、部署)
