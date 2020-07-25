@@ -563,6 +563,100 @@
 ![测试图](./img/git-rebase.png)
 
 
+### git commit 规范
+
+> (commitizen 工具 + cz-conventional-changelog 规范适配器 + commitlint + husky)
+
+- 安装：
+    - 全局安装：需要 ~/.czrc 配置文件, 为 commitizen 指定 Adapter.
+    ```
+    npm install -g commitizen cz-conventional-changelog
+    // 创建配置文件
+    echo '{ "path": "cz-conventional-changelog" }' > ~/.czrc
+    ```
+    - 项目级安装
+    ```
+    npm install -D commitizen cz-conventional-changelog
+    
+    // package.json
+    "script": {
+        ...,
+        "commit": "git-cz",
+    },
+     "config": {
+        "commitizen": {
+          "path": "node_modules/cz-conventional-changelog"
+        }
+     }
+    ```
+    - 安装commitlint校验规范： @commitlint/config-conventional (符合 Angular团队规范) + husky 在commit提交后进行lint校验.
+    ```
+    npm i -D @commitlint/config-conventional @commitlint/cli husky
+    
+    // 创建.commitlintrc.js，与package.json同级
+    module.exports = {
+      extends: [
+        "@commitlint/config-conventional"
+      ],
+      rules: {
+      }
+    };
+    
+    // package.json
+    "husky": {
+        "hooks": {
+          "commit-msg": "commitlint -e $GIT_PARAMS"
+        }
+    }
+    ```
+- 使用：
+    
+    ```
+    
+    命令：npm run commit or git cz
+    
+    1.Select the type of change that you're committing 选择改动类型 (<type>)
+
+    2.What is the scope of this change (e.g. component or file name)? 填写改动范围 (<scope>)
+    
+    3.Write a short, imperative tense description of the change: 写一个精简的描述 (<subject>)
+    
+    4.Provide a longer description of the change: (press enter to skip) 对于改动写一段长描述 (<body>)
+    
+    5.Are there any breaking changes? (y/n) 是破坏性修改吗？默认n (<footer>)
+    
+    6.Does this change affect any openreve issues? (y/n) 改动修复了哪个问题？默认n (<footer>)
+    
+    // 生成的最终格式
+    <type>(<scope>): <subject>
+    <BLANK LINE>
+    <body>
+    <BLANK LINE>
+    <footer>
+    
+    // 填写完毕后，husky会调用commitlint对message进行格式校验，默认规定type及subject为必填项。
+    ```
+- type必填：当一次改动包括主要type与特殊type时，统一采用主要type。
+    ```
+        # 主要
+        feat：新功能
+        fix： 修复bug
+        # 特殊
+        docs: 文档相关
+        style： 代码格式：缩进、空格之类
+        build： webpack构建工具或外部依赖变动如npm
+        refactor：重构
+        revert：执行git revert打印的message
+    ```
+- scope必填：改动的范围，格式为项目名/模块名
+    ```
+    node-pc/common rrd-h5/activity
+    ```
+- subject: commit 的概述    
+- body：commit的具体改动情况和原因
+- break changes：破坏性修改：描述接口删除、迁移等
+- affect issues: 影响的哪个issues`（re #123、fix #123）`
+
 
 ### 编码风格-分号
 
