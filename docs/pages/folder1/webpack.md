@@ -563,7 +563,8 @@
 ![测试图](./img/git-rebase.png)
 
 
-### git commit 规范
+### git commit 规范(git cz)
+- [掘金参考](https://juejin.im/post/5afc5242f265da0b7f44bee4#heading-4)
 
 > commitizen 可使用git cz + cz-conventional-changelog 规范适配器 + commitlint 校验 + husky
 
@@ -575,9 +576,13 @@
 <type>(<scope>): <subject> // 类型 范围 标题
 
 <body> // 内容
-
-<footer>
 ```
+
+
+![git-commit](./img/git-commit.png)
+![git-cz](./img/git-cz.png)
+
+> 注意：windows下git bash无法使用交互式，可直接在vscode中使用终端配置git bash，方可使用上下箭头移动交互。
 
 - 安装：
     - 全局安装：需要 ~/.czrc 配置文件, 为 commitizen 指定 Adapter.
@@ -649,8 +654,6 @@
     // 填写完毕后，husky会调用commitlint对message进行格式校验，默认规定type及subject为必填项。
     ```
 
-
-![git-commit](./img/git-commit.png)
 
 - type必填：当一次改动包括主要type与特殊type时，统一采用主要type。
     ```
