@@ -713,3 +713,114 @@
     - 编码规范(eslint)
     - 提交规范(commitizen 工具 + cz-conventional-changelog 规范适配器)
     - 开发流程(GitFlow工作流、CodeReview、测试、部署)
+
+## 前端错误监控体系
+- [错误监控参考](http://jartto.wang/2018/11/20/js-exception-handling/)
+
+### 异常分类
+- JS语法错误、代码异常
+- AJAX请求异常
+- 静态资源加载异常
+- Promise异常
+- 跨域
+- 奔溃、卡顿
+
+### 处理方式总结（try-catch -> window.onerror -> addEventListener捕获 -> unhandledrejection未处理的reject -> Vue捕获）
+
+1. 可疑区域使用`try-catch`:监控特定的错误，捕获同步的运行时的错误
+
+2. 全局监控JS运行异常`window.onerror`：捕获预料之外的错误：` window.onerror` 可捕获同步+异步，语法错误和静态资源捕获不到
+
+```
+window.onerror = function(message, source, line, column, error) {
+    console.log('捕获到异常：',{message, source, lineno, colno, error});
+    //message:错误消息 source：脚本URL line/column：行列 error：错误对象
+}
+```
+
+3. 全局静态资源异常和网络请求异常，error不会冒泡，使用捕获阶段监听` window.addEventListener('error',(error)=>{},true)`
+
+4. 捕获没有catch的Promise：`window.addEventListener('unhandledrejection',e => {})`
+
+5. Vue异常捕获
+- 捕获error： `Vue.config.errorHandler(err, vm, info)`
+```js
+Vue.config.errorHandler = function(err, vm, info) { //err指代error对象，info是一个Vue特有的字符串，vm指代Vue应用本身。
+    console.log(`Error: ${err.toString()}\nInfo: ${info}`);
+}
+```
+
+```js
+// weex中的错误监控
+Vue.config.errorHandler = function(err, vm, info) {
+  let errObj = {
+    path: weex.config.bundleUrl,
+    errDesc: err.toString(),
+    errDetail: JSON.stringify(err),
+    info: info
+  }
+  let errMsg = '执行时错误信息: \n' + JSON.stringify(errObj, null, 4)
+  console.error(errMsg)
+}
+```
+
+- 捕获warning： `Vue.config.warnHandler(msg, vm, trace)` //trace表示组件树，生产环境不可用
+
+6. Script error表示跨域（加载自不同域的脚本）
+- 为 script 标签添加 crossOrigin 属性
+- 服务器设置Access-Control-Allow-Origin：* 响应头
+
+7. 错误(埋点)上报方式（可设置采集率）：
+```js
+Reporter.send = function(data) {
+  // 采集率 30% 避免收集太多条
+  if(Math.random() < 0.3) {
+    send(data)      // 上报错误信息
+  }
+}
+```
+- [方式总结](https://toutiao.io/posts/xpy6p8/preview)
+- 通过 Ajax 发送数据(get/post)
+    - 一般打点域名不是当前域名，容易造成跨域
+- 通过请求其他文件
+    - 要插入dom才发请求，性能不好
+    - 加载资源会阻塞页面渲染
+- 动态创建img标签的形式（简单常用1x1的透明GIF）
+    - 使用：
+        ```js
+        (new Image()).src = 'http://baidu.com/tesjk?logs=error'(?后加信息)
+        ```
+    - 优点：
+        - 无跨域问题，不需要操作dom
+        - 1X1最小合法图片
+        - gif支持透明，且体积最小为43字节。
+
+8. 监控网页奔溃：window对象的load和beforeunload
+```js
+window.addEventListener('load', function () {
+    sessionStorage.setItem('good_exit', 'pending');
+    setInterval(function () {
+        sessionStorage.setItem('time_before_crash', new Date().toString());
+    }, 1000);
+  });
+
+  window.addEventListener('beforeunload', function () {
+    sessionStorage.setItem('good_exit', 'true');
+  });
+
+  if(sessionStorage.getItem('good_exit') &&
+    sessionStorage.getItem('good_exit') !== 'true') {
+    /*
+        insert crash logging code here
+    */
+    alert('Hey, welcome back from your crash, looks like you crashed on: ' + sessionStorage.getItem('time_before_crash'));
+  }
+```
+
+## 如何项目重构
+- [参考](https://www.itzhai.com/refactoring/refactoring-principle.html)
+- 它的概念：不影响目前功能情况下，对软件内部结构进行调整。
+- 它的优点：提高代码可读性；降低维护成本；
+- 它的作用：消除重复代码；更容易找到BUG；
+- 执行时机：添加功能时；修复BUG时；
+- 新业务紧急和重构技术的选择：新模块考虑用新做法，旧模块建议先融入并整理逻辑，待后期业务不紧急考虑进行重构。
