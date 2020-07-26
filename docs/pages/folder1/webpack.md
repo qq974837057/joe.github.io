@@ -565,7 +565,19 @@
 
 ### git commit 规范
 
-> (commitizen 工具 + cz-conventional-changelog 规范适配器 + commitlint + husky)
+> commitizen 可使用git cz + cz-conventional-changelog 规范适配器 + commitlint 校验 + husky
+
+- 作用：生成规范统一的commit message，有助于团队成员review和项目管理。
+
+- 最终提交格式：
+
+```
+<type>(<scope>): <subject> // 类型 范围 标题
+
+<body> // 内容
+
+<footer>
+```
 
 - 安装：
     - 全局安装：需要 ~/.czrc 配置文件, 为 commitizen 指定 Adapter.
@@ -589,11 +601,11 @@
         }
      }
     ```
-    - 安装commitlint校验规范： @commitlint/config-conventional (符合 Angular团队规范) + husky 在commit提交后进行lint校验.
+    - 安装commitlint校验规范： @commitlint/config-conventional (符合 Angular团队规范) + husky(git hook钩子) 在commit提交后进行lint校验.
     ```
     npm i -D @commitlint/config-conventional @commitlint/cli husky
     
-    // 创建.commitlintrc.js，与package.json同级
+    // 创建配置文件.commitlintrc.js，与package.json同级
     module.exports = {
       extends: [
         "@commitlint/config-conventional"
@@ -613,7 +625,7 @@
     
     ```
     
-    命令：npm run commit or git cz
+    命令：npm run commit or git cz(全局安装下可使用)
     
     1.Select the type of change that you're committing 选择改动类型 (<type>)
 
@@ -636,6 +648,10 @@
     
     // 填写完毕后，husky会调用commitlint对message进行格式校验，默认规定type及subject为必填项。
     ```
+
+
+![git-commit](./img/git-commit.png)
+
 - type必填：当一次改动包括主要type与特殊type时，统一采用主要type。
     ```
         # 主要
