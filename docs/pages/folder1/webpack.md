@@ -110,7 +110,7 @@
     - dev-server/client 只负责消息传递、不负责新模块的获取
     - HMR runtime 才应该是获取新代码的地方。
 
-### webpack打包体积优化
+### webpack打包体积优化(Tree-shaking)
 - 分析打包后的模块文件大小
     - webpack-bundle-analyzer 
     ```
@@ -187,7 +187,7 @@
             }
             ```
 
-### webpack打包加速优化
+### webpack打包加速优化(缓存 + 多核 + 抽离)
 - 提高热更新速度：
     - 提高热更新速度，上百页 2000ms内搞定，10几页面区别不大
     ```js
@@ -396,6 +396,66 @@
 - 效果提升：(20页)
     - 初次打包：20s
     - 二次打包：8s
+
+### webpack在vue cli3的使用
+- 默认splitChunks和minimize
+    - 代码就会自动分割、压缩、优化，
+    - 可单独拆包配置，如elementUI
+    - 同时 webpack 也会自动帮你 Scope hoisting（变量提升） 和 Tree-shaking
+    ```js
+    splitChunks: {
+    // ...
+        cacheGroups: {    
+            elementUI: {
+                name: "chunk-elementUI", // 单独将 elementUI 拆包
+                priority: 15, // 权重需大于其它缓存组
+                test: /[\/]node_modules[\/]element-ui[\/]/
+            }
+        }
+    }
+    ```
+- 默认CSS压缩：mini-css-extract-plugin
+    - 升级：将原先内联写在每一个 js chunk bundle的 css，单独拆成了一个个 css 文件。
+    - css 独立拆包最大的好处就是 js 和 css 的改动，不会影响对方，导致缓存失效。
+    - 配合optimization.splitChunks去拆开打包独立的css文件
+
+- 合并配置：配置configureWebpack选项，可为对象或函数(基于环境有条件地配置), 合并入最终的 webpack 配置
+    ```js
+    // vue.config.js
+    module.exports = {
+      configureWebpack: {
+        plugins: [
+          new MyAwesomeWebpackPlugin()
+        ]
+      }
+    }
+    // vue.config.js
+    module.exports = {
+      configureWebpack: config => {
+        if (process.env.NODE_ENV === 'production') {
+          // 为生产环境修改配置...
+        } else {
+          // 为开发环境修改配置...
+        }
+      }
+    }
+    ```
+- 链式操作：修改/新增/替换Loader，更细粒度的控制其内部配置    
+    ```js
+    // vue.config.js
+    module.exports = {
+      chainWebpack: config => {
+        config.module
+          .rule('vue')
+          .use('vue-loader')
+            .loader('vue-loader')
+            .tap(options => {
+              // 修改它的选项...
+              return options
+            })
+      }
+    }
+    ```
 
 ## Git
 - 参考[廖雪峰的Git教程](https://www.liaoxuefeng.com/wiki/896043488029600/897013573512192)
@@ -817,7 +877,7 @@ window.addEventListener('load', function () {
   }
 ```
 
-## 如何项目重构
+## 项目重构
 - [参考](https://www.itzhai.com/refactoring/refactoring-principle.html)
 - 它的概念：不影响目前功能情况下，对软件内部结构进行调整。
 - 它的优点：提高代码可读性；降低维护成本；
