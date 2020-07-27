@@ -476,6 +476,104 @@
 - 优点：无刷新请求数据
 - 缺点：浏览器限制不能跨域，跨域看下面的方案。
 
+
+## Axios使用
+- 简介：Axios 是一个基于 promise 的 HTTP 库，可以用在浏览器和 node.js 中。
+- 创建axios实例：
+    - 单独建个http.js独立维护
+    - 引入axios并进行配置
+    ```js
+    // api/http.js
+    import axios from 'axios'
+    // 创建 axios 实例
+    const Request = axios.create({
+      // 配置项
+      baseURL: '', // url = base url + request url
+      timeout: 120 * 1000 //  请求超时中断：ms  0表示不限制+
+      withCredentials: false, // 默认的,表示跨域请求时是否需要使用cookie凭证
+      headers: {'X-Requested-With': 'XMLHttpRequest'},// `headers` 是即将被发送的自定义请求头
+    })
+    // 暴露给外部api去封装自己的接口
+    export default Request
+    ```
+- 配置的优先级
+    - 在 lib/defaults.js 找到的库的默认值 < 实例的 defaults 属性 < 请求的 config 参数。
+- 拦截器
+    - 请求拦截器
+        ```js
+        Request.interceptors.request.use(
+            config => {
+                // 配置：如添加请求头，进行token验证
+                config.headers['x-requested-with'] = 'XMLHttpRequest'
+                return config
+            },
+            error => {
+                // 对请求错误做些什么
+                console.log(error)
+                return Promise.reject(error);
+            }
+        )
+        ```
+    - 响应拦截器
+        
+        ```js
+        Request.interceptors.response.use(
+            response => {
+                // 配置：如对response.status状态码进行判断，输出错误信息
+                const res = response.data
+                if (response.status === 200) {
+                  return res
+                } else {
+                  return Promise.reject(new Error(res.message || 'Error'))
+                } 
+            },
+            error => {
+                // 拿到错误里的响应体数据
+                const { response } = error
+                if(response) {
+                    // 针对特定的状态码错误，对应处理提示
+                    errorHandle(response.status, response.data.message) 
+                    return Promise.reject(response)
+                } else {
+                    return Promise.reject(response)
+                }
+            }
+        )
+        ```
+
+- API封装和使用
+    ```js
+    // .env.production 配置接口地址常量
+    
+    # base api
+    VUE_APP_BASE_API = 'https://3.123.xxx.xxx:28100'
+    
+    
+    // api/pluginManagement/index.js  接口封装的js文件
+    
+    import Request from '../http.js'
+    const domain = process.env.VUE_APP_BASE_API
+    // 查询APP列表
+    export function queryApp(data) {
+      return Request({
+        url: `${domain}/appInfo/getAll/page`,
+        method: 'post',
+        data: data
+      })
+    }
+    
+    // product.vue 页面组件使用
+    
+    import { queryApp } from '@/api/pluginManagement/index'
+    queryApp(this.searchForm)
+        .then(res => {
+          
+        })
+        .catch(err => {
+          
+        })
+    ```
+
 ## 域名
 - 一个完整的域名由二个或二个以上部分组成，各部分之间用英文的句号"."来分隔。
 - 倒数第一个"."的右边部分称为顶级域名（TLD，也称为一级域名）
@@ -721,6 +819,60 @@ http://www.domain2.com/b.js        不同域名                         不允�
     - token验证发过来的token后，还要查数据库获取用户信息，验证是否有效。
     - JWT包含用户信息和加密数据，服务端只需要使用密钥解密进行校验，不需要查数据库或者少查。
 
+## cookie、sessionStorage、localStorage
+- 共同点：都是保存在浏览器端，同源。
+- 生命周期：
+    - cookie：可设置失效时间，没有设置的话，默认是关闭浏览器后失效
+    - sessionStorage： 仅在当前网页会话下有效，关闭页面或浏览器后就会被清除。
+    - localStorage：除非被手动清除，否则将会永久保存。
+- 存放数据大小：
+    - cookie：4KB左右
+    - localStorage和sessionStorage：可以保存5MB。 
+- http请求：
+    - cookie：每次都会携带在HTTP头中，浪费带宽，如果使用cookie保存过多数据会带来性能问题
+    - localStorage和sessionStorage：仅在客户端（即浏览器）中保存，不参与和服务器的通信
+- 共享：
+    - sessionStorage同源下也其他窗口无法共享
+    - cookie、localStorage所有同源窗口中都是共享的
+        - 每次 localStorage 中有任何变动都会触发一个 storage 事件，所有窗口都监听这个事件，一旦有窗口更新 localStorage，其他窗口都会收到通知
+- 应用：
+    -  cookie一般用于验证用户登录信息、购物车、个性化设置
+    -  其他情况大部分用storage（jwt、token、健康打卡缓存）
+
+## 缓存策略
+- 缓存策略可分为 强缓存 和 协商缓存（未过期时，直接使用强缓存，过期使用协商缓存）
+- 客户端请求资源，服务端设置`Cache-Control`和`ETag`，在强缓存没过期时，直接使用本地缓存200（from cache），过期了才发起请求询问是否有新资源，有则拉取新资源。
+- 协商缓存，第二次请求头携带，传给服务器对比，若有更改，则返回新资源200，若无更改，则返回304，使用本地缓存即可。
+- 不加Cache-Control的情况：
+    - 默认强缓存Expires = (响应头Date - Last-Modified) * 10%
+    - 响应头的Date时间与`Last-Modified`的时间差的十分之一作为缓存的过期时间
+- 强缓存
+    - `Cache-Control`(缓存的时间长度)(优先)(HTTP / 1.1)
+        - `Cache-Control:max-age=600`（单位s）
+        - `Cache-Control`:
+            - `no-cache`，允许缓存，但每次都和服务器协商,验证是否新鲜。相当于max-age=0
+            - `no-store`，不会缓存，每次都去拉资源。
+            - `private`，仅客户端可以缓存
+            - `public`，客户端和代理服务器都可以缓存
+    - `Expires`(特定过期时间))(http1.0)
+        - `expires`: Wed, 07 Aug 2019 23:15:20 GMT
+        - 到期时间是服务器端的时间，客户端时间可修改，有误差
+- 协商缓存
+    - `ETag`(唯一标识)(优先)
+        - `ETag`(response 携带)根据文件大小和修改时间 :"50b1c1d4f775c61:df3"
+        - `If-None-Match`(再次请求由request携带，上一次返回的 Etag)
+    - `Last-Modified`(最后一次修改时间)
+        - `Last-Modified`(response携带) : Wed, 21 Oct 2015 07:28:00 GMT
+        - `If-Modified-Since` (再次请求由request携带，上一次返回的Last-Modified)
+        - 周期修改但内容没变，缓存会失效
+        - s以内的改动监测不到
+        
+- 最佳实践：
+    - 协商缓存：**index.html**文件设置`Cache-Control：no-cache`.每次使用协商缓存
+    - 强缓存 + hash：**JS、CSS等其他资源**使用强缓存，`Cache-Control：31536000` 尽量设置长时间缓存，webpack打包时候为文件添加hash值，当资源变化，hash代表新url，就会去请求新资源。
+    - 分层次缓存：不常用第三方单独打包，常用第三方如lodash放在vendor，最小范围的缓存失效，没更新的可以持久缓存
+
+
 ## 单点登录的实现(SSO)
 > 在A系统登录后，去B 、C等系统，已经是登录状态。
 
@@ -872,3 +1024,145 @@ setAttribute(key, value);
 hasAttribute(key);
 removeAttribute(key);
 ```
+
+## 前端安全
+
+- XSS：跨站脚本攻击
+    - 攻击：在URL或者页面输入框中插入JavaScript代码，如获取cookie。
+    - 存储型：持久化、如发表文章、评论加入恶意代码，存入数据库，访问即会触发，较危险。
+    - 反射型：非持久化、引诱点击带恶意代码的url，如带参数的搜索，服务器响应返回，浏览器收到解析执行代码
+    - DOM型：前端取出url的代码执行，属于前端js漏洞。
+    - 防范
+        - 设置HttpOnly ：禁止js读取`document.cookie`
+        - 输入检查：过滤非法值再存入服务器（style节点，script节点，iframe节点）
+        - 输出转义：潜在威胁的字符(`& < > " ' /`)进行HTMLEncode编码、转义
+        - 限定长度：增加XSS攻击难度
+        - DOM型：不要把不可信的数据作为 HTML 插到页面上，如不使用v-html
+- CSRF/XSRF: 跨站请求伪造
+    - 攻击：攻击者通过第三方网站（如图片链接src、自动提交的表单）发送跨站请求，访问一个用户曾经认证过的网站（带有cookie），利用登录凭证冒充受害者提交操作（只借用cookie，不能获取）
+    - 防范1：阻止不明外域的访问
+        - 同源检测：header里的`Origin`和 `Referer` 字段：服务器判断请求来源，校验该地址是否合法。
+        - `Samesite=Strict`: Set-Cookie时将同站cookie属性设为严格模式，表明这个 Cookie 在任何情况下都能作为第三方 Cookie
+    - 防范2：提交时要求附加本域才能获取的信息
+        - 服务器生成CSRF token（常用）：服务器根据用户信息 哈希算法生成 token 字符串 发给前端，前端存储在localStroage中，再次请求时前端请求头带上token，服务端验证token是否正确（请求头可通过拦截器在接口调用时添加token），一次性有效token，每次接口校验完返回新token。
+        - 双重提交Cookie：用户访问后，返回一个随机字符串注入cookie，下次请求时取出，添加到URL参数上，验证与cookie是否一致。
+        - 输入验证码来校验合法请求：用户体验差。
+- 网络劫持
+    - http劫持（明文修改响应，加广告）：全站HTTPS,将HTTP加密,这使得运营商无法获取明文,就无法劫持你的响应内容.
+- JSON劫持(JSON Hijacking)
+    - 属于CSRF范畴
+    - 通过已认证过的凭证，构造jsonp执行跨域请求，获取数据执行回调，将数据通过new Image的方式发送到攻击者的服务器上。造成信息泄露。
+    - 防御：
+        - api设置为post，因为jsonp只能get
+        - 检查请求头表示有ajax发起的请求`X-Requested-With:XMLHttpRequest`
+        - 请求的参数加上与后端约定好的签名（带上时间戳）
+
+## WebSocket
+- 和HTTP有啥不同
+    - HTTP通信只能由客户端发起，WebSocket使服务器主动向客户端推送消息
+
+- 特点：
+    - 握手阶段采用HTTP协议
+    - 无同源限制，客户端可以跟任意服务器通信
+    - 协议标识为ws，加密为wss，如ws://example.com:80/some/path
+    
+- 客户端的使用
+    ```js
+    var ws = new WebSocket("wss://echo.websocket.org");
+    
+    ws.onopen = function(evt) { 
+      console.log("Connection open ..."); 
+      ws.send("Hello WebSockets!");
+    };
+    
+    ws.onmessage = function(evt) {
+      console.log( "Received Message: " + evt.data);
+      ws.close();
+    };
+    
+    ws.onclose = function(evt) {
+      console.log("Connection closed.");
+    };      
+    ```
+
+- API解释
+    - WebSocket构造函数：新建WebSocket 实例
+        ```js
+        var ws = new WebSocket('ws://localhost:8080');
+        // 执行完后，客户端与服务器进行连接
+        ```
+    - ws.readyState：返回实例对象的当前状态
+        ```js
+        switch (ws.readyState) {
+          case WebSocket.CONNECTING: // 常量：0，表示正在连接
+            // do something
+            break;
+          case WebSocket.OPEN: // 常量：1，表示连接成功，可以通信了。
+            // do something
+            break;
+          case WebSocket.CLOSING: // 常量：2，表示连接正在关闭。
+            // do something
+            break;
+          case WebSocket.CLOSED: // 常量：3，表示连接已经关闭，或者打开连接失败。
+            // do something
+            break;
+          default:
+            // this never happens
+            break;
+        }
+        ```
+    - ws.onopen：连接成功后的回调函数
+        ```js
+        ws.onopen = function (event) {
+          ws.send('Hello Server!');
+        }
+        ws.addEventListener('open', function (event) {
+            ws.send('Hello Server!');
+        });
+        ```
+    - ws.onclose：连接关闭后的回调函数
+        ```js
+        ws.onclose = function(event) {
+          var code = event.code;
+          var reason = event.reason;
+          var wasClean = event.wasClean;
+          // handle close event
+        };
+        ```
+    - ws.onmessage：收到服务器的数据后的回调函数
+        ```js
+        ws.onmessage = function(event) {
+          var data = event.data;
+          // 处理数据
+        };
+        // 多个回调可以使用下面监听
+        ws.addEventListener("message", function(event) {
+          var data = event.data;
+          // 处理数据
+        });
+        ```
+    - ws.send：向服务器发送数据
+        ```js
+        ws.send('your message');
+        // 发送文件
+        var file = document.querySelector('input[type="file"]').files[0];
+        ws.send(file);
+        ```
+    - ws.onerror： 报错时的回调函数
+        ```js
+        socket.onerror = function(event) {
+          // handle error event
+        };
+        ```
+    - ws.bufferedAmount：表示还有多少字节的二进制没发送出去，为0表示发送结束。
+        ```js
+        var data = new ArrayBuffer(10000000);
+        socket.send(data);
+        
+        if (socket.bufferedAmount === 0) {
+          // 发送完毕
+        } else {
+          // 发送还没结束
+        }
+        ```
+        

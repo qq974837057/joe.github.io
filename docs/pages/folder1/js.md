@@ -171,6 +171,19 @@ function isObj(obj) {
 ![JS-Type-conversion](./img/JS-Type-conversion.png)
 此外还有一些操作符会存在隐式转换，不做展开。
 
+## == 和 ===
+- ==：相等。允许类型转换
+- ===：严格相等。类型不一致直接false
+
+- 基本类型比较
+  - ==：转为同一类型后比较“值”
+  - ===：类型相同就继续比较“值”，类型不同就不等
+- 引用类型比较
+  - ==和===：无区别
+- 基本和引用比较
+  - ==：引用转为基本类型后比较“值”
+  - ===：类型不同结果false
+
 ## 0.1+0.2为什么不等于0.3？
 
 - 一句话：部分浮点数转二进制时因为标准位数52位尾数(1位符号，11位指数偏移)的限制丢失了精度，计算完再转回十进制时和理论结果不同。
@@ -829,9 +842,10 @@ let { firstName: fName, position="默认" } = employee;
   const sortNumbers = (...numbers) => numbers.sort();
   ```
 
-- 类
-  - 是个语法糖，底层是基于原型的继承
+- 类的声明
+  - 是个语法糖，底层是基于原型的继承。
   - 在类的实例上面调用方法，其实就是调用原型上的方法。
+  - 类的声明有两种，ES5和ES6，如下。
   ```js
   // ES5
   function Point(x, y) {
@@ -843,6 +857,7 @@ let { firstName: fName, position="默认" } = employee;
     return '(' + this.x + ', ' + this.y + ')';
   };
 
+  // 生成实例
   var p = new Point(1, 2);
 
   // ES6
@@ -1806,6 +1821,7 @@ console.log(it.next(13)) // => {value: 42, done: true}
 // 外部无法访问变量 name
 ```
 
+
 ## 高阶函数
 - 高阶函数是一个可以接收函数作为参数，甚至返回一个函数的函数。 它就像常规函数一样，只是多了接收和返回其他函数的附加能力，即参数和输出。
 
@@ -1830,6 +1846,42 @@ function map(arr, fn) {
 }
 
 ```
+
+## 高阶函数应用-柯里化
+
+> 定义：柯里化是一种将使用多个参数的函数转换成一系列使用一个参数的函数，并且返回接受余下的参数而且返回结果的新函数的技术
+
+- 简单来说
+  - 在一个函数中，首先填充几个参数，然后再返回一个新的函数的技术，称为函数的柯里化。
+  - 通常可用于在不侵入函数的前提下，为函数 预置通用参数，供多次重复调用。
+
+- 实现
+  - 「用闭包把传入参数保存起来，当传入参数的数量足够执行函数时，就开始执行函数」
+  - 其实就是判断当前参数长度够不够，参数够了就立马执行，不够就返回一个新函数，这个新函数并不执行，并且通过 bind 或者闭包保存之前传入的参数。
+
+```js
+function currying(fn, length) {
+  length = length || fn.length; // 第一次调用获取函数 fn 参数的长度，后续调用获取 fn 剩余参数的长度
+  return function (...args) {   // currying 包裹之后返回一个新函数，接收参数为 ...args (ES6 剩余参数 args在内部为数组)
+    return args.length >= length	// 新函数接收的参数长度是否大于等于 fn 剩余参数需要接收的长度
+    	? fn.apply(this, args)	// 使用apply传数组，满足要求，执行 fn 函数，传入新函数的参数
+            : currying(fn.bind(this, ...args), length - args.length) // 不满足要求，递归 currying 函数，新的 fn 为 bind 返回的新函数（bind 绑定了 ...args参数，未执行），新的 length 为 fn 剩余参数的长度
+  }
+}
+
+const add = currying(function(a,b,c) {
+    console.log(a+b+c);
+})
+add(1,2)(3); // 6 
+add(1)(4)(3);// 8
+```
+- 应用：
+  - 求和、bind实现
+  - 动态创建函数：添加监听 addEventListener避免重复判断、跟惰性函数一样功能
+  - 参数复用：改造toString函数用来判断类型（Object.prototype.toString设置为传入参数）
+  ```js
+  Function.prototype.call.bind(Object.prototype.toString)
+  ```
 
 #### 函数式编程
 - 函数式是一种编程形式，你可以将函数作为参数传递给其他函数，并将它们作为值返回。 在函数式编程中，我们以函数的形式思考和编程。
@@ -2331,7 +2383,26 @@ self.importScripts()：加载 JS 脚本。
     - DOM限制：无法使用 document / window / alert / confirm
     - 文件限制：无法读取本地资源
 
+## 代码复用
+基本有三种形式
+- 函数封装
+- 继承、借用apply/call
+- 混入mixin
+
+##  “use strict” 
+- 严格模式，指令只允许出现在脚本或函数的开头
+  - 变量先声明后使用
+  - 函数参数不能同名
+  - 不能删除变量
+  - 不能删除函数
+  - 不能删除不允许删除的属性，Object.prototype
+  - 不能使用with语句
+  - 不能对只读属性赋值
+  - 禁止this指向全局对象
+  - 增加了保留字（比如protected、static和interface）
+
 ## 设计模式
+- 面向对象三大要素： 封装，继承，多态。
 - 面向对象的软件设计原则：开放封闭原则。
     - 对扩展开放，意味着有新的需求或变化时，可以对现有代码进行扩展，以适应新的情况。
     - 对修改封闭，意味着类一旦设计完成，就可以独立完成其工作，而不要对类进行任何修改。
