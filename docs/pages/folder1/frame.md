@@ -222,38 +222,7 @@
 - props/$emit+v-on: 父子通信：通过props将数据自上而下传递，而通过$emit和v-on(@)来向上传递信息。
 
 - vuex: 是全局数据管理库，可以通过vuex管理全局的数据流
-    - **场景：项目复杂时，多个视图依赖于同一状态、来自不同视图的行为需要变更同一状态**
-    - state：状态中心，用于数据的存储，是store中的唯一数据源，其他组件读取this.$store.state.A
-    - getters：获取状态，如vue中的计算属性，基于state数据的二次包装，常用于数据的筛选和多个数据的相关性计算
-    - mutations：更改状态，类似函数，改变state的唯一途径，且不能处理异步事件，触发状态改变this.$store.commit('test',{ A：'a' })
-    - actions：异步更改状态，类似于mutation，用于提交mutation来改变状态，而不直接变更状态，可以处理任意异步事件
-    - modules：: 将state分成多个modules,类似于命名空间，用于项目中将各个模块的状态分开定义和操作，便于维护
-    - vuex结合localStorage持久化数据
-        - vuex里数据改变的时候把数据保存到localStorage里面
-        - 刷新后，localStorage里如果有保存的数据，取出来替换store里的state。
-        ```js
-        let defaultCity = "上海"
-        try {   // 用户关闭了本地存储功能，此时在外层加个try...catch
-          if (!defaultCity){
-            defaultCity = JSON.parse(window.localStorage.getItem('defaultCity'))
-          }
-        }catch(e){}
-        export default new Vuex.Store({
-          state: {
-            city: defaultCity
-          },
-          mutations: {
-            changeCity(state, city) {
-              state.city = city
-              try {
-              window.localStorage.setItem('defaultCity', JSON.stringify(state.city));
-              // 数据改变的时候把数据拷贝一份保存到localStorage里面
-              } catch (e) {}
-            }
-          }
-        })
-
-        ```
+    
 - EventBus: 兄弟组件或跨级：事件总线：所有组件的共同事件中心，通过EventBus进行信息的发送和监听
     - 不适用多人协作和大项目，较难维护。 
     - 组件没有同时显示不应该用eventbus，一般需要先on再emit。比如两个路由一个还没创建，所以监听不到。而应该使用vuex。
@@ -616,7 +585,283 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 ### 路由守卫
 
 ## React和Vue的区别
-## Vuex 的原理
+
+## Vuex 使用和原理
+```
+npm install vuex --save
+```
+```js
+import Vue from 'vue'
+import Vuex from 'vuex'
+Vue.use(Vuex)
+```
+
+- 简介：它是全局状态管理容器，将状态抽离到全局，集中共享管理，有几个特点：单向数据流，响应式，非持久化。通过Vue结合实现store中数据的响应式。因为保存在内存中，所有不具有持久化，默认刷新就重置状态。可通过结合缓存的方法实现持久化。
+![vuex](./img/vue-vuex.png)
+
+- **场景：中大型单页应用，项目复杂时，多个视图展示需要读取同个状态或多个视图的行为需要变更同个状态**
+    - 如插件中设备信息、运行数据、i18n、定时等状态信息。
+- 使用
+    - 在组件中获取Vuex的状态，在根实例注册 store 选项，将实例先注入所有子组件，再使用this.$store.xxx访问，最好放在computed中，可以响应式监听到变化。
+      ```js
+      import Vue from 'vue'
+      import Vuex from 'vuex';
+      Vue.use(Vuex);
+      
+      import store from '../store'
+      
+      const app = new Vue({
+        el: '#app',
+        // 把 store 对象提供给 “store” 选项，把 store 的实例注入所有的子组件
+        store,
+        ...
+      })
+
+      const Counter = {
+        template: `<div>{{ count }}</div>`,
+        computed: {
+          count () {
+            return this.$store.state.count
+          }
+        }
+      }
+      ```
+
+      ```js
+      //store.js
+
+      export default new Vuex.Store({
+        state: {
+          count: 0
+        },
+        getters: {
+          countPlus: state => {
+            return state.count++;
+          }
+        },
+        mutations: {
+          increment (state, payload) {
+            state.count++
+          }
+        },
+        actions: {
+          increment ({commit}) {
+            commit('increment')
+          }
+        }
+      })
+      ```
+    - 辅助函数：mapState、mapGetters、mapMutations、mapActions，使用需要先在根节点注入store实例，前面已提到过。
+      - 使用`mapState、mapGetters`就不用一个个计算属性的写，然后用`...`展开运算符混入对应组件的computed中。
+        ```js
+        import { mapState, mapGetters } from 'vuex'
+
+        export default {
+          // ...
+          computed: {
+            // 局部组件自身计算值
+            localComputed () { /* ... */ },
+
+            // 使用对象展开运算符将 state 混入 computed 对象中
+            ...mapState({
+              // ...
+            })
+            // 也可传字符串数组，每个字符串表示与state同名
+            ...mapState([
+              // ...
+            ])
+
+            // 使用对象展开运算符将 getter 混入 computed 对象中
+            ...mapGetters([
+              'doneTodosCount',
+              'anotherGetter',
+              // ...
+            ])
+            // 使用 别名
+            ...mapGetters({
+              // 把 `this.doneCount` 映射为 `this.$store.getters.doneTodosCount`
+              doneCount: 'doneTodosCount'
+            })
+          }
+        }
+        ```
+      - 使用`mapMutations、mapActions`，将mutation和action的处理函数混入methods，就可以直接调用`this.incrementBy(amount)`和`this.incrementBy1(amount)`，自动对应映射为`this.$store.commit('incrementBy', amount)`和 `this.$store.dispatch('incrementBy1', amount)`
+        ```js
+        import { mapMutations, mapActions } from 'vuex'
+
+        export default {
+          // ...
+          methods: {
+            ...mapMutations([
+              'incrementBy' // 将 `this.incrementBy(amount)` 映射为 `this.$store.commit('incrementBy', amount) ` amount为载荷，可传参数
+            ]),
+            ...mapMutations({
+              add: 'increment' // 将 `this.add()` 映射为 `this.$store.commit('increment')` add为自定义别名。
+            })
+
+            ...mapActions([
+              'incrementBy' // 将 `this.incrementBy(amount)` 映射为 `this.$store.dispatch('incrementBy', amount)`
+            ]),
+            ...mapActions({
+              add: 'increment' // 将 `this.add()` 映射为 `this.$store.dispatch('increment')`
+            })
+          }
+        }
+        ```
+    - state：
+      - 【状态中心】用于数据的存储，是store中的**唯一数据源**，
+      - 【读取方式】`this.$store.state.A`
+    - getters：
+      - 【获取状态】用于数据的筛选和多个数据的相关性计算，**接受 state 作为其第一个参数**。基于state数据的二次包装，如vue中的computed属性。
+      - 【属性读取方式】`this.$store.getters.B`，有缓存性；
+      - 【方法读取方式】`this.$store.getters.fn(arg)`，可传参，无缓存性。
+    - mutations：
+      - 【同步更改状态】改变state的**唯一**途径，**接受 state 为第一个参数，Payload为第二个参数**，且不能处理异步事件，如果是两个异步回调的mutations，就不知道哪个先回调了。
+      - 【调用1】通过commit调用handler处理函数`this.$store.commit('xxx', { A:'a' })`，commit第二个参数为载荷payload，作为参数传入处理函数xxx中，`xxx(state, payload){} `。
+      - 【调用2】mapMutations辅助函数，将mutation的处理混入methods，就可直接使用`this.xxx()`，会自动转为`this.$store.commit('xxx')`
+    - actions：
+      - 【异步更改状态】如接口获取最新状态，获取之后再通过调用mutation来进而改变state，而不是直接变更state。接收一个上下文context作为参数，在里面使用context.commit方法，可以使用参数解构直接使用上下文的commit，`increment ({ commit }) { commit('increment') }`，更简洁。内部可以多个commit执行多个mutation。比如根据接口返回值，决定commit哪一个mutation。
+      - 【调用1】`this.$store.dispatch('xxx')`
+      - 【调用2】mapActions 辅助函数，将action的处理混入methods，就可直接使用`this.xxx()`，会自动转为`this.$store.dispatch('xxx')`
+      - 示例：配合`async/await` 获取设备信息成功后，commit一个mutation(setDeviceInfo)，将返回结果存入state对象对应的属性中。
+        ```js
+        actions: {
+          async updateDeviceInfo({ commit }) {
+              const response = await nativeService.getDeviceInfo().catch(err => nativeService.toast('设备信息获取失败'));
+              commit('setDeviceInfo', response.result);
+              return response;
+          },
+        }
+        ```
+    - modules：
+      -  将store 分割成模块（module）。每个模块拥有自己的 state、getter、mutation、action，便于维护。
+      - 模块内部的 action、mutation 和 getter 是注册在全局命名空间的，这样使得多个模块能够对同一 mutation 或 action 作出响应。可通过添加`namespaced: true`这个属性表示带命名空间的模块。
+      ```js
+      const moduleA = {
+        state: () => ({ ... }),
+        mutations: { ... },
+        actions: { ... },
+        getters: { ... }
+      }
+
+      const moduleB = {
+        state: () => ({ ... }),
+        mutations: { ... },
+        actions: { ... }
+      }
+
+      const store = new Vuex.Store({
+        modules: {
+          a: moduleA,
+          b: moduleB
+        }
+      })
+
+      store.state.a // -> moduleA 的状态
+      store.state.b // -> moduleB 的状态
+      ```
+    - 大型应用结构参考，分割actions(异步逻辑封装)和mutations(同步更改状态)
+      ```js
+        ├── index.html
+        ├── main.js
+        ├── api
+        │   └── ... # 抽取出API请求
+        ├── components
+        │   ├── App.vue
+        │   └── ...
+        └── store
+            ├── index.js          # 我们组装模块并导出 store 的地方
+            ├── actions.js        # 根级别的 action
+            ├── mutations.js      # 根级别的 mutation
+            └── modules
+                ├── cart.js       # 购物车模块
+                └── products.js   # 产品模块
+      ```
+    - vuex结合localStorage持久化数据
+      - vuex里数据改变的时候把数据保存到localStorage里面
+      - 刷新后，localStorage里如果有保存的数据，取出来替换store里的state。
+      ```js
+      let defaultCity = "上海"
+      try {   // 用户关闭了本地存储功能，此时在外层加个try...catch
+        if (!defaultCity){
+          defaultCity = JSON.parse(window.localStorage.getItem('defaultCity'))
+        }
+      } catch(e) {
+
+      }
+      export default new Vuex.Store({
+        state: {
+          city: defaultCity
+        },
+        mutations: {
+          changeCity(state, city) {
+            state.city = city
+            try {
+            window.localStorage.setItem('defaultCity', JSON.stringify(state.city));
+            // 数据改变的时候把数据拷贝一份保存到localStorage里面
+            } catch (e) {}
+          }
+        }
+      })
+
+      ```
+    - weex中因为每个页面是独立入口，只能每个页面去引入注册store使用。
+
+- 原理：核心就是与Vue本身结合，利用响应式机制，实现store的状态响应式。
+  - 混入每个vm实例：`Vue.use(Vuex)`安装插件，内部调用Vuex插件提供的install方法。`Vue.mixin({ beforeCreate: vuexInit });` 先将vuexInit混入每个实例的beforeCreate钩子，vuexInit方法内部判断如果是根节点，则`options.store`赋值给 `this.$store`，否则从父节点的 `$store` 中获取。
+    ```js
+
+    /*使用时：将 store 放入 Vue 创建时的 option 中*/
+    new Vue({
+        el: '#app',
+        store
+    });
+    // 下面是实现
+    let Vue;
+    export default install (_Vue) {
+        Vue.mixin({ beforeCreate: vuexInit });
+        Vue = _Vue;
+    }
+    function vuexInit () {
+        const options = this.$options;
+        if (options.store) {
+            this.$store = options.store;
+        } else {
+            this.$store = options.parent.$store;
+        }
+    }
+    ```
+  - 数据响应式化：通过Vue核心进行依赖收集，修改时更新视图。
+    ```js
+    constructor () {
+        this._vm = new Vue({
+            data: {
+                $$state: this.state
+            }
+        })
+    }
+    ```
+  - 两个API：commit和dispatch
+    -  commit 方法 用于触发  mutation 。从 ` _mutations` 中取出对应的 mutation，循环执行其中的每一个 mutation。
+    ```js
+    commit (type, payload, _options) {
+        const entry = this._mutations[type];
+        entry.forEach(function commitIterator (handler) {
+            handler(payload);
+        });
+    }
+    ```
+    - dispatch 方法 用于触发 action，可以包含异步状态。取出  `_actions` 中的所有对应 action，将其执行，如果有多个则用  `Promise.all` 进行包装。
+    ```js
+    dispatch (type, payload) {
+        const entry = this._actions[type];
+        return entry.length > 1
+        ? Promise.all(entry.map(handler => handler(payload)))
+        : entry[0](payload);
+    }
+    ```
+
+
 ## keep-alive
 ## mixin混入
 
