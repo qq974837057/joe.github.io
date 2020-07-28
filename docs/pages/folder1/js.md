@@ -1853,7 +1853,7 @@ function map(arr, fn) {
 
 - 简单来说
   - 在一个函数中，首先填充几个参数，然后再返回一个新的函数的技术，称为函数的柯里化。
-  - 通常可用于在不侵入函数的前提下，为函数 预置通用参数，供多次重复调用。
+  - 通常可用于在不侵入函数的前提下，为函数 预设通用参数，供多次重复调用。
 
 - 实现
   - 「用闭包把传入参数保存起来，当传入参数的数量足够执行函数时，就开始执行函数」
@@ -1861,7 +1861,7 @@ function map(arr, fn) {
 
 ```js
 function currying(fn, length) {
-  length = length || fn.length; // 第一次调用获取函数 fn 参数的长度，后续调用获取 fn 剩余参数的长度
+  length = length || fn.length; // 第一次调用获取函数 fn.length 表示参数的长度，后续调用获取 fn 剩余参数的长度
   return function (...args) {   // currying 包裹之后返回一个新函数，接收参数为 ...args (ES6 剩余参数 args在内部为数组)
     return args.length >= length	// 新函数接收的参数长度是否大于等于 fn 剩余参数需要接收的长度
     	? fn.apply(this, args)	// 使用apply传数组，满足要求，执行 fn 函数，传入新函数的参数
@@ -1869,14 +1869,28 @@ function currying(fn, length) {
   }
 }
 
-const add = currying(function(a,b,c) {
-    console.log(a+b+c);
+const add = currying(function(a, b, c) {
+    console.log(a + b + c);
 })
+
+// 函数一次执行
 add(1,2)(3); // 6 
-add(1)(4)(3);// 8
+add(1)(2)(3);// 6
+
+// 函数分多次执行
+const f1 = add(1,2)
+const f2 = f1(3) // 6
+
+// 4个参数也可以
+const sum = currying(function(a, b, c, d) {
+    console.log(a + b + c + d);
+})
+sum(1)(2,3,4) // 10
+sum(1,2)(3,4) // 10
+
 ```
 - 应用：
-  - 求和、bind实现
+  - add求和函数、bind实现
   - 动态创建函数：添加监听 addEventListener避免重复判断、跟惰性函数一样功能
   - 参数复用：改造toString函数用来判断类型（Object.prototype.toString设置为传入参数）
   ```js

@@ -1,5 +1,6 @@
 ## 前沿
 - [2020大前端发展](https://mp.weixin.qq.com/s/b7PlbHZS6EY5kGpALpzMLA)
+
 ### TypeScript
 - [接口Interfaces、枚举enum、泛型Generics](https://github.com/xcatliu/typescript-tutorial/blob/master/advanced/generics.md)    
 - 接口：一个类只能继承自另一个类，有时候不同类之间可以有一些共有的特性，这时候就可以把特性提取成接口（interfaces）相当于一个小类，用 implements 关键字来实现继承方法。
@@ -20,12 +21,14 @@
     - 清晰的函数参数/接口属性，增加了代码可读性和可维护性
     - 静态检查和编辑器提示
     - Check JS：js中也可以获得自动提示和静态检查
+
 ### PWA：渐进式网页应用
 - 使用多种技术来增强web app的功能，能够模拟一些原生功能，比如通知推送。
 - PWA仍然是网站，基于 Service worker，只是在缓存、通知、后台功能等方面表现更
 好，让网页应用呈现和原生应用相似的体验。
 - PWA: 开发成本低，加载速度快
 - 原生：更强的计算能力，更可靠安全
+
 ### Flutter 谷歌 可跨平台开发（移动端、web、PC）
 - 优点
     - 开源免费
@@ -36,6 +39,7 @@
 - 缺点
     - 应用体积更大（hello world 应用都要7mb）
     - 需要Dart语言编程，并没那么流行
+
 ### 微前端
 - 基于[single-spa](https://single-spa.js.org/)[教程](https://alili.tech/archive/11052bf4/)
 - [蚂蚁金服](https://juejin.im/post/5d2ee768f265da1bd605da09#heading-3)
@@ -46,6 +50,7 @@
     - 技术灵活:兼容多技术栈，跳转不需要刷新页面
     - 可扩展：项目模块化可扩展，按需加载，性能更好
 - 公司应用场景：主应用合并子应用：包括中控配网平台（分sit和pro）、运营平台（文章发布、广告管理）、插件管理平台
+
 ### Vue3.0
 - （基于函数组合）composition-api抽逻辑，做可复用组件，同个逻辑组织在一块，更好维护-
 - （基于vue2的option）所有methods、computed、data、props聚在一起，组件变大时候，很多联合关注点，用mixin了，可能导致命名空间冲突。
@@ -59,6 +64,7 @@
 - 2.7最后一个2.x
 - 稳定且切换成本高，不需要新功能的话，可以不用升级
 - proxy性能更好
+
 ### Deno
 - [Deno1.0](https://mp.weixin.qq.com/s?__biz=MzUxMzcxMzE5Ng==&mid=2247494712&idx=1&sn=9864ab7a7e86c10a5e503cdf1c447469&chksm=f952597bce25d06da0b23aff36d2db7847903ac34e6cdc8f97a47ad3f71c93f69bdaeaf723bc&mpshare=1&scene=1&srcid=0514iBBWWstWdIV6rACwfnbx&sharer_sharetime=1589460187316&sharer_shareid=f72feefcc9c2c137677aa7f49d02e0f4&key=ccdbd9bf2470f177f1778e8a536c75fa6ff0f4f9b4c018199c7ae9c39d9a59b26df87afc2538e03550e23af2e85e15d5a7a1af90c135f520a33283dd458dc86d40fbd5b642b95e4b53b6b8deca22ff71&ascene=1&uin=MjI1NjQ0MTU1&devicetype=Windows+10&version=62080079&lang=zh_CN&exportkey=AU6tiwanRNaXKDr8T%2F9oryw%3D&pass_ticket=jc2jFsb7uCiKjVYhP4G1wr338fKnSOS%2FPJb3BVzXbVQ%3D)
     - 好处    
@@ -79,11 +85,34 @@
 
 
 ## 其他
+- npm版本号
+    - X.Y.Z(主版本.次要版本.补丁版本)
+        - X:有不兼容的API
+        - Y:向后兼容的功能变化
+        - Z:向后兼容的bug fix
+    - 连字符-
+        - 1.2.3 - 2.3.4  等价于 >=1.2.3 <=2.3.4
+        - 1.2.3 - 2      等价于 >=1.2.3 <3.0.0
+    - 波浪线~(推荐)
+        - 次要版本不增加
+        - ~1.2.3    等价于  >=1.2.3 <1.3.0
+        - ~1.2      等价于  >=1.2.0 <1.3.0 (Same as 1.2.x)
+        - ~0.2.3    等价于  >=0.2.3 <0.3.0
+        - ~0.2      等价于  >=0.2.0 <0.3.0 (Same as 0.2.x)
+        - 特殊情况
+        - ~1        等价于 >=1.0.0 <2.0.0 (Same as 1.x)
+        - ~0        等价于 >=0.0.0 <1.0.0 (Same as 0.x)
+    - 脱字符^
+        - 指定从左面起第一个非零位置的范围，以它为基准不变，后面小版本可变。
+        - ^1.2.3    等价于 >=1.2.3 <2.0.0
+        - ^0.2.3    等价于 >=0.2.3 <0.3.0
+        - ^0.0.3    等价于 >=0.0.3 <0.0.4，即等价于0.0.3
 
 - 抓包工具：
   - Fiddler 4
   - Charles
-- 版本：
+
+- Node版本：
   - Node.js 14.5.0 2020-06-30 
   - Node.js 11.0.0 2018-10-23
   - node10和node11事件循环有差异。

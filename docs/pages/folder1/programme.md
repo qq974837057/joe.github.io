@@ -1,4 +1,20 @@
 
+## Object和Function的instancof关系
+- 均为true
+```js
+Object instanceof Function
+// 等价于 Object.__proto__ === Function.prototype //true
+
+Function instanceof Object
+// 等价于 Function.__proto__.__proto__ === Object.prototype //true
+
+Object instanceof Object
+// 等价于 Object.__proto__.__proto__ === Object.prototype //true
+
+Function instanceof Function
+// 等价于 Function.__proto__ === Function.prototype //true
+```
+
 ## 反转字符串
 ```js
 let newStr = str.split('').reverse().join('');

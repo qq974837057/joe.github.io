@@ -1076,3 +1076,21 @@ Vue.use(Vuex)
   </second-hand-house>
   ```
 
+## weex架构
+- 早期混合开发：
+  - 使用客户端内置浏览器也就是webview，前端开发的是H5页面。
+  - 优点：提高开发效率，满足跨平台需求
+  - 缺点：性能较差
+- weex
+  - 阿里和vue合作的性能更好的跨端解决方案，利用 JS 引擎实现了**跨平台能力**，同时又将JS 控件，对应解析为原生控件进行渲染，实现了**性能的提升**。
+  - 流程：
+    - vue代码打包成JS文件，APP请求服务器拉取这些JS文件，然后进入APP处理
+    - APP: 四个重要组成部分 JS runtime、JS bridge、native render、weex core
+      - `JS runtime`: 执行JS代码，iOS使用JS Core，安卓上使用V8
+      - `weex core`: weex的核心代码，负责JS解析工作，构建虚拟DOM，根据diff将修改patch到视图上。
+      - `JS bridge`: 翻译成原生native可执行的代码
+      - `native render`:负责视图渲染，渲染器收到指令后，渲染为原生组件，我们写的`<div><p>`等标签，对应变成客户端的原生组件，展示给用户。
+  - 优点：跨平台，体验流畅
+  - 缺点：框架和平台耦合过多，版本兼容维护比较困难。性能有瓶颈，因为JS bridge也存在性能限制。
+  - 架构图
+  ![frame-weex](./img/frame-weex.jpg)

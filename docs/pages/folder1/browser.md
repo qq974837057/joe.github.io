@@ -831,21 +831,25 @@ http://www.domain2.com/b.js        不同域名                         不允�
 - http请求：
     - cookie：每次都会携带在HTTP头中，浪费带宽，如果使用cookie保存过多数据会带来性能问题
     - localStorage和sessionStorage：仅在客户端（即浏览器）中保存，不参与和服务器的通信
+- 应用：
+    -  cookie一般用于验证用户登录信息、个性化设置、购物车
+    -  其他情况大部分用storage（jwt、token、健康打卡缓存）
+
 - 共享：
     - sessionStorage同源下也其他窗口无法共享
     - cookie、localStorage所有同源窗口中都是共享的
         - 每次 localStorage 中有任何变动都会触发一个 storage 事件，所有窗口都监听这个事件，一旦有窗口更新 localStorage，其他窗口都会收到通知
-- 应用：
-    -  cookie一般用于验证用户登录信息、购物车、个性化设置
-    -  其他情况大部分用storage（jwt、token、健康打卡缓存）
+
 
 ## 缓存策略
+> 好的缓存策略不仅可以优化网站性能、提高用户体验；还能控制更少请求和更少流量，节省成本。
+
 - 缓存策略可分为 强缓存 和 协商缓存（未过期时，直接使用强缓存，过期使用协商缓存）
-- 客户端请求资源，服务端设置`Cache-Control`和`ETag`，在强缓存没过期时，直接使用本地缓存200（from cache），过期了才发起请求询问是否有新资源，有则拉取新资源。
-- 协商缓存，第二次请求头携带，传给服务器对比，若有更改，则返回新资源200，若无更改，则返回304，使用本地缓存即可。
-- 不加Cache-Control的情况：
-    - 默认强缓存Expires = (响应头Date - Last-Modified) * 10%
-    - 响应头的Date时间与`Last-Modified`的时间差的十分之一作为缓存的过期时间
+    - 客户端请求资源，服务端设置`Cache-Control`和`ETag`，在强缓存没过期时，直接使用本地缓存200`from cache`，过期了才发起请求询问是否有新资源，有则拉取新资源。
+    - 协商缓存，下次请求头携带，传给服务器对比，若有更改，则返回新资源200，若无更改，则返回304`Not Modified`，使用本地缓存即可。
+    - 不加Cache-Control的情况：
+        - 默认强缓存Expires = (响应头Date - Last-Modified) * 10%
+        - 响应头的Date时间与`Last-Modified`的时间差的十分之一作为缓存的过期时间
 - 强缓存
     - `Cache-Control`(缓存的时间长度)(优先)(HTTP / 1.1)
         - `Cache-Control:max-age=600`（单位s）
@@ -859,19 +863,28 @@ http://www.domain2.com/b.js        不同域名                         不允�
         - 到期时间是服务器端的时间，客户端时间可修改，有误差
 - 协商缓存
     - `ETag`(唯一标识)(优先)
-        - `ETag`(response 携带)根据文件大小和修改时间 :"50b1c1d4f775c61:df3"
+        - `ETag`(response 携带)根据hash或size/mtime :"50b1c1d4f775c61:df3"
         - `If-None-Match`(再次请求由request携带，上一次返回的 Etag)
-    - `Last-Modified`(最后一次修改时间)
+    - `Last-Modified`(最后一次修改时间mtime)
         - `Last-Modified`(response携带) : Wed, 21 Oct 2015 07:28:00 GMT
         - `If-Modified-Since` (再次请求由request携带，上一次返回的Last-Modified)
         - 周期修改但内容没变，缓存会失效
         - s以内的改动监测不到
         
 - 最佳实践：
-    - 协商缓存：**index.html**文件设置`Cache-Control：no-cache`.每次使用协商缓存
-    - 强缓存 + hash：**JS、CSS等其他资源**使用强缓存，`Cache-Control：31536000` 尽量设置长时间缓存，webpack打包时候为文件添加hash值，当资源变化，hash代表新url，就会去请求新资源。
-    - 分层次缓存：不常用第三方单独打包，常用第三方如lodash放在vendor，最小范围的缓存失效，没更新的可以持久缓存
+    - 两种情况：
+        - 不带hash(指纹)的资源：每次都使用协商缓存，进行新鲜度校验。
+        - 带hash(指纹)的资源：使用强缓存，一年过期时间，即 31536000秒，可以认为永久缓存。
+    - 不带hash(指纹)的资源：如**index.html**
+        - `Cache-Control：no-cache`，每次都去协商，校验资源是否过期，没有过期则返回304`Not Modified`，继续使用本地缓存。
+    - 带hash(指纹)的资源：如**JS、CSS等**
+        - `Cache-Control：31536000`，设置一年过期，在此期间不发送请求。当资源内容发生变化，webpack打包为文件添加新hash值，导致hash变化后，会发起新的请求请求最新的资源。
+        - 切割缓存：当所有js打包在一个文件里时，只要一个小更改，整个包缓存就会失效，所以要分开。
+            - 每个页面独立分开
+            - 不常用第三方且较大的模块(更新频率低)，单独打包，如echarts。
+            - 常用的第三方模块(更新频率高)，集中打包在一起，如lodash放在vendor。
 
+    ![http-cache](./img/http-cache.png)
 
 ## 单点登录的实现(SSO)
 > 在A系统登录后，去B 、C等系统，已经是登录状态。
@@ -1028,34 +1041,59 @@ removeAttribute(key);
 ## 前端安全
 
 - XSS：跨站脚本攻击
-    - 攻击：在URL或者页面输入框中插入JavaScript代码，如获取cookie。
-    - 存储型：持久化、如发表文章、评论加入恶意代码，存入数据库，访问即会触发，较危险。
-    - 反射型：非持久化、引诱点击带恶意代码的url，如带参数的搜索，服务器响应返回，浏览器收到解析执行代码
-    - DOM型：前端取出url的代码执行，属于前端js漏洞。
+    - 攻击：在URL或者页面输入框中插入恶意JS代码，用户访问时完成攻击，如获取cookie。
+    - 存储型：将恶意代码存入服务器的数据库，如发表文章、评论等，访问即会触发，比较危险。属于服务端的安全漏洞。是持久化的。
+    - 反射型：引诱点击带恶意代码的url，如带参数的搜索，跳转，服务器响应返回，属于服务端的安全漏洞。是非持久化的。
+    - DOM型：构造包含恶意代码的URL，前端取出URL的恶意代码，不小心地执行了该代码，获取用户数据，调用相关接口，属于前端代码漏洞。
+    ```html
+    <!-- 链接内包含恶意代码 -->
+    <a href="代码">1</a>
+
+    <script>
+    // setTimeout()/setInterval() 中调用恶意代码
+    setTimeout("恶意代码")
+    setInterval("恶意代码")
+    // location 调用恶意代码
+    location.href = '恶意代码'
+    </script>
+    ```
+    - 反射型 XSS 跟存储型 XSS 的区别：存储型 XSS 的恶意代码存在数据库里，反射型 XSS 的恶意代码存在 URL 里。
+    - DOM 型 XSS 跟前两种 XSS 的区别：DOM 型 XSS 攻击中，取出和执行恶意代码由浏览器端完成，属于前端 JavaScript 自身的安全漏洞，而其他两种 XSS 都属于服务端的安全漏洞。
     - 防范
-        - 设置HttpOnly ：禁止js读取`document.cookie`
-        - 输入检查：过滤非法值再存入服务器（style节点，script节点，iframe节点）
-        - 输出转义：潜在威胁的字符(`& < > " ' /`)进行HTMLEncode编码、转义
-        - 限定长度：增加XSS攻击难度
-        - DOM型：不要把不可信的数据作为 HTML 插到页面上，如不使用v-html
+        - 设置HttpOnly ：禁止JS读取`document.cookie`，解决XSS后的Cookie劫持攻击。
+        - 输入检查：检查用户输入的数据，过滤非法值或者编码再存入服务器（style节点，script节点，iframe节点），可用开源的一些XSS Filter。
+        - 输出转义：输出到HTML页面时，潜在威胁的字符`& < > " ' /`进行HTMLEncode编码、转义
+        - 合理地限定长度：增加XSS攻击难度
+        - DOM型：避免拼接字符串传入一些API，导致代码执行。不要把不可信的数据作为 HTML 插到页面上，例如不使用v-html。
+        
 - CSRF/XSRF: 跨站请求伪造
-    - 攻击：攻击者通过第三方网站（如图片链接src、自动提交的表单）发送跨站请求，访问一个用户曾经认证过的网站（带有cookie），利用登录凭证冒充受害者提交操作（只借用cookie，不能获取）
+    - 攻击：攻击者通过第三方网站（如图片链接src、自动提交的表单）发送跨站请求，访问一个用户曾经认证过的网站（带有cookie），利用登录凭证，请求一些接口执行恶意操作（只借用cookie，不能获取）
     - 防范1：阻止不明外域的访问
         - 同源检测：header里的`Origin`和 `Referer` 字段：服务器判断请求来源，校验该地址是否合法。
         - `Samesite=Strict`: Set-Cookie时将同站cookie属性设为严格模式，表明这个 Cookie 在任何情况下都能作为第三方 Cookie
     - 防范2：提交时要求附加本域才能获取的信息
-        - 服务器生成CSRF token（常用）：服务器根据用户信息 哈希算法生成 token 字符串 发给前端，前端存储在localStroage中，再次请求时前端请求头带上token，服务端验证token是否正确（请求头可通过拦截器在接口调用时添加token），一次性有效token，每次接口校验完返回新token。
+        - 服务器生成CSRF token（常用）：服务器根据用户信息 哈希算法生成 token 字符串 发给前端，前端存储在localStorage中，再次请求时前端请求头带上token，服务端验证token是否正确（请求头可通过拦截器在接口调用时添加token），一次性有效token，每次接口校验完返回新token。
         - 双重提交Cookie：用户访问后，返回一个随机字符串注入cookie，下次请求时取出，添加到URL参数上，验证与cookie是否一致。
-        - 输入验证码来校验合法请求：用户体验差。
+        - 输入验证码：明确当前是本人操作的，用户体验差。
+
 - 网络劫持
-    - http劫持（明文修改响应，加广告）：全站HTTPS,将HTTP加密,这使得运营商无法获取明文,就无法劫持你的响应内容.
+    - http劫持（明文修改响应，加广告）：全站HTTPS，将HTTP加密，这使得运营商无法获取明文，就无法劫持你的响应内容
+
 - JSON劫持(JSON Hijacking)
     - 属于CSRF范畴
     - 通过已认证过的凭证，构造jsonp执行跨域请求，获取数据执行回调，将数据通过new Image的方式发送到攻击者的服务器上。造成信息泄露。
     - 防御：
-        - api设置为post，因为jsonp只能get
+        - API设置为post，因为jsonp只能get
         - 检查请求头表示有ajax发起的请求`X-Requested-With:XMLHttpRequest`
         - 请求的参数加上与后端约定好的签名（带上时间戳）
+
+## CDN「内容分发网络」
+[知乎- 闲话 CDN](https://zhuanlan.zhihu.com/p/39028766)
+- 最简单的CDN网络：一个DNS 服务器+几台缓存服务器，本质是离得很近的一个缓存。
+- 原理：**通过dns服务器来实现优质节点的选择，通过缓存来减少源站的压力。**
+- 过程：输入URL -> 本地DNS解析 -> CDN专用DNS服务器(阿里云、腾讯云) -> DNS负载均衡设备 -> 接收请求 -> 转发请求至最优质节点服务器（距离、负载、响应最快）-> 第一次访问该内容 -> 请求源站并缓存 -> 用户获取内容 -> 再次访问 -> 直接从缓存节点中获取内容
+- 作用：用户就近获取内容，减轻服务器负载，提高网站响应速度
+- 简单来说：将内容从总部分发运到各地仓库，由DNS指向最近的仓库，用户从那里获取内容，但有延迟，不能保证内容是最新的。
 
 ## WebSocket
 - 和HTTP有啥不同
