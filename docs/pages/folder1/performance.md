@@ -3,6 +3,11 @@
 - 大部分页面需要2秒内完成加载，超过3秒，接近40%的用户离开网站。
 - 所以优化方向就是让用户觉得加载得快！不仅包括加载指标速度的提升，还包括提高用户的体验，如有趣的loading或顺畅的骨架屏会让用户感觉并没有等太久。
 
+- 性能优化方案步骤
+1.分析目前性能缺陷，确定性能提升目标
+2.针对特定场景，做对应方案，如加载时(首屏)，运行时(动画、内存泄漏、长列表)
+3.实施方案，查看优化效果
+
 ## 性能指标
 - [知乎参考](https://zhuanlan.zhihu.com/p/82981365)
 
@@ -17,63 +22,70 @@
   - 整体：
     - 通过 Performance 工具可以用来录制一段时间的 CPU 占用、内存占用、FPS 等运行时性能问题，如Bottom Up看出一段时间较耗时的操作。
     - 通过 Network 工具或者代码统计页面的加载时间来分析加载性能问题。
-  - 手动：Chrome面板
-    - Performance的Timings一栏：查看FP、FCP、FMP
-    - Performance的Main一栏：Recalculate Style：样式计算。Layout：布局位置。
-    - Performance的Frames查看FPS帧率，水平线越低且持续时间长，代表画面卡顿。
-    - Show Rendering：勾选FPS，可查看帧率和GPU内存使用情况
+  - 手动查看分析：Chrome DevTools - Performance面板
+    - Timings:查看FP、FCP、FMP
+    - CPU:通过下方的summary查看占用比例
+      - Loading: 网络通信和HTML解析
+      - Scripting: JS执行
+      - Rendering: 样式计算和布局
+      - Painting: 重绘
+      - System: 其它事件花费的时间
+      - Idle: 空闲时间
+      - Total: 总耗时
+    - Main：倒置火焰图，横坐标表示消耗时间，纵坐标为函数调用栈，除了函数的耗时，还有Recalculate Style：样式计算。Layout：布局位置。
+    - Frames:FPS帧率，水平线越低且持续时间长，同时上方会出现红色线条，代表画面卡顿。
+    - Rendering：勾选FPS，可查看帧率和GPU内存使用情况
   - 代码：使用window.performance.timing
-  ![timing API1](./img/Per-timingAPI-1.jpg)
-  ![timing API2](./img/Per-API.jpg)
+    ![timing API1](./img/Per-timingAPI-1.jpg)
+    ![timing API2](./img/Per-API.jpg)
     - 起始点可选择：navigationStart(在URL输入栏回车或者页面按F5刷新的时间点) vs fetchStart(准备用 HTTP 请求获取文档的时间，除去重定向)
     - 白屏时间：从用户再按下回车的瞬间navigationStart 到 解析器完成工作domInteractive(即能看到第一个内容)
-  ```js
-  let t = window.performance.timing;
-  let blankTime = t.domInteractive - t.navigationStart;          // 白屏时间
-  let firstTime = t.domContentLoadedEventEnd - t.navigationStart; // 首屏加载时间
-  let tcpTime = t.connectEnd - t.connectStart;                   // tcp连接耗时
-  let dnsTime = t.domainLookupEnd - t.domainLookupStart;         // dns查询耗时
-  ```
+    ```js
+    let t = window.performance.timing;
+    let blankTime = t.domInteractive - t.navigationStart;          // 白屏时间
+    let firstTime = t.domContentLoadedEventEnd - t.navigationStart; // 首屏加载时间
+    let tcpTime = t.connectEnd - t.connectStart;                   // tcp连接耗时
+    let dnsTime = t.domainLookupEnd - t.domainLookupStart;         // dns查询耗时
+    ```
 - 数据上传
-  - navigator.sendBeacon(url, data);通过HTTP将少量数据异步传输到Web服务器(不支持IE)
+  - `navigator.sendBeacon(url, data);`通过HTTP将少量数据异步传输到Web服务器(不支持IE)
   ```js
   window.addEventListener('unload', logData, false);
   function logData() {
       navigator.sendBeacon("/log", analyticsData);
   }
   ```
-  - 或者使用new Image()方式自动get请求，进行降级上报。
+  - 或者使用`new Image()`方式自动get请求，进行降级上报。
 - 注意：
-  - 白屏时间可以通过FP、FCP来粗略代替，精确则使用window.performance.timing。
-  - SPA通过window.performance.timing，只是首次加载的数据。改变URL实际不刷新页面，该API是无法获取子路由对应的页面相关时间。
+  - 白屏时间可以通过FP、FCP来粗略代替，精确则使用`window.performance.timing`。
+  - SPA通过`window.performance.timing`，只是首次加载的数据。改变URL实际不刷新页面，该API是无法获取子路由对应的页面相关时间。
 
+    ```js
+    // FP
+    function getFPTime(){
+        const timings = performance.getEntriesByType('paint');
+        return timings ? Math.round(timings[0].startTime) : null
+    }
+    // FCP
+    function getFCPTime(){
+        const timings = performance.getEntriesByType('paint');
+        return timings.length > 1 ? Math.round(timings[1].startTime) : null
+    }
 
-```js
-// FP
-function getFPTime(){
-    const timings = performance.getEntriesByType('paint');
-    return timings ? Math.round(timings[0].startTime) : null
-}
-// FCP
-function getFCPTime(){
-    const timings = performance.getEntriesByType('paint');
-    return timings.length > 1 ? Math.round(timings[1].startTime) : null
-}
+    // FMP 尚无标准化的定义
 
-// FMP 尚无标准化的定义
+    // TTI 谷歌npm包 - tti-polyfill
 
-// TTI 谷歌npm包 - tti-polyfill
+    // FPS
+    //不掉帧的情况，requestAnimationFrame 这个方法在一秒内会执行 60 次。假设动画在时间 A 开始执行，在时间 B 结束，耗时 x ms。而中间 requestAnimationFrame 一共执行了 n 次，则此段动画的帧率大致为：n / (B - A)。
 
-// FPS
-//不掉帧的情况，requestAnimationFrame 这个方法在一秒内会执行 60 次。假设动画在时间 A 开始执行，在时间 B 结束，耗时 x ms。而中间 requestAnimationFrame 一共执行了 n 次，则此段动画的帧率大致为：n / (B - A)。
-
-// 设备信息
-window.navigator.userAgent     // 获取用户设备信息
-window.navigator.language      // 获取用户设备语言
-window.navigator.connection    // 获取设备网络信息
-window.devicePixelRatio        // 获取设备像素比
-```
-![用户设备信息](./img/Per-device.png)
+    // 设备信息
+    window.navigator.userAgent     // 获取用户设备信息
+    window.navigator.language      // 获取用户设备语言
+    window.navigator.connection    // 获取设备网络信息
+    window.devicePixelRatio        // 获取设备像素比
+    ```
+    ![用户设备信息](./img/Per-device.png)
 
 - 注意：
   - FP和FCP可能是相同的时间，也可能是先FP后FCP
@@ -81,13 +93,13 @@ window.devicePixelRatio        // 获取设备像素比
 
 - 获取函数执行耗时
   - 只能控制台调试用(不要在生产环境使用)
-    - console.time('1');fn();console.timeEnd('1');
+    - `console.time('1');fn();console.timeEnd('1');`
   - 获取时间戳，然后相减。
-    - Date.now(); 时间精度为 毫秒（10^-3）级别；
-    - new Date().getTime();
-    - +new Date();
+    - `Date.now();` 时间精度为 毫秒（10^-3）级别；
+    - `new Date().getTime();`
+    - `+new Date();`
   - 更精确的方案
-    - 浏览器：window.performance.now()获取window.performance.timing.navigationStart到当前时刻的毫秒数，带小数点。performance.timing.navigationStart + performance.now() 约等于 Date.now()。
+    - 浏览器：`window.performance.now()`获取从`window.performance.timing.navigationStart`到当前时刻的毫秒数，带小数点。`performance.timing.navigationStart + performance.now()` 约等于 `Date.now()`。
     ```js
     function doSomething(){
       for(let i=0;i<1000;i++){
@@ -100,7 +112,7 @@ window.devicePixelRatio        // 获取设备像素比
     console.log("doSomething函数执行了" + (t1 - t0) + "毫秒.")
     // doSomething函数执行了0.09499990846961737毫秒.
     ```
-    - Node环境：process.hrtime.bigint()，直接通过两个 bigint 相减来计算差异。在 Node.js 程序中，优先选 process.hrtime，其次选 performance.now，最后才会是 Date.now。
+    - Node环境：`process.hrtime.bigint()`，直接通过两个 bigint 相减来计算差异。在 Node.js 程序中，优先选 `process.hrtime`，其次选 `performance.now`，最后才会是 `Date.now`。
     ```js
     const start = process.hrtime.bigint();
     // 191051479007711n
@@ -137,7 +149,7 @@ window.devicePixelRatio        // 获取设备像素比
     - 更好的 SEO：数据已包含在页面，无须异步Ajax获取内容，方便爬虫抓取。
     - 首屏加载更快：直接渲染好后返回，无须再下载js再渲染。
   - 缺点
-    - 开发条件限制：只支持 beforCreate 和 created 两个钩子函数，一些外部扩展库需要特殊处理。且服务器需要处于Node.js运行环境。
+    - 开发条件限制：只支持 beforeCreate 和 created 两个钩子函数，一些外部扩展库需要特殊处理。且服务器需要处于Node.js运行环境。
     - 服务器负载：占用更多CPU资源，负载更大。
 
 ## 加载时
@@ -308,8 +320,24 @@ window.devicePixelRatio        // 获取设备像素比
 
 ## 运行时
 > 高性能要求的场景，优化代码执行速度。
+### 渲染原理介绍
 
-### 动画性能
+- 展示总体步骤
+![performance-render1](./img/performance-render1.jpg)
+  - JS实现动画或新增DOM -> Style计算样式 -> Layout进行布局计算位置 -> Paint绘制 -> Composite渲染层合并
+
+- Composite详细流程
+![performance-render](./img/performance-render.png)
+  - Nodes 到 LayoutObjects(布局对象)
+    - 每个 Node 节点都有一个对应的 LayoutObject，保存样式位置信息，构成一个树。
+  - LayoutObjects 到 PaintLayers(渲染层)
+    - 根据层叠上下文的位置创建新渲染层，也有特殊情况会创建新的渲染层。
+  - PaintLayers 到 GraphicsLayers(图形层)
+    - 合成层拥有独立的图形层，其他渲染层公用一个图形层。每个图形层会生成位图，交给GPU将多个位图合成， 然后展现在屏幕上。
+  - 层压缩
+    - 大量合成层消耗内存，影响性能，所以浏览器会进行自动层压缩，但有些是压缩不了的。
+
+### 提升动画性能
 - 动画的三种实现方式
   - CSS3
   - Canvas + JS
@@ -317,25 +345,161 @@ window.devicePixelRatio        // 获取设备像素比
 
 - CSS动画优化
   - 原则：
-    - 尽量将动画放在一个独立图层，避免动画效果导致重绘影响其他渲染层的元素
-    - 尽量避免回流和重绘
-    - 尽量利用GPU加速
-  - 方法-提升为合成层：
+    - 尽量将动画提升为一个独立图层(合成层)，避免动画效果导致重绘影响其他渲染层的元素
+    - 尽量利用GPU硬件加速(提示为合成层也就会用到硬件加速啦)
+    - 尽量避免回流和重绘，除了常规的避免，在合成层上使用transform 和 opacity也不会导致回流重绘。
+  - 提升为合成层的较好的两种方式：
     - CSS 的 will-change 属性。will-change 设置为 opacity、transform、top、left、bottom、right（其中 top、left 等需要设置明确的定位属性，如 relative 等）
-    - 如不支持，使用3D transform属性强制提升，transform: translateZ(0);。
-  - 合成层好处：
-    - 需要重绘时，只重绘自身，不会影响其他层
-    - transform 和 opacity 效果，不会回流重绘
+    ```css
+    #target {
+      will-change: transform;
+    }
+    ```
+    - 如不支持，使用3D transform属性强制提升。
+    ```css
+    #target {
+      transform: translateZ(0);
+    }
+    ```
+
+  - 提升为合成层好处：
     - 合成层的位图会交给GPU合成，速度比CPU快
+    - 需要重绘时，只重绘自身，不会影响其他层
+    - 可以使用 transform 和 opacity 实现动画效果，不会引发回流重绘，在其他渲染层就会。
   - 查看合成层
     - 简单：DevTools，勾选上 Layer Borders
     - 详细：More Tools，添加 Layers 选项卡
     - 可关注 Composite渲染层合并的时间来优化合成层的数量。
     ![查看合成层](./img/Per-Composite.png)
+  - 硬件加速原理：
+    - 让容器有自己的独立合成层，由GPU直接处理。
+  - 硬件加速开启方式：
+    - will-change
+    - 3D transform
+    - video 元素
+    - backface-visibility 为 hidden的元素(翻转后背面不可见)
+    - ...
+  - 硬件加速优缺点：
+    - 建议：只在需要的情况下开启，不要滥用
+    - 优点：提高渲染速度
+    - 缺点：额外内存消耗，耗电量增加
 
 - Canvas动画优化
   - 使用requestAnimationFrame替代setInterval来做动画循环
   - 使用web worker分担主线程压力，解决大量数据计算，大量DOM操作的卡顿问题
+
+### 减少内存泄漏
+- [参考](https://mp.weixin.qq.com/s?__biz=MzUxMzcxMzE5Ng==&mid=2247496779&idx=2&sn=892d968a86ebd083582ae2e28f48ab8f&chksm=f9524108ce25c81e960471a63357cf2bc59971e2a22ca9549f67c5266100474712fcaa208f28&mpshare=1&scene=1&srcid=&sharer_sharetime=1592813500572&sharer_shareid=f72feefcc9c2c137677aa7f49d02e0f4&key=5275bdb85f6fecb5b863a0f4364938b0f20d3068a623c70bb17408602e09ad9840bc8824054c5f5f3e8b5fdacdf41cf6d13413049806b41cdb497e6abe7e48742dabb92c99874d17f7c19bace4019ecd&ascene=1&uin=MjI1NjQ0MTU1&devicetype=Windows+7+x64&version=62090523&lang=zh_CN&exportkey=AZvo2t51y73c8EhAeN7gjAk%3D&pass_ticket=KfXN%2BILZIw36ijjDu%2F7KSM38UJxJ2Cjf8FTYPf6jp%2Fg%3D)
+
+- 查看内存泄露： 
+  - Chrome 中的 Performance 面板，可视化查看内存的变化情况，找出异常点。
+  ![JS-heap-check](./img/JS-heap-check.png)
+    - 打开开发者工具，选择 Performance 面板
+    - 在顶部勾选 Memory
+    - 点击左上角的录制按钮Record。
+    - 在页面上进行各种操作，模拟用户的使用情况。
+    - 一段时间后，点击对话框的 stop 按钮，面板上就会显示这段时间的内存占用情况。
+    - 关注JS Heap，看到起点不断增高而没有释放内存，可能出现异常，点击预览图蓝色线增高点，看看执行了什么操作。去对应的函数中排查代码。
+
+  - Chrome 中的 Memory 面板，可查看活动的Javascript对象（以及DOM节点）在内存中的分布
+  ![JS-heap-2](./img/JS-heap-2.png)
+    - Heap snapshot 堆快照，可截操作前后的内存快照，进行对比分析。
+    - on timeline 时间线，可开始录制操作，执行一段操作，选择内存增大的时间点分析。
+
+- [分析Chrome性能调试工具Timeline简介](https://www.jianshu.com/p/f27b27167125)
+
+> 下面是可能导致内存泄漏的情况及预防
+
+- 滥用全局变量: 如未声明的变量，在函数中滥用this指向全局对象，无法被回收
+  - 预防：使用严格模式（"use strict"）
+- 闭包(返回子函数): 父执行完后，子函数中引用父的变量无法被释放，导致引用的变量被保留。
+  - 预防：会用到，但要知道何时创建，保留哪些对象
+- 定时器: 未被正确关闭，导致所引用的外部变量无法被释放
+  - 预防：必要时销毁定时器如clearInterval
+- 事件监听: 没有正确销毁，如使用监听执行匿名内联函数，无法使用removeEventListener() 将其删除
+  ```js
+  document.addEventListener('keyup', function() { 
+    doSomething(hugeString); 
+  });
+  ```
+  - 预防：
+    - 将执行函数的引用传递进removeEventListener，来注销事件监听。
+    - 还可以使用addEventListener() 第三个参数`{once: true}`，在处理一次事件后，将自动删除侦听器函数。
+    ```js
+    function listener() {
+      doSomething(hugeString);
+    }
+    document.addEventListener('keyup', listener); 
+    document.removeEventListener('keyup', listener); 
+    ```
+- DOM 引用: 在全局中对DOM节点的直接引用，删除该DOM节点，也不会被垃圾回收
+  ```js
+  function createElement() {
+    const div = document.createElement('div');
+    div.id = 'detached';
+    return div;
+  }
+  const detachedDiv = createElement();
+  document.body.appendChild(detachedDiv);
+  // this will keep referencing the DOM element even after deleteElement() is called
+  ```
+  - 预防：
+    - 使用弱引用WeakSet 和 WeakMap 保存 DOM 的引用
+    - 将对DOM的引用移入函数局部作用域，函数使用完，局部变量对DOM的引用被销毁。
+  ```js
+  function createElement() {...} 
+  function appendElement() {
+      const detachedDiv = createElement(); // DOM的引用放在函数内
+      document.body.appendChild(detachedDiv);
+  }
+  appendElement();
+  ```
+
+
+
+### 减少回流重绘
+- 重排（回流）：节点尺寸需要重新计算，重新排列元素，引起局部或整个页面重新渲染
+- 重绘：样式发生变化，更新外观内容
+- 重绘不一定出现重排
+- 重排一定会出现重绘
+
+#### 如何触发
+- display: none隐藏一个DOM节点 -> 回流和重绘
+- visibility: hidden隐藏一个DOM节点 -> 重绘
+- 增加、删除、更新dom
+- 移动dom或者动画
+- 调整窗口大小
+
+#### 如何优化
+- 集中改变样式
+    - 改变class（类名）的方式
+        ```js
+        // 判断是否是黑色系样式
+        const theme = isDark ? 'dark' : 'light'
+        // 根据判断来设置不同的class
+        ele.setAttribute('className', theme)
+        ```
+- 离线操作dom：DocumentFragment
+    - createDocumentFragment在dom树之外创建游离节点，该节点上批量操作，再插入dom，一次重排
+        ```js
+        var fragment = document.createDocumentFragment();
+        for (let i = 0;i<10;i++){
+          let node = document.createElement("p");
+          node.innerHTML = i;
+          fragment.appendChild(node);
+        }
+        document.body.appendChild(fragment);
+        ```
+- 提升至合成层
+    - CSS 的 will-change  
+        ```css
+        #target {
+          will-change: transform;
+        }
+        ```
+    - 重绘时只会影响合成层，不会影响其它层
+    - transform 和 opacity 效果，不会触发 layout 和 paint
+    
 
 ### 大数据长列表性能
 

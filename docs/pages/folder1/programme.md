@@ -1,9 +1,34 @@
 
+## 原型链相关
+有个构造函数class A {}，new A()生成实例a。
+- `a.__proto__`和`A.prototype` 关系 ?
+- `a.__proto__.__proto__`是什么?
+- `a.__proto__.__proto__.__proto__`是什么?
+- `Function(构造函数).__proto__` 是什么?
+- `Function(构造函数).__proto__.__proto__` 是什么?
+
+```js
+a.__proto__ === A.prototype  // 构造函数的prototype
+a.__proto__.__proto__ === Object.prototype // Object.prototype
+a.__proto__.__proto__.__proto__ === null   // 原型链终点
+
+Function.__proto__ === Function.prototype
+Function.__proto__.__proto__ === Object.prototype
+```
+
+
 ## Object和Function的instancof关系
-- 均为true
+- 结果均为true，此处Object和Function都是构造函数。
+    - 构造函数的__proto__都是Function.prototype，所以instanceof Function
+    - 构造函数的__proto__.__proto__都是Object.prototype，所以instanceof Object
+
 ```js
 Object instanceof Function
 // 等价于 Object.__proto__ === Function.prototype //true
+
+Function instanceof Function
+// 等价于 Function.__proto__ === Function.prototype //true
+
 
 Function instanceof Object
 // 等价于 Function.__proto__.__proto__ === Object.prototype //true
@@ -11,8 +36,6 @@ Function instanceof Object
 Object instanceof Object
 // 等价于 Object.__proto__.__proto__ === Object.prototype //true
 
-Function instanceof Function
-// 等价于 Function.__proto__ === Function.prototype //true
 ```
 
 ## 反转字符串
