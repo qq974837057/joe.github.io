@@ -38,9 +38,70 @@ Object instanceof Object
 
 ```
 
+
+## 版本号比较大小
+- 提供“版本转换为字符串”的函数，然后直接用字符串进行比较即可。
+    - 先将参数转为字符串，再切割为数组
+    - 数组每一项根据自身字符串的length，前面补0，补齐4位
+    - 使用补零+版本(如0006)拼接为字符串
+    - 整个数组合并为一串字符串，就可以进行比较
+
+> 字符串按字符在unicode中的码位一个一个比较，从第一位开始比较，相同则继续往后比较。
+
+```js
+function toVersion (x) {
+    let versionArr = x.toString().split('.');
+    let replaceArr = ['0000','000','00','0',''];
+    for(let i = 0; i < versionArr.length; i++) {
+    let len = versionArr[i].length;
+    versionArr[i] = `${replaceArr[len]}${versionArr[i]}`;
+    }
+    let res = versionArr.join('');
+    return res;
+}
+
+toVersion('6.3.111.55') // '0006000301110055'
+toVersion('6.4.4')      // '000600040004'
+toVersion('6.3.111.55') > toVersion('6.4.4') // false
+
+// compare比较：a是否大于b，大于为true
+function compare(a, b) {
+    return toVersion(a) >= toVersion(b);
+}
+compare('6.5.5', '6.5.51'); // false
+```
+
 ## 反转字符串
 ```js
 let newStr = str.split('').reverse().join('');
+```
+
+## 交换变量位置
+- 解构赋值(常用)
+```js
+let a = 1,
+    b = 2;
+    
+[a, b] = [b, a];
+```
+- 临时变量
+```js
+let a = 1,
+    b = 2,
+    tmp;
+    
+tmp = a;
+a = b;
+b = tmp;
+```
+- 异或：a ^ b ^ b == a
+```js
+let a = 1,  // 二进制：0001
+    bb = 2;	// 二进制：0010
+
+a = a ^ b; // 计算结果：a = 0011, b = 0010
+b = a ^ b; // 计算结果：a = 0011, b = 0001
+a = a ^ b; // 计算结果：a = 0010, b = 0001
 ```
 
 ## 实现一个sleep函数
