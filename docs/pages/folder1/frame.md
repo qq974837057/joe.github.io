@@ -1094,3 +1094,20 @@ Vue.use(Vuex)
   - 缺点：框架和平台耦合过多，版本兼容维护比较困难。性能有瓶颈，因为JS bridge也存在性能限制。
   - 架构图
   ![frame-weex](./img/frame-weex.jpg)
+
+
+## 其他
+### v-bind
+
+```html
+<!-- 绑定一个 attribute -->
+<img v-bind:src="imageSrc">
+<!-- 缩写 -->
+<img :src="imageSrc">
+
+<!-- 绑定一个全是 attribute 的对象 -->
+<!-- 字段的props透传至element-ui用到此方法 -->
+<el-button v-bind="{ type: 'danger', size: 'mini' }"></el-button>
+<!-- 等同于 -->
+<el-button type='danger' size='mini'>主要按钮</el-button>
+```

@@ -1,22 +1,93 @@
 ## webpack
 
 ### 构建流程
-- 1、初始化参数：配置文件package.json和shell语句读取与合并参数，得到最终参数
-- 2、开始编译：初始化Compiler编译对象，加载插件，执行run开始编译。
+- 1、初始化参数：拷贝配置文件webpack.config.js合并参数，并加载插件，得到最终options对象。
+- 2、开始编译：初始化Compiler编译对象，执行Compiler的run方法开始编译，以下是一些关键事件点。
+```js
+function webpack(options) {
+  var compiler = new Compiler();
+  ...// 检查options,若watch字段为true,则开启watch线程
+  return compiler;
+}
+...
+```
 - 3、确定入口：根据entry找到入口文件
 - 4、编译模块：用loader进行翻译后，找出对应依赖模块
 - 5、完成编译：确定了翻译的内容和依赖关系
-- 6、输出准备：根据入口和模块的依赖关系，组装成包含多个模块的chunk，每个chunk转成一个文件加载到输出列表。
+- 6、输出准备：根据入口和模块的依赖关系，组装成包含多个模块的chunk，每个chunk转成一个文件并生成hash，加载到输出列表【代码优化和功能添加的关键环节】。
 - 7、执行输出：根据output路径和文件名，写入文件系统。
-- 执行run开始编译：过程中触发一些钩子beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出dist目录）【编写插件的时候，就可以将自定义的方挂在对应钩子上，按照编译的顺序被执行】
-- 插件过程中调用：Webpack 会在特定的时间点广播出特定的事件，插件在监听到感兴趣的事件后会执行特定的逻辑，并且插件可以调用 Webpack 提供的 API 改变 Webpack 的运行结果
+- 执行run开始编译：过程中触发一些钩子beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出dist目录），每个节点会触发对应的webpack事件。
+- 【编写插件plugin的时候，钩子发出对应的事件`compilation.plugin('xxx', callback)`，监听到就会执行特定的逻辑】
+
+### webpack.config.js 配置
+
+- 配置合并：
+    - 在加载插件之前，webpack 将 webpack.config.js 中的各个配置项拷贝到 options 对象中。
+    - options 作为最后返回结果，包含了之后构建阶段所需的重要信息。
+    ```js
+    { 
+        entry: {},//入口配置
+        output: {}, //输出配置
+        plugins: [], //插件集合(配置文件 + shell指令) 
+        module: { loaders: [ [Object] ] }, //模块配置
+        context: //工程路径
+        ... 
+    }
+    ```
+
+```js
+var path = require('path');
+var node_modules = path.resolve(__dirname, 'node_modules');
+var pathToReact = path.resolve(node_modules, 'react/dist/react.min.js');
+
+module.exports = {
+  // 入口文件，是模块构建的起点，同时每一个入口文件对应最后生成的一个 chunk。
+  entry: {
+    bundle: [
+      'webpack/hot/dev-server',
+      'webpack-dev-server/client?http://localhost:8080',
+      path.resolve(__dirname, 'app/app.js')
+    ]
+  },
+  // 文件路径指向(可加快打包过程)。
+  resolve: {
+    alias: {
+      'react': pathToReact
+    }
+  },
+  // 生成文件，是模块构建的终点，包括输出文件与输出路径。
+  output: {
+    path: path.resolve(__dirname, 'build'),
+    filename: '[name].js'
+  },
+  // 这里配置了处理各模块的 loader ，包括 css 预处理 loader ，es6 编译 loader，图片处理 loader。
+  module: {
+    loaders: [
+      {
+        test: /\.js$/,
+        loader: 'babel',
+        query: {
+          presets: ['es2015', 'react']
+        }
+      }
+    ],
+    noParse: [pathToReact]
+  },
+  // webpack 各插件对象，在 webpack 的事件流中执行对应的方法。
+  plugins: [
+    new webpack.HotModuleReplacementPlugin()
+  ]
+};
+```
 
 ### bundle，chunk，module分别指什么
 - Entry：作为构建依赖图的入口文件
 - Output：输出创建的bundle到指定文件夹
 - bundle（包）：webpack打包出来的文件
-- chunk（代码块）：代码分割（如webpack4的SplitChunksPlugin）的产物，将一些代码单独打包为一个 Chunk ，由多个模块组合而成,用于缓存、按需加载等。
+- chunk（代码块）：代码分割的产物（如webpack4的SplitChunksPlugin），也就是按需加载的分块。将一些代码单独打包为一个 Chunk ，由多个模块module组合而成，用于按需加载或缓存。
 - module（模块）：Webpack 里一切皆模块（图片、ES6模块）、一个模块对应一个文件。Webpack 会从配置的 Entry 开始递归找出所有依赖的模块。
+- module和chunk的图解
+![module和chunk](./img/webpack-chunk.jpg)
 
 ### Loader和Plugin的区别
 - Loader(加载器)
@@ -48,7 +119,8 @@
 
 - Plugin(插件)
     - 用于扩展webpack的功能（如打包优化、压缩、定义变量）
-    - 在webpack打包过程广播很多事件，Plugin监听事件并在合适的时机使用webpack的api改变输出结果。
+    - 构建过程调用原理：Webpack 会在构建过程中对应的钩子中广播出特定的事件，插件在监听到感兴趣的事件后会执行特定的逻辑，并且插件可以调用 Webpack 提供的 API 改变 Webpack 的运行结果
+    - 钩子：beforeRun -> run -> beforeCompile -> compile（开始编译）-> make（入口分析依赖）-> seal（构建封装，不可更改）-> afterCompile（完成构建，缓存数据）-> emit （输出dist目录）
     - 用法：plugins中单独配置，数组里每项都是一个plugin实例，参数由构造函数传入。
         ```js
         plugins: [
