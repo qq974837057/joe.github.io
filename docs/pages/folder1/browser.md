@@ -46,8 +46,8 @@
 
 
 ### 细节：TCP三次握手
-- 保证client和server均让对方知道自己**的接收和发送能力**没问题而保证的最小次数
-- 每次握手都会带一个标识 seq，后续的ACK都会**对seq+1**来进行确认。
+- 三次握手而不是两次，是因为要保证client和server均让对方知道自己**的接收和发送能力**没问题而保证的最小次数
+- 每次握手都会带一个标识 seq，后续的ACK都会**对seq+1**来进行确认，保证每个数据包之间的顺序。
 - 三次握手的本质，中间的一次动作是（ACK和SYN）的合并。
 - 过程：
     - 客户端向服务器发送一个建立连接的请求 SYN（您好，我是A），客户端为syn_sent状态（主动半打开）
@@ -294,8 +294,8 @@
 ## HTTP/HTTPS/HTTP2 协议
 ![HTTP/HTTPS/HTTP2的flow](./img/HTTP-HTTPS-HTTP2-flow.jpg)
 - 主要区别：
-    - HTTP1.0【无法复用连接】【等待响应后下个请求】
-    - HTTP1.1【长连接可复用】【管道化】【无须等待响应即可请求，但响应顺序要保持一致，导致队头阻塞】
+    - HTTP1.0【无法复用连接，要手动添加keep-alive】【等待响应后才发送下个请求】
+    - HTTP1.1【默认长连接keep-alive可复用】【管道化】【无须等待响应即可请求，但响应顺序要保持一致，导致队头阻塞】
     - HTTP2.0【多路复用】【无须等待响应即可请求，响应顺序无顺序要求】
 
 - HTTP1.0
@@ -741,90 +741,6 @@ http://www.domain2.com/b.js        不同域名                         不允�
 同源策略作为浏览器的安全基石，其「同源」判断是比较严格的，相对而言，Cookie中的「同站」判断就比较宽松：只要两个 URL 的 eTLD+1 相同即可，不需要考虑协议和端口。其中，eTLD 表示有效顶级域名，注册于 Mozilla 维护的公共后缀列表（Public Suffix List）中，例如，.com、.co.uk、.github.io 等。eTLD+1 则表示，有效顶级域名+二级域名，例如 taobao.com 等。
     - 举几个例子，www.taobao.com 和 www.baidu.com 是跨站，www.a.taobao.com 和 www.b.taobao.com 是同站，a.github.io 和 b.github.io 是跨站(注意是跨站)。
 
-- cookie注意
-    - 用途：
-        - 会话状态管理（如用户登录状态、购物车、游戏分数或其它需要记录的信息）
-        - 个性化设置（如用户自定义设置、主题等）
-        - 浏览器行为跟踪（如跟踪分析用户行为等）
-    - 无法跨域
-    - HttpOnly：禁止js通过 document.cookie 读取cookie（提高安全性，防范xss攻击）
-    - Secure 设为true，在HTTPS才有效
-    - MaxAge表示失效时间（秒），负数表示临时 cookie，关闭浏览器就删除。默认-1，为0表示删除。
-    - Expires 设置过期时间，以客户端时间为准。不设置表示临时cookie，保存在客户端内存，关闭浏览器失效。
-    - Domain 指定cookie所属域名，默认为当前主机，如使用单点登录时设置为二级域名`.taobao.com`，子域名下(`a.taobao.com` 还是 `b.taobao.com`)都可以使用该cookie，自动发送cookie，携带登录信息。注意：不能跨域设置 Cookie，只能设置跟自己同域的。
-    - Path 指定了一个 URL 路径，子路径也会匹配，该路径下的可接收cookie。比如设置 `Path=/docs`，`/docs/Web/` 下的资源会带 Cookie 首部，`/test` 则不会携带 Cookie 首部。
-    - **SameSite：主流浏览器得到支持，在 Chrome80 版本之前是none，之后默认屏蔽了第三方的 Cookie（Lax）**
-        - SameSite 属性可以让 Cookie 在跨站请求时不会被发送，从而可以阻止跨站请求伪造攻击（CSRF）。
-        - Strict 这个 Cookie 在任何情况下都不可能作为第三方 Cookie，跨站请求不能携带（即使CORS也行不通）。
-        - Lax 允许部分第三方请求携带 Cookie（比如get）
-        - None 无论是否跨站都会发送 Cookie  
-        - 影响：Post 表单，iframe（广告），AJAX，Image（埋点），`<script>`（jsonp）不发送三方 Cookie
-        - 改造：SameSite=none，允许同站、跨站请求携带该cookie
-        - 注意：SameSite=none，不支持HTTP，需要设置cookie的Secure属性，只有在HTTPS协议才发送。
-    - 三方cookie
-        - 通常cookie的域和浏览器地址的域匹配，这被称为第一方cookie。那么第三方cookie就是cookie的域和地址栏中的域不匹配。
-        - 用途：前端日志打点监控、行为分析、广告推荐
-        - 实现：A站写入第三方cookie(域名为第三方)，页面操作过程将携带第三方cookie向第三方域发起请求，第三方域获取到数据。(如请求第三方广告商网站的图片，响应成功顺便设置第三方cookie，去另一个网站，还是请求同个广告商图片，会将这个第三方cookie发送到广告商，这样会收集到用户的数据)
-        - 现状：Firefox、Safari 默认禁止、Chrome —— SameSite Cookie、2022将全面禁止
-        - 解决：转成一方cookie（js操作document.cookie设置第三方cookie，而不是set-cookie，请求将cookie放在请求参数中，而不是放在cookie中，模拟三方cookie的标识用户的过程），不过第三方sdk能获取信息就更多，风险大。
-    - 服务器创建cookie
-        - 通过Set-cookie响应头(一次Set一个cookie)
-            ```
-            Set-Cookie: <cookie-name>=<cookie-value>; Expires=<date>; Domain=<domain-value>; Path=<path-value>; Secure; HttpOnly; SameSite=Lax
-            ```
-    - 通过JS创建cookie
-        - 可添加过期日期expires、可添加path设置路径（默认属于当前页）
-            ```js
-            document.cookie = "username=Joe; expires=Sun, 31 Dec 2017 12:00:00 UTC; path=/";
-            ``` 
-           
-- session注意
-    - session 是基于 cookie 实现的，session 存储在服务器端，sessionId 会被存储到客户端的cookie 中
-    - session失效两种情况
-        - 一是cookie是会话有效，关闭浏览器，sessionid被清理。
-        - 二是服务器设置session失效时间，到期就清理掉该session
-    - 用户比较多时，数据大占内存，**给session设置失效时间**，定期清理过期的session
-    - 集群部署，多台服务器要做session共享
-        - 可通过复制，广播给其他节点来同步session
-            - 网络负荷压力大
-        - 或者更优的分布式缓存方案Redis（集群） 来缓存 session
-            - 方便扩展、跨平台
-        - session 持久化
-            - 数据库压力大
-    - 如果cookie被禁止，sessionId可在url参数后传递。
-- Access Token注意（令牌）
-    - uid+time+sign（用户标识+时间戳+哈希签名）
-    - 服务器签发token，客户端保存localStorage或者cookie ，每次请求放在header上，服务器接收验证。
-    - 可避免CSRF攻击
-    - 移动端常用，一般Access Token设置一周，Refresh Token一个月
-    - Refresh Token 设置更长有效期，当Access Token过期，可通过携带Refresh Token去请求新的Acesss Token。当Refresh Token过期只能重新登录 了 
-- JWT注意（JSON Web Token）
-    - Header（头部）+Payload（负载）+Signature（签名）：字符串：Header.Payload.Signature
-      ```
-        // Header
-        {
-          "alg": "HS256",
-          "typ": "JWT"
-        }
-        // Payload
-        {
-          "sub": "1234567890",
-          "name": "John Doe",
-          "admin": true
-        }
-        // Signature
-          HMACSHA256(
-              base64UrlEncode(header) + "." +
-              base64UrlEncode(payload),
-              secret)
-      ```
-    - 服务器签发token，客户端保存localStorage或者cookie ，每次请求放在header上的Authorization ，服务器接收解密验证。
-    - 优点：无状态认证，不保存session数据，降低查询数据库次数，服务器认方便扩展
-    - 缺点：服务器不保存session，无法废弃某个token，一旦 JWT 签发了，到期之前就会始终有效
-    - 减少盗用：HTTPS、和有效期设置短
-- JWT和token的区别
-    - token验证发过来的token后，还要查数据库获取用户信息，验证是否有效。
-    - JWT包含用户信息和加密数据，服务端只需要使用密钥解密进行校验，不需要查数据库或者少查。
 
 ## cookie、sessionStorage、localStorage
 - 共同点：都是保存在浏览器端，同源。
@@ -893,7 +809,102 @@ http://www.domain2.com/b.js        不同域名                         不允�
 
     ![http-cache](./img/http-cache.png)
 
-## 单点登录的实现(SSO)
+## 鉴权相关
+- 几种方式
+    - cookie和session：用户登录后，服务端保存用户信息在session中，将对应的sessionId通过set-cookie保存在客户端，客户端每次携带包含sessionId的cookie，服务端进行验证。
+    - Token: 用id+时间戳+hash生成一串token，通过请求响应给客户端，客户端进行保存，每次请求在header上携带，服务器验证，避免CSRF攻击。
+    - JWT: 包含了用户信息，服务端进行解密即可获取该用户信息，无需查数据库或者少查。
+    - SSO: 单点登录，常用CAS 中央认证服务
+
+### cookie和session
+- cookie注意
+    - 用途：
+        - 会话状态管理（如用户登录状态、购物车、游戏分数或其它需要记录的信息）
+        - 个性化设置（如用户自定义设置、主题等）
+        - 浏览器行为跟踪（如跟踪分析用户行为等）
+    - 无法跨域
+    - HttpOnly：禁止js通过 document.cookie 读取cookie（提高安全性，防范xss攻击）
+    - Secure 设为true，在HTTPS才有效
+    - MaxAge表示失效时间（秒），负数表示临时 cookie，关闭浏览器就删除。默认-1，为0表示删除。
+    - Expires 设置过期时间，以客户端时间为准。不设置表示临时cookie，保存在客户端内存，关闭浏览器失效。
+    - Domain 指定cookie所属域名，默认为当前主机，如使用单点登录时设置为二级域名`.taobao.com`，子域名下(`a.taobao.com` 还是 `b.taobao.com`)都可以使用该cookie，自动发送cookie，携带登录信息。注意：不能跨域设置 Cookie，只能设置跟自己同域的。
+    - Path 指定了一个 URL 路径，子路径也会匹配，该路径下的可接收cookie。比如设置 `Path=/docs`，`/docs/Web/` 下的资源会带 Cookie 首部，`/test` 则不会携带 Cookie 首部。
+    - **SameSite：主流浏览器得到支持，在 Chrome80 版本之前是none，之后默认屏蔽了第三方的 Cookie（Lax）**
+        - SameSite 属性可以让 Cookie 在跨站请求时不会被发送，从而可以阻止跨站请求伪造攻击（CSRF）。
+        - Strict 这个 Cookie 在任何情况下都不可能作为第三方 Cookie，跨站请求不能携带（即使CORS也行不通）。
+        - Lax 允许部分第三方请求携带 Cookie（比如get）
+        - None 无论是否跨站都会发送 Cookie  
+        - 影响：Post 表单，iframe（广告），AJAX，Image（埋点），`<script>`（jsonp）不发送三方 Cookie
+        - 改造：SameSite=none，允许同站、跨站请求携带该cookie
+        - 注意：SameSite=none，不支持HTTP，需要设置cookie的Secure属性，只有在HTTPS协议才发送。
+    - 三方cookie
+        - 通常cookie的域和浏览器地址的域匹配，这被称为第一方cookie。那么第三方cookie就是cookie的域和地址栏中的域不匹配。
+        - 用途：前端日志打点监控、行为分析、广告推荐
+        - 实现：A站写入第三方cookie(域名为第三方)，页面操作过程将携带第三方cookie向第三方域发起请求，第三方域获取到数据。(如请求第三方广告商网站的图片，响应成功顺便设置第三方cookie，去另一个网站，还是请求同个广告商图片，会将这个第三方cookie发送到广告商，这样会收集到用户的数据)
+        - 现状：Firefox、Safari 默认禁止、Chrome —— SameSite Cookie、2022将全面禁止
+        - 解决：转成一方cookie（js操作document.cookie设置第三方cookie，而不是set-cookie，请求将cookie放在请求参数中，而不是放在cookie中，模拟三方cookie的标识用户的过程），不过第三方sdk能获取信息就更多，风险大。
+    - 服务器创建cookie
+        - 通过Set-cookie响应头(一次Set一个cookie)
+            ```
+            Set-Cookie: <cookie-name>=<cookie-value>; Expires=<date>; Domain=<domain-value>; Path=<path-value>; Secure; HttpOnly; SameSite=Lax
+            ```
+    - 通过JS创建cookie
+        - 可添加过期日期expires、可添加path设置路径（默认属于当前页）
+            ```js
+            document.cookie = "username=Joe; expires=Sun, 31 Dec 2017 12:00:00 UTC; path=/";
+            ``` 
+           
+- session注意
+    - session 是基于 cookie 实现的，session 存储在服务器端，sessionId 会被存储到客户端的cookie 中
+    - session失效两种情况
+        - 一是cookie是会话有效，关闭浏览器，sessionid被清理。
+        - 二是服务器设置session失效时间，到期就清理掉该session
+    - 用户比较多时，数据大占内存，**给session设置失效时间**，定期清理过期的session
+    - 集群部署，多台服务器要做session共享
+        - 可通过复制，广播给其他节点来同步session
+            - 网络负荷压力大
+        - 或者更优的分布式缓存方案Redis（集群） 来缓存 session
+            - 方便扩展、跨平台
+        - session 持久化
+            - 数据库压力大
+    - 如果cookie被禁止，sessionId可在url参数后传递。
+
+### Token和JWT
+- Access Token注意（令牌）
+    - uid+time+sign（用户标识+时间戳+哈希签名）
+    - 服务器签发token，客户端保存localStorage或者cookie ，每次请求放在header上，服务器接收验证。
+    - 可避免CSRF攻击
+    - 移动端常用，一般Access Token设置一周，Refresh Token一个月
+    - Refresh Token 设置更长有效期，当Access Token过期，可通过携带Refresh Token去请求新的Acesss Token。当Refresh Token过期只能重新登录 了 
+- JWT注意（JSON Web Token）
+    - Header（头部）+Payload（负载）+Signature（签名）：字符串：Header.Payload.Signature
+      ```
+        // Header
+        {
+          "alg": "HS256",
+          "typ": "JWT"
+        }
+        // Payload
+        {
+          "sub": "1234567890",
+          "name": "John Doe",
+          "admin": true
+        }
+        // Signature
+          HMACSHA256(
+              base64UrlEncode(header) + "." +
+              base64UrlEncode(payload),
+              secret)
+      ```
+    - 服务器签发token，客户端保存localStorage或者cookie ，每次请求放在header上的Authorization ，服务器接收解密验证。
+    - 优点：无状态认证，不保存session数据，降低查询数据库次数，服务器认方便扩展
+    - 缺点：服务器不保存session，无法废弃某个token，一旦 JWT 签发了，到期之前就会始终有效
+    - 减少盗用的方式：使用HTTPS、和 有效期设置短一些
+- JWT和token的区别
+    - token验证发过来的token后，还要查数据库获取用户信息，验证是否有效。
+    - JWT包含用户信息和加密数据，服务端只需要使用密钥解密进行校验，不需要查数据库或者少查。
+
+### 单点登录(SSO)
 > 在A系统登录后，去B 、C等系统，已经是登录状态。
 
 主要解决两个问题
@@ -1103,15 +1114,35 @@ removeAttribute(key);
 - 简单来说：将内容从总部分发运到各地仓库，由DNS指向最近的仓库，用户从那里获取内容，但有延迟，不能保证内容是最新的。
 
 ## WebSocket
-- 和HTTP有啥不同
-    - HTTP通信无状态，且只能由客户端发起，WebSocket有状态，建立长久的连接，服务器可以主动向客户端推送消息，客户端也可以主动向服务器发送信息，是双向通信，适合实时性的场景如QQ，微信。
+
+- 轮询和长轮询
+
+> 早期为了实现推送技术，都是使用轮询，每隔一段时间向服务器发出HTTP请求，服务器返回最新的数据。分为轮询和长轮询，轮询数据更新可能有延时。当轮询都是请求-应答模式，服务器无法主动推动消息。
+- 优点：兼容性强，实现简单
+- 缺点：非常消耗请求资源，影响性能
+
+![WebSocket-Polling.png](./img/WebSocket-Polling.png)
+
+- WebSocket 和 HTTP
+    - HTTP通信无状态，且只能由客户端发起
+    - WebSocket有状态，全双工TCP通道，服务器也可以主动向客户端推送消息。
+    - 主要应用：即时通信、实时音视频、在线教育等
+    - 优点:
+        - 实时性：服务器可以主动给客户端下发数据
+        - 开销少：交换数据时的头部较小
+        - 保持状态：是有状态的协议
+    ![HTTP-websoket](./img/HTTP-websocket.png)
+
+-  WebSocket 与 长轮询
+    - 长轮询收到客户端的请求，先挂起，判断数据有更新再响应，无更新等待一定时间再返回。仍然是一问一答（请求 — 响应）的模式
+    - WebSocket 在握手成功后，就是全双工的 TCP 通道，数据可以主动从服务端发送到客户端。
+    ![WebSocket-Long-Pollin](./img/WebSocket-Long-Polling.png)
 
 - 特点：
     - 握手阶段采用HTTP协议
     - 无同源限制，客户端可以跟任意服务器通信
     - 协议标识为ws，加密为wss，如ws://example.com:80/some/path
 
-![HTTP-websoket](./img/HTTP-websocket.png)
 
 - 客户端的使用
     ```js

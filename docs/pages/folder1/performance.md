@@ -153,6 +153,7 @@
     - 服务器负载：占用更多CPU资源，负载更大。
 
 ## 加载时
+> 加载时可以以首屏加载速度来做优化
 
 ### 首屏加载
 > 首屏的加载速度很重要,过长的白屏会导致用户流失。
@@ -319,7 +320,8 @@
   - SSR服务端渲染(nuxt.js)
 
 ## 运行时
-> 高性能要求的场景，优化代码执行速度。
+> 高性能要求的场景，优化代码执行速度，主要分为动画优化、减少回流重绘、减少内存泄漏、长列表优化、多线程运行。
+
 ### 渲染原理介绍
 
 - 展示总体步骤
@@ -388,6 +390,52 @@
   - 使用requestAnimationFrame替代setInterval来做动画循环
   - 使用web worker分担主线程压力，解决大量数据计算，大量DOM操作的卡顿问题
 
+
+
+
+### 减少回流重绘
+- 重排（回流）：节点尺寸需要重新计算，重新排列元素，引起局部或整个页面重新渲染
+- 重绘：样式发生变化，更新外观内容
+- 重绘不一定出现重排
+- 重排一定会出现重绘
+
+#### 如何触发
+- display: none隐藏一个DOM节点 -> 回流和重绘
+- visibility: hidden隐藏一个DOM节点 -> 重绘
+- 增加、删除、更新dom
+- 移动dom或者动画
+- 调整窗口大小
+
+#### 如何优化
+- 集中改变样式
+    - 改变class（类名）的方式
+        ```js
+        // 判断是否是黑色系样式
+        const theme = isDark ? 'dark' : 'light'
+        // 根据判断来设置不同的class
+        ele.setAttribute('className', theme)
+        ```
+- 离线操作dom：DocumentFragment
+    - createDocumentFragment在dom树之外创建游离节点，该节点上批量操作，再插入dom，一次重排
+        ```js
+        var fragment = document.createDocumentFragment();
+        for (let i = 0;i<10;i++){
+          let node = document.createElement("p");
+          node.innerHTML = i;
+          fragment.appendChild(node);
+        }
+        document.body.appendChild(fragment);
+        ```
+- 提升至合成层
+    - CSS 的 will-change  
+        ```css
+        #target {
+          will-change: transform;
+        }
+        ```
+    - 重绘时只会影响合成层，不会影响其它层
+    - transform 和 opacity 效果，不会触发 layout 和 paint
+    
 ### 减少内存泄漏
 - [参考](https://mp.weixin.qq.com/s?__biz=MzUxMzcxMzE5Ng==&mid=2247496779&idx=2&sn=892d968a86ebd083582ae2e28f48ab8f&chksm=f9524108ce25c81e960471a63357cf2bc59971e2a22ca9549f67c5266100474712fcaa208f28&mpshare=1&scene=1&srcid=&sharer_sharetime=1592813500572&sharer_shareid=f72feefcc9c2c137677aa7f49d02e0f4&key=5275bdb85f6fecb5b863a0f4364938b0f20d3068a623c70bb17408602e09ad9840bc8824054c5f5f3e8b5fdacdf41cf6d13413049806b41cdb497e6abe7e48742dabb92c99874d17f7c19bace4019ecd&ascene=1&uin=MjI1NjQ0MTU1&devicetype=Windows+7+x64&version=62090523&lang=zh_CN&exportkey=AZvo2t51y73c8EhAeN7gjAk%3D&pass_ticket=KfXN%2BILZIw36ijjDu%2F7KSM38UJxJ2Cjf8FTYPf6jp%2Fg%3D)
 
@@ -455,52 +503,6 @@
   appendElement();
   ```
 
-
-
-### 减少回流重绘
-- 重排（回流）：节点尺寸需要重新计算，重新排列元素，引起局部或整个页面重新渲染
-- 重绘：样式发生变化，更新外观内容
-- 重绘不一定出现重排
-- 重排一定会出现重绘
-
-#### 如何触发
-- display: none隐藏一个DOM节点 -> 回流和重绘
-- visibility: hidden隐藏一个DOM节点 -> 重绘
-- 增加、删除、更新dom
-- 移动dom或者动画
-- 调整窗口大小
-
-#### 如何优化
-- 集中改变样式
-    - 改变class（类名）的方式
-        ```js
-        // 判断是否是黑色系样式
-        const theme = isDark ? 'dark' : 'light'
-        // 根据判断来设置不同的class
-        ele.setAttribute('className', theme)
-        ```
-- 离线操作dom：DocumentFragment
-    - createDocumentFragment在dom树之外创建游离节点，该节点上批量操作，再插入dom，一次重排
-        ```js
-        var fragment = document.createDocumentFragment();
-        for (let i = 0;i<10;i++){
-          let node = document.createElement("p");
-          node.innerHTML = i;
-          fragment.appendChild(node);
-        }
-        document.body.appendChild(fragment);
-        ```
-- 提升至合成层
-    - CSS 的 will-change  
-        ```css
-        #target {
-          will-change: transform;
-        }
-        ```
-    - 重绘时只会影响合成层，不会影响其它层
-    - transform 和 opacity 效果，不会触发 layout 和 paint
-    
-
 ### 大数据长列表性能
 
 > 前端渲染大量数据上千行，不允许分页情况下，容易导致卡顿，掉帧现象。
@@ -513,6 +515,76 @@
 
 - 常见场景：
   - 插件关联时：不选择对应品类的话，会展示所有品类的全部版本插件，每个插件可能是几十上百个版本，所有品类最多可上万条版本数据供关联。
+
+### Web Worker多线程
+现代浏览器为JavaScript创造的 多线程环境。**可以将复杂计算任务分配到worker线程并行运行，等worker完成计算任务，再将结果返回主线程**，两个线程可 独立运行，互不干扰，可通过自带的 **消息机制** 相互通信，为了节省系统资源，使用完毕记得关闭。
+
+- 基本用法:
+  - 主线程
+    ```js
+    const worker = new Worker('work.js') // 来自网络的js文件
+    worker.postMessage('Hello World') //主线程传给 Worker 的数据
+    worker.onmessage = function(event) { //监听函数，接收子线程发回来的消息
+        console.log('Received message' + event.data)
+    }
+    // 错误监控
+    worker.onerror(function (event) {
+      console.log([
+        'ERROR: Line ', e.lineno, ' in ', e.filename, ': ', e.message
+      ].join(''));
+    });
+
+    worker.terminate(); //任务完成，关闭
+    ```
+  - Worker线程(self代表子线程自身，即子线程的全局对象)
+    ```js
+    self.addEventListener('message', function (e) { // 监听message事件
+      self.postMessage('You said: ' + e.data); // self.postMessage()方法用来向主线程发送消息。
+    }, false);
+
+    // 示例：
+    self.addEventListener('message', function (e) {
+      var data = e.data;
+      switch (data.cmd) {
+        case 'start':
+          self.postMessage('WORKER STARTED: ' + data.msg);
+          break;
+        case 'stop':
+          self.postMessage('WORKER STOPPED: ' + data.msg);
+          self.close(); // self.close()用于在 Worker 内部关闭自身。
+          break;
+        default:
+          self.postMessage('Unknown command: ' + data.msg);
+      };
+    }, false);
+
+    // 加载其他脚本：
+    importScripts('script1.js', 'script2.js');
+    ```
+- API
+主线程
+```js
+Worker.onerror：指定 error 事件的监听函数。
+Worker.onmessage：指定 message 事件的监听函数，发送过来的数据在Event.data属性中。
+Worker.onmessageerror：指定 messageerror 事件的监听函数。发送的数据无法序列化成字符串时，会触发这个事件。
+Worker.postMessage()：向 Worker 线程发送消息。
+Worker.terminate()：立即终止 Worker 线程。
+```
+Worker
+```js
+self.name： Worker 的名字。该属性只读，由构造函数指定。
+self.onmessage：指定message事件的监听函数。
+self.onmessageerror：指定 messageerror 事件的监听函数。发送的数据无法序列化成字符串时，会触发这个事件。
+self.close()：关闭 Worker 线程。
+self.postMessage()：向产生这个 Worker 线程发送消息。
+self.importScripts()：加载 JS 脚本。
+```
+- 优势：
+    - 能够执行处理器密集型的运算而不会阻塞 UI 线程。
+- 限制:
+    - 同源限制：与主线程的脚本同源
+    - DOM限制：无法使用 document / window / alert / confirm
+    - 文件限制：无法读取本地资源
 
 #### 长列表渲染-虚拟列表
 - 原因：DOM元素的创建和渲染时间成本很高,大数据完整渲染列表比较慢。

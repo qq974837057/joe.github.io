@@ -894,6 +894,12 @@ let { firstName: fName, position="默认" } = employee;
 
 
 ## Map、Set、WeakMap、WeakSet
+- 总结：
+- Map/Set、WeakMap/WeakSet的作用
+    - 它们是构造函数，用于生产新的数据结构
+    - Set类似数组，但成员唯一不重复的。Map可以用对象或其他类型做键名key，同个键名则更新键值，注意两个同名对象，内存地址不一致，仍是两个键。
+    - WeakSet集合中的值、WeakMap的键名都必须是对象，且它们是弱引用，可以防止内存泄露，而且都不可遍历(成员随时消失)，
+    - 应用：Set常用于数组去重`[...new Set(arr)]`，与Object的“字符串-值”不同，Map 结构提供了“值—值”的对应。WeakSet储存 DOM 节点解决内存泄漏，WeakMap常用于深拷贝解决循环调用的问题。
 
 - Set
     - 成员唯一，没有重复值
@@ -905,7 +911,7 @@ let { firstName: fName, position="默认" } = employee;
     - 常用
         - 数组去重
             ```js
-            [...new Set(array)]
+            [...new Set(arr)]
             // 或者
             Array.from(new Set(arr))
             ```
@@ -958,10 +964,10 @@ let { firstName: fName, position="默认" } = employee;
             - forEach()：使用回调函数遍历每个成员
 - WeakSet：弱引用
     - 场景：适合临时存放一组对象：只要这些对象在外部消失，它在WeakSet结构中的引用就会自动消失
-    - 示例：WeakSet 中的对象都是弱引用，避免内存泄露，如储存 DOM 节点，而不用担心这些节点从文档移除时，会引发内存泄漏。垃圾回收机制不考虑 WeakSet
+    - 示例：WeakSet 中的对象都是弱引用，避免内存泄露，如储存 DOM 节点，而不用担心这些节点从文档移除时，会导致内存泄漏。垃圾回收机制不考虑 WeakSet的引用，直接回收。
     - 规则1：WeakSet 的成员只能是对象
     - 规则2：WeakSet **不可遍历**（成员可能随时消失）
-    - 原理：WeakSet对该对象的引用，如果其他对象都不再引用该对象，那么垃圾回收机制会自动回收该对象所占用的内存，不考虑该对象还存在于 WeakSet 之中。
+    - 原理：WeakSet对该对象的引用，如果其他对象都不再引用该对象，那么垃圾回收机制会自动回收该对象所占用的内存，忽略WeakSet 的引用，因为是弱引用。
     - 用法：`const set = new WeakSet(arr)`
     - 属性
         - constructor：构造函数，返回WeakSet函数
@@ -1108,8 +1114,7 @@ let { firstName: fName, position="默认" } = employee;
         - has(key)：返回布尔值，表示某个键名是否在当前WeakMap对象中
         - delete()：删除键值对，返回布尔
         - 无遍历方法、无清空（即没有keys()、values()和entries()、clear()方法）
-- Map/Set、WeakMap，什么作用【描述】
-    - Map可以用对象做key，重复的话更新键值，Set是用作保证值不重复的集合。WeakSet的值、WeakMap的键名都必须是对象，且它们是弱引用，可以防止内存泄露。
+
 
 - 弱引用和强引用
   - 一个对象若只被弱引用所引用，不可访问（或弱可访问），可能在任何时刻被回收。
@@ -1150,6 +1155,16 @@ let { firstName: fName, position="默认" } = employee;
 
 - 虽然 HTML5 增加了 Web Work 可用来另开一个线程，但是该线程仍受主线程的控制，所以 JavaScript 的本质依然是单线程。 
 
+- Node中的进程和线程
+  - 全局对象
+    - 进程Process 
+    - 创建进程：child_process 模块 
+  - 关系：
+      - 一个进程可以有多个线程（至少有一个主线程）
+      - 一个线程只能属于一个进程
+  - 区别: 本身资源还是共享资源
+      - 进程作为拥有资源的基本单位，它拥有资源(地址空间，数据，代码)。
+      - 线程作为调度和分配的单位，不拥有资源，但线程共享进程内的所有资源。
 
 ## 浏览器事件循环(Event Loop)
 -  浏览器多进程的，进程表示cpu资源分配的最小单位，一个进程中可以有多个线程
@@ -1184,7 +1199,7 @@ let { firstName: fName, position="默认" } = employee;
     - 重复以上过程
     ![JS-eventloop-1](./img/JS-eventloop-1.png)
 
-- 宏任务（Macro-Task）：`script`(整体代码)、I/O 操作(点击)、`setTimeout`、`setInterval`、`setImmediate`（IE&Node独有）、requestAnimationFrame(浏览器独有)
+- 宏任务（Macro-Task）：`script`(整体代码)、I/O 操作(点击)、`setTimeout`、`setInterval`、`setImmediate`（IE&Node独有、事件队列尾部执行）、requestAnimationFrame(浏览器独有)
 - 微任务（Micro-Task）：`Promise.then`、`MutationObserver`的回调(监听DOM、浏览器独有)、`Process.nextTick`（Node独有）
 - （调用）栈：后进先出
 - （任务) 队列：先进先出
@@ -1197,8 +1212,15 @@ let { firstName: fName, position="默认" } = employee;
   - 浏览器的requestAnimationFrame姑且也算是宏任务吧，requestAnimationFrame在MDN的定义为，下次页面重绘前所执行的操作，而重绘也是作为宏任务的一个步骤来存在的。
 
 - 优先级
-    - 对于微任务micro-task：process.nextTick(node) > Promise.then
-    - 对于宏任务macro-task：setTimeout > setImmediate(node)
+    - 对于微任务micro-task：process.nextTick(node)(微任务优先级最高) > Promise.then
+    - 对于宏任务macro-task：setTimeout > setImmediate(node)(宏任务优先级最低)
+
+- setTimeout和requestAnimationFrame(rAF)的区别
+  - setTimeout根据我们设定延时决定函数执行时机，由于事件队列的原因，实际执行时间不一致，或者与屏幕刷新间隔不同，容易出现丢帧。
+  - requestAnimationFrame的优点是由系统决定回调函数执行时机，在浏览器下一次重绘之前执行，参数只需要传递回调函数。常用于动画优化，动画还没结束记得回调函数继续调用`window.requestAnimationFrame()`。
+    - 保证回调函数在屏幕每次刷新间隔中只被执行一次，避免丢帧
+    - 刷新率60Hz，回调函数就每16.7ms被执行一次
+    - 刷新率75Hz，回调函数就每`1000/75 = 13.3ms`被执行一次
 
 ## Node事件循环
 
@@ -1215,13 +1237,13 @@ let { firstName: fName, position="默认" } = employee;
       - 执行上一轮循环中的少数未被执行的 I/O 回调
       - 处理网络、流、TCP 的错误回调
   - 闲置阶段（idle, prepare）：仅node内部使用。
-  - 轮询阶段（poll）（重要）: 检索新的 I/O 事件;执行与 I/O 相关的回调（除了关闭的回调函数和 由计时器和 setImmediate() 调度的之外的回调），node 将在适当的时候在此阻塞一段时间。具体检测过程如下
+  - 轮询阶段（poll）（重要）: 检索新的 I/O 事件;执行与 I/O 相关的回调（除了timers、 setImmediate()、关闭事件的回调函数之外的回调），node 将在此阻塞一段时间，然后自动进入 check 阶段。具体检测过程如下
       ![JS-node-eventloop-poll](./img/JS-node-eventloop-poll.jpg)
       - 如有到期的setTimeout / setInterval， 则去 timer 阶段执行
       - 没有则进入poll的回调函数队列，不为空则将回调函数队列执行清空
-      - 如果poll队列为空
+      - 如果poll队列为空，执行事件队列尾部的setImmediate
         - 如有setImmediate的回调要执行，则去 check 阶段执行
-        - 如没有 setImmediate 回调要执行，会等待其他回调被加入到队列中并立即执行回调，这里同样会有个超时时间设置防止一直等待下去,一段时间后自动进入 check 阶段。
+        - 如没有 setImmediate 回调要执行，会等待其他回调被加入到队列中并立即执行回调，这里同样会有个超时时间设置防止一直等待下去，一段时间后自动进入 check 阶段。
   - 检查阶段（check）
       - 执行setImmediate的回调函数
       > setImmediate()是将事件插入到事件队列尾部，主线程和事件队列的函数执行完成之后立即执行setImmediate指定的回调函数（防止一个耗时长的操作阻塞后面操作）
@@ -1298,11 +1320,11 @@ test()
 
 ### 浏览器和node事件循环的主要区别：
 - 浏览器中的微任务是在每个相应的宏任务完成后执行的，而node10中的微任务是每个阶段的宏任务都执行完毕再执行的，也就是在每个阶段之间。而在 node11之后
-，一个阶段里的一个宏任务(setTimeout,setInterval和setImmediate)就立刻执行对应的微任务队列。
+，一个阶段里的一个宏任务(setTimeout,setInterval和setImmediate)执行完成后，就立刻执行当时的微任务队列。
 
 ## 异步方案
 
-- 回调函数（callback）:如setTimeout
+- 回调函数（callback）:如setTimeout【回调地狱】
     - 优点:实现异步
     - 缺点:回调地狱（多个回调函数嵌套难以阅读调试，多个异步操作强耦合），无法try/catch错误
     ```js
@@ -1316,7 +1338,7 @@ test()
         })
     })
     ```
-- promise:
+- promise:【链式调用】
     - 优点:解决回调地狱，实现链式调用then，用catch捕获错误
     - 缺点:
         - 错误不能被 try catch；
@@ -1335,26 +1357,30 @@ test()
       })
     ```
 - generator：
-    - 优点：可以控制函数的执行（暂停/继续）流程更加直观
-    - 缺点：必须部署自动运行器，且保证yield后的表达式返回一个Promise
+    - 优点：可以控制函数的执行（暂停/继续）流程更加直观，可被try.catch，可以调用返回的遍历器对象it的throw()方法抛出错误，不影响下次遍历next()
+    - 缺点：限制较多，必须部署自动运行器，且保证yield后的表达式返回一个Promise
     - 执行到yield时暂停，调用next()方法继续
     ```js
     function *fetch() {
+      try{
         yield ajax('XXX1', () => {})
         yield ajax('XXX2', () => {})
         yield ajax('XXX3', () => {})
+      } catch(e) {
+        //...
+      }
     }
-    let it = fetch()
+    let it = fetch() //返回的遍历器对象it
     let result1 = it.next()
     let result2 = it.next()
     let result3 = it.next()
     ```
-- async await（ES8）:Generator 函数的语法糖，最优雅的解决方案
+- async await（ES8）:Generator 函数的语法糖，异步最优雅的解决方案
     - 优点:
-      - 不需要then链，读起来更加同步；
+      - 不需要then链，更加同步的写法；
+      - 错误处理友好，可被try.catch（包裹await）
       - 传中间值方便；调试友好,同步代码的断点;
-      - 错误处理友好可被try.catch（包裹await）
-    - 缺点:要注意并行promise的情况，无依赖性，却用多个await(多个同时并行请求可以Promise.all)，会导致耗时长（等前面执行完再执行后面）
+    - 缺点:使用时要注意并行promise的情况，无依赖性，却用多个await(多个同时并行请求可以Promise.all)，会导致耗时长（等前面执行完再执行后面）
     - async声明一个function是异步的、await等待异步方法执行完成。
     - 一个函数如果加上 async ，那么该函数就会返回一个 Promise
     - 只要一个await出现reject，后面await不会执行。
@@ -2341,76 +2367,6 @@ function add() {
 - defer 是最接近我们对于应用脚本加载和执行的要求的，先加载，等待html加载完再执行。
 
 - JS延迟加载还有另外两种：JS脚本放在文档底部、动态创建标签插入script标签引入脚本。
-
-## Web Worker
-现代浏览器为JavaScript创造的 多线程环境。可以新建并将部分任务分配到worker线程并行运行，两个线程可 独立运行，互不干扰，可通过自带的 **消息机制** 相互通信，等worker完成计算任务，再将结果返回主线程，为了节省系统资源，使用完毕记得关闭。
-
-- 基本用法:
-  - 主线程
-    ```js
-    const worker = new Worker('work.js') // 来自网络的js文件
-    worker.postMessage('Hello World') //主线程传给 Worker 的数据
-    worker.onmessage = function(event) { //监听函数，接收子线程发回来的消息
-        console.log('Received message' + event.data)
-    }
-    // 错误监控
-    worker.onerror(function (event) {
-      console.log([
-        'ERROR: Line ', e.lineno, ' in ', e.filename, ': ', e.message
-      ].join(''));
-    });
-
-    worker.terminate(); //任务完成，关闭
-    ```
-  - Worker线程(self代表子线程自身，即子线程的全局对象)
-    ```js
-    self.addEventListener('message', function (e) { // 监听message事件
-      self.postMessage('You said: ' + e.data); // self.postMessage()方法用来向主线程发送消息。
-    }, false);
-
-    // 示例：
-    self.addEventListener('message', function (e) {
-      var data = e.data;
-      switch (data.cmd) {
-        case 'start':
-          self.postMessage('WORKER STARTED: ' + data.msg);
-          break;
-        case 'stop':
-          self.postMessage('WORKER STOPPED: ' + data.msg);
-          self.close(); // self.close()用于在 Worker 内部关闭自身。
-          break;
-        default:
-          self.postMessage('Unknown command: ' + data.msg);
-      };
-    }, false);
-
-    // 加载其他脚本：
-    importScripts('script1.js', 'script2.js');
-    ```
-- API
-主线程
-```js
-Worker.onerror：指定 error 事件的监听函数。
-Worker.onmessage：指定 message 事件的监听函数，发送过来的数据在Event.data属性中。
-Worker.onmessageerror：指定 messageerror 事件的监听函数。发送的数据无法序列化成字符串时，会触发这个事件。
-Worker.postMessage()：向 Worker 线程发送消息。
-Worker.terminate()：立即终止 Worker 线程。
-```
-Worker
-```js
-self.name： Worker 的名字。该属性只读，由构造函数指定。
-self.onmessage：指定message事件的监听函数。
-self.onmessageerror：指定 messageerror 事件的监听函数。发送的数据无法序列化成字符串时，会触发这个事件。
-self.close()：关闭 Worker 线程。
-self.postMessage()：向产生这个 Worker 线程发送消息。
-self.importScripts()：加载 JS 脚本。
-```
-- 优势：
-    - 能够执行处理器密集型的运算而不会阻塞 UI 线程。
-- 限制:
-    - 同源限制：与主线程的脚本同源
-    - DOM限制：无法使用 document / window / alert / confirm
-    - 文件限制：无法读取本地资源
 
 ## 代码复用
 基本有三种形式

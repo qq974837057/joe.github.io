@@ -50,7 +50,7 @@
 > vue和react的虚拟DOM的Diff算法大致相同
 
 - 相同：树的分层对比
-- 区别：节点diff时，react使用唯一key标记(对比是否需要增删移)，vue使用双指针。
+- 区别：节点diff时，react15.x使用唯一key标记，且整个新老数据对比是否需要增删移，vue使用双指针，减少节点移动次数，且组件级别采用watcher通知，内部采用diff，避免watcher太多带来性能开销。
 
 - [React diff 知乎](https://zhuanlan.zhihu.com/p/20346379)
 
@@ -585,6 +585,34 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 ### 路由守卫
 
 ## React和Vue的区别
+> 相同的有：虚拟DOM、组件化、核心库和功能库分开；
+
+> 不同的有：改变视图数据、组件更新的方式、Vue推荐模板template、React推荐JSX、Vue上手成本低、且新建项目CLI可配置。
+
+- 相同：
+    - 虚拟DOM
+    - 组件化的架构
+    - 核心库和其他功能库(如路由和状态管理库)
+- 不同：
+    - 改变数据：Vue不需要想React那样setState改变状态，是响应式渲染页面的。
+        - 数据劫持优势1：无需显示调用，Vue运用数据劫持+发布订阅,直接通知变化并驱动视图,，react则需要显示调用setState
+        - 数据劫持优势2：精确得知变化数据newVal
+    - 组件更新：Vue是收集依赖，精确知道哪个组件要更新，React需要手动shouldComponentUpdate来表示该组件应该更新，较难优化。
+    - Template和JSX： React 中只能使用 JSX 的渲染函数。Vue推荐使用模板(单文件组件)，可以在偏视图组件使用模板，偏逻辑组件使用JSX或渲染函数。
+    - 新建项目：Vue 提供了 CLI 脚手架，可选择适合自己的模板。React 在这方面也提供了 create-react-app，项目生成时不允许配置，只有默认生成单页应用的选项。
+    - 上手成本：React需要知道 JSX 和 ES2015，成本较高，Vue起步看指南即可建立简单应用。
+    - 原生渲染：Vue对应weex，React对应React Native，实现平台开发。
+    - Vue 设置样式的默认方法是单文件组件里类似 style 的标签， React 中是通过 CSS-in-JS 的方案。
+
+- Vue的优势是：【模板写法，上手简单】
+    - 模板和渲染函数的弹性选择
+    - 简单的语法和项目配置
+    - 更快的渲染速度和更小的体积
+- React的优势是：【适合大型、生态系统大】
+    - 更适合大型应用
+    - 同时适用于 Web 端和原生 App
+    - 更大的生态系统，更多的支持和好用的工具
+
 
 ## Vuex 使用和原理
 ```
@@ -863,10 +891,24 @@ Vue.use(Vuex)
 
 
 ## keep-alive
+- keep-alive 是 Vue 内置的一个组件，keep-alive可以实现组件缓存，当组件切换时不会对当前组件进行卸载，避免重新渲染 。
+- 提供两个属性include/exclude：允许组件有条件的进行缓存。   
+  - include 表示只有名称匹配的组件会被缓存，exclude 表示任何名称匹配的组件都不会被缓存 。
+  - exclude 的优先级比 include 高；
+- 对应两个生命周期activated/deactivated
+  - 当组件被激活时，触发钩子函数 activated
+  - 当组件被移除时，触发钩子函数 deactivated
+
+
+
 ## mixin混入
 
+
 ## Vue3.0重要特性
-#### 采用proxy劫持对象
+相比于Vue2.x 主要有四方面的优势和特性：
+    - 性能更好：采用proxy劫持对象 和 Diff算法优化
+    - 体积更小：Tree-shaking
+    - 逻辑清晰：组合式API Composition API 解决代码反复横跳的问题
 
 #### Proxy与Object.defineProperty的优劣对比?
 - 基于数据劫持的双向绑定有两种实现
@@ -880,10 +922,231 @@ Vue.use(Vuex)
     - 兼容性好,支持IE9(不能兼容IE8及以下)。而Proxy 的存在浏览器兼容性问题，且无法用 polyfill 磨平，所以在Vue3.0才能引入这个破坏性改变。
     - 缺点：只能劫持对象的属性,需要对每个对象的每个属性进行遍历，如果属性值也是对象那么需要深度遍历。
 
-#### Composition API
-#### Tree-shaking
+
 #### Diff算法优化
-#### Vue3.0 对比Vue2.0的优势在哪？
+- Diff算法优化【PatchFlags类型标志 + 模板传入的事件缓存起来cacheHandlers不会重复渲染】
+  - 针对类型高效地diff：在创建VNode时就确定其类型，_createVNode传入数字表示是text(1)还是props(8)，无数字则表示静态，不需要diff。通过位运算来判断有多种类型组合VNode的类型，按位与(组合值)&(类型的值)就可以得出是由哪些类型组合而成的，针对那些类型进行diff即可。
+  - 类型数值
+  ```js
+  export const enum PatchFlags {
+  
+    TEXT = 1,// 表示具有动态textContent的元素
+    CLASS = 1 << 1,  // 表示有动态Class的元素
+    STYLE = 1 << 2,  // 表示动态样式（静态如style="color: red"，也会提升至动态）
+    PROPS = 1 << 3,  // 表示具有非类/样式动态道具的元素。
+    FULL_PROPS = 1 << 4,  // 表示带有动态键的道具的元素，与上面三种相斥
+    HYDRATE_EVENTS = 1 << 5,  // 表示带有事件监听器的元素
+    STABLE_FRAGMENT = 1 << 6,   // 表示其子顺序不变的片段（没懂）。 
+    KEYED_FRAGMENT = 1 << 7, // 表示带有键控或部分键控子元素的片段。
+    UNKEYED_FRAGMENT = 1 << 8, // 表示带有无key绑定的片段
+    NEED_PATCH = 1 << 9,   // 表示只需要非属性补丁的元素，例如ref或hooks
+    DYNAMIC_SLOTS = 1 << 10,  // 表示具有动态插槽的元素
+  }
+
+  // 组合示例
+  let TEXT = 1, STYLE = 4, PROPS = 8;
+  1^8 = 9 // “异或”组合,存在text和props类型
+  !!(9 & TEXT)  // true “按位与”检查是否有该类型
+  !!(9 & PROPS) // true
+  !!(9 & STYLE) // false
+  ```
+
+    - [蜗牛老湿](https://juejin.im/post/5e9faa8fe51d4546fe263eda)
+
+#### Composition API
+![组合式API-RFC](https://composition-api.vuejs.org/zh/#%E6%A6%82%E8%BF%B0)
+- 使用示例：
+  ```html
+  <template>
+    <button @click="increment">
+      Count is: {{ state.count }}, double is: {{ state.double }}
+    </button>
+  </template>
+
+  <script>
+    import { reactive, computed } from 'vue'
+
+    export default {
+      setup() {
+        const state = reactive({ // 原data返回的对象实质也是通过这个方法变成响应式的，因为可以和options选项混用。
+          count: 0,
+          double: computed(() => state.count * 2),
+        })
+
+        function increment() {
+          state.count++
+        }
+
+        return {
+          state,
+          increment,
+        }
+      },
+    }
+  </script>
+  ```
+- 组合式API
+  - 简单理解：
+    - 组合：将data、computed、method、生命周期等集中在setup()函数中，setup函数里可以存放多个组合函数，根据传递的参数可以清晰看到每个组合函数之间的依赖关系，通过逻辑关系组织代码，避免逻辑点分散开，通过return单一出口暴露的方式，把属性和方法给模板使用。
+      ```js
+      export default {
+        setup() {
+          // ...存放多个组合函数
+          // 网络状态
+          const { networkState } = useNetworkState()
+          // 文件夹状态
+          const { folders, currentFolderData } = useCurrentFolderData(networkState)
+          const folderNavigation = useFolderNavigation({
+            networkState,
+            currentFolderData,
+          })
+          const createFolder = useCreateFolder(folderNavigation.openFolder)
+        },
+      }
+      // 编写单个组合函数
+      function useCreateFolder(openFolder) {// 参数是另一个方法
+        // 原来的数据 property
+        const showNewFolder = ref(false)
+        const newFolderName = ref('')
+
+        // 原来的计算属性
+        const newFolderValid = computed(() => isValidMultiName(newFolderName.value))
+
+        // 原来的一个方法
+        async function createFolder() {
+          // ...
+          openFolder(result.data.folderCreate.path)
+          newFolderName.value = ''
+          showNewFolder.value = false
+        }
+        // 暴露出去
+        return {
+          showNewFolder,
+          newFolderName,
+          newFolderValid,
+          createFolder,
+        }
+      }
+      ```
+    - 复用：同时让提取和复用变得简单，编写一个用组合式API的函数，暴露出去，在setup()直接引入该函数并解构获取属性/方法即可，不需要再创建组件实例mixin去混入，解决属性来源不清晰的问题，还可以通过解构消除mixin带来的命名空间冲突。
+      - 一个组合函数
+      ```js
+      import { ref, onMounted, onUnmounted } from 'vue'
+
+      export function useMousePosition() {
+        const x = ref(0)
+        const y = ref(0)
+
+        function update(e) {
+          x.value = e.pageX
+          y.value = e.pageY
+        }
+
+        onMounted(() => {
+          window.addEventListener('mousemove', update)
+        })
+
+        onUnmounted(() => {
+          window.removeEventListener('mousemove', update)
+        })
+
+        return { x, y }
+      }
+      ```
+      - 混入
+        ```js
+        import { useMousePosition } from './mouse'
+
+        export default {
+          setup() {
+            const { x, y } = useMousePosition()
+            // 其他逻辑...
+            return { x, y }
+          },
+        }
+        ```
+  - 可与现有的 选项 Options API一起使用
+    - 组合式 API 会在 2.x 的选项 (data、computed 和 methods) 之前解析，并且不能提前访问这些选项中定义的 property。
+    - setup() 函数返回的 property 将会被暴露给 this
+  - 灵活的逻辑组合与复用，混入(mixin) 将不再作为推荐使用
+  - Composition API 的入口setup()
+    - Vue创建组件实例，然后初始化 props ，紧接着就调用setup 函数，在 beforeCreate 钩子之前被调用。
+    - this 在 setup() 中不可用，因为this和2.x的选项不同。
+    - 使用方式
+    ```js
+    <template>
+      <div>{{ count }} {{ object.foo }}</div>
+    </template>
+
+    <script>
+      import { ref, reactive } from 'vue'
+
+      export default {
+        setup() {
+          const count = ref(0)
+          const object = reactive({ foo: 'bar' }) //在组件中从 data() 返回一个对象，内部实质上通过调用 reactive() 使其变为响应式。
+
+          // 返回对象暴露给模板
+          return {
+            count,
+            object,
+          }
+        },
+      }
+    </script>
+    ```
+
+  - 主要有六个API
+    - reactive：将传入的对象变成响应式，是深度转换的
+    - ref：用来初始化属性，返回一个响应式且可改变的ref对象，内部有唯一属性value，不过在模板不需要写value属性，会自动解开。`const showNewFolder = ref(false)`
+    - computed：可传入get和set，返回ref对象
+    - readonly：传入一个对象（响应式或普通）或 ref，返回一个原始对象的只读代理。深层的属性也是只读的。
+    - watchEffect：传入的函数被立即执行，当更新时候再继续执行
+    - watch：对比上面watchEffect，是懒执行的。只有监听到变化才执行回调函数。
+
+  - 生命周期对应
+    - beforeCreate -> 使用 setup()
+    - created -> 使用 setup()
+    - beforeMount -> onBeforeMount
+    - mounted -> onMounted
+    - beforeUpdate -> onBeforeUpdate
+    - updated -> onUpdated
+    - beforeDestroy -> onBeforeUnmount
+    - destroyed -> onUnmounted
+    - errorCaptured -> onErrorCaptured
+  - 使用方式：
+    ```js
+    import { onMounted, onUpdated, onUnmounted } from 'vue'
+
+    const MyComponent = {
+      setup() {
+        onMounted(() => {
+          console.log('mounted!')
+        })
+        onUpdated(() => {
+          console.log('updated!')
+        })
+        onUnmounted(() => {
+          console.log('unmounted!')
+        })
+      },
+    }
+    ```
+    注意：生命周期钩子注册函数只能在 setup() 期间同步使用， 因为它们依赖于内部的全局状态来定位当前组件实例（正在调用 setup() 的组件实例）, 不在当前组件下调用这些函数会抛出一个错误。
+    - 逻辑提取与复用
+
+#### Tree-shaking
+编译时用import按需引入，没有使用就不会打包，配合webpack的Tree-shaking，实现更小的体积10-20kb
+
+## Vue响应式对比
+
+### Vue 2.x 响应式原理简述
+- Vue在初始化数据时，会使用Object.defineProperty重新定义data中的所有属性，当开始渲染时，首先会进行依赖收集(收集当前组件的watcher)，如果属性发生变化会通知相关依赖进行更新操作(发布订阅)。
+
+### Vue 3.x 响应式原理
+- Vue3.x改用Proxy替代Object.defineProperty。因为Proxy可以直接监听对象和数组的变化，并且有多达13种拦截方法。并且作为新标准将受到浏览器厂商重点持续的性能优化。
+- 原生Proxy只会代理对象的第一层，Vue3.0为了实现了深度观测reactive实现深度响应式化对象属性，判断当前Reflect.get的返回值是否为Object，如果是则再通过reactive方法继续做代理。
+- 监测数组的时候可能触发多次get/set，为了防止触发多次，判断key是否为当前被代理对象target自身属性，也可以判断旧值与新值是否相等，只有满足以上两个条件之一时，才有可能执行trigger。
 
 ## MVVM与MVC
 ![MVVM](./img/MVVM.png)
