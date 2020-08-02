@@ -215,7 +215,7 @@ function isObj(obj) {
 
 - 原型：用来实现对象的属性继承的对象（instance的`__proto__`）（构造函数的prototype）
 - 构造函数：通过new新建一个对象的函数（instance.constructor）（原型的constructor）
-- 实例：通过new 和构造函数创建的对象
+- 实例：通过new 和构造函数创建的对象，注意实例只有`__proto__`，没有prototype
 - 原型链：每个对象都有`__proto__`属性， 指向该对象构造函数的原型，`__proto__`属性 将对象连接起来组成原型链，有两个特性。
   - 查找特性：一个对象的属性不存在，沿着原型链上一级查找，找到就输出，找不到继续找，直到顶级的原型对象Object.prototype，没找到就输出undefined。
   - 修改特性：只会修改实例本身的属性，不存在则添加该属性。修改原型属性时，可以通过构造函数fn.prototype.x = 1来修改，继承该对象的属性都会改变。

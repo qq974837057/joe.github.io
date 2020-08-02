@@ -4,13 +4,23 @@
 - `a.__proto__`和`A.prototype` 关系 ?
 - `a.__proto__.__proto__`是什么?
 - `a.__proto__.__proto__.__proto__`是什么?
+- `a.prototype`是什么?
+
 - `Function(构造函数).__proto__` 是什么?
 - `Function(构造函数).__proto__.__proto__` 是什么?
 
 ```js
+class A{
+    constructor() {
+        this.name = 'joe';
+    }
+}
+const a = new A();
+
 a.__proto__ === A.prototype  // 构造函数的prototype
 a.__proto__.__proto__ === Object.prototype // Object.prototype
 a.__proto__.__proto__.__proto__ === null   // 原型链终点
+a.prototype === undefined   //实例没有prototype，构造函数才有
 
 Function.__proto__ === Function.prototype
 Function.__proto__.__proto__ === Object.prototype
@@ -38,6 +48,17 @@ Object instanceof Object
 
 ```
 
+
+
+## 箭头函数
+```js
+const obj = {
+  f1: () => console.log(this),
+  f2() { console.log(this) },
+};
+obj.f1() // global 最近的非箭头函数的this
+obj.f2() // obj 指向最后调用的
+```
 
 ## 版本号比较大小
 - 提供“版本转换为字符串”的函数，然后直接用字符串进行比较即可。
