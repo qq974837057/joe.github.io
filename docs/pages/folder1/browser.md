@@ -423,7 +423,7 @@
         - 1、`application/x-www-form-urlencoded`。默认的编码方式。其实不是不能上传文件，是只能上传文本格式的文件。
         - 2、`multipart/form-data` 。表单数据有多部分构成，既有文本数据，又有文件等二进制数据的意思。将文件以二进制的形式上传，这样可以实现多种类型的文件上传。
         - 3、`text/plain`。纯文本的传输。空格转换为 “+” 加号，但不对特殊字符编码。
-    - application/x-www-form-urlencoded(默认，不可用于文件上传)
+    - application/x-www-form-urlencoded(默认，不可用于文件上传，因为这种编码方式对文件二进制数据非常低效)
         - 键值对格式：`key=value&key=value`
         - get方式放在url后面，用?分割；post放在http body中。
         - 会进行url编码（键值对的参数用&连接；空格转为+加号；字符`"a"-"z"，"A"-"Z"，"0"-"9"，"."，"-"，"*"`，和`"_"`都不会被编码；其他符号(&@#)转为 【% + ASCII十六进制值】如%xy;）
@@ -710,22 +710,27 @@ http://www.domain2.com/b.js        不同域名                         不允�
     - 应用：www.baidu.com就是我们的反向代理服务器。Nginx就是性能非常好的反向代理服务器，用来做负载均衡，将过多请求分布给多个真实的服务器。隐藏IP端口号，更安全。
 
 ## get和post
+![知乎参考](https://www.zhihu.com/question/28586791)
+
 - 参数
-    - get通过url传输，post通过请求体传输
+    - get通过url传输，post通过请求体body传输(HTTP本身没限制，get实际上也可以带body，post也可以在url上携带数据)
 - 类型
-    - get只允许ASCII字符，post无限制
+    - get只允许ASCII字符(其实是URL用的编码)，post无限制(其实是body用的编码)
 - 限制
-    - get有长度限制(浏览器限制)，post无限制，
+    - get有长度限制(浏览器限制URL的长度、Chrome的URL限制是2MB)，post无限制，
 - 安全
-    - get不安全，通过历史记录可查，post安全，数据在请求体里
+    - get不安全，参数在url上，通过地址栏/代理/历史记录可查到，post较安全，数据在请求体里。不过也是可以被记录的，最安全的还是https。
 - 有害
     - get无害，刷新后退不会引起重复提交。
 - 幂等性
-    - get幂等，post非幂等(幂等表示执行相同的操作，效果一样)
+    - get幂等(反复读取不会对访问的数据有副作用)，post非幂等(比如请求会让服务器做事情，如下单，有副作用)
+    - 不过不过开发者可以将GET实现为有副作用，POST实现为没有副作用，只是和与浏览器预期不符。
 - TCP数据包
     - get一个，post两个(先发header，返回100再发body的数据)
+    - 发两次只是一个优化，为了服务端能够先校验请求头，通过再发送数据给服务器，不通过就拒绝，避免浪费带宽传输body。
 - 场景
     - get一般用于获取资源，post一般用来创建资源。
+    - 私密数据，合理选择是用POST + body，比如登录。
     - axios的get方法不支持在body传参，只支持params，如果要传递，需要使用post。或者自己xhr封装实现，理论上是可以在body里传，但一般不这么做。
 
 ## cookie和session区别
@@ -811,9 +816,18 @@ http://www.domain2.com/b.js        不同域名                         不允�
 
 ## 鉴权相关
 - 几种方式
-    - cookie和session：用户登录后，服务端保存用户信息在session中，将对应的sessionId通过set-cookie保存在客户端，客户端每次携带包含sessionId的cookie，服务端进行验证。
+    - 服务器session+客户端cookie中的sessionId
+        - 服务器收到账户密码校验通过后存储session，之后通过sessionId查找该用户session
+        - 服务器set-cookie将sessionId返回给客户端，可设置domain域名，允许请求二级域名。
+        - 客户端再次请求，服务器通过cookie中的sessionId找到对应session，知道是谁发来请求
+        - 优点：同域下，HTTP请求自动携带
+        - 缺点：不好扩展，服务器集群需要共享session
+    - JWT token（解析token时间换取session的空间）
+        - 用户登录后，将用户信息存在加密后的字符串token中，返回给客户端保存
+        - 推荐放在请求头Authorization，解决cookie跨域问题
+        - 优点：无需查数据库或者少查。
+        - 缺点：有效期前一直有效，比如修改密码，无法阻止异常登录
     - Token: 用id+时间戳+hash生成一串token，通过请求响应给客户端，客户端进行保存，每次请求在header上携带，服务器验证，避免CSRF攻击。
-    - JWT: 包含了用户信息，服务端进行解密即可获取该用户信息，无需查数据库或者少查。
     - SSO: 单点登录，常用CAS 中央认证服务
 
 ### cookie和session

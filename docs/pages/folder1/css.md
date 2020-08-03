@@ -115,6 +115,25 @@ display:inline-block
 - opacity:0 透明度为0，占空间、(提升为合成层不会重绘)、可点击、可继承（不能取消隐藏）
 - z-index:-9999: 层级放最低，被覆盖
 
+## CSS3
+- 1、RGBA和透明度(opacity)
+- 2、圆角（border-radius:8px）
+- 3、盒模型box-sizing
+- 4、盒阴影box-shadow：10px 10px 5px #888888(横向，纵向，褪色渐变半径，颜色)
+- 5、文字阴影text-shadow： 5px 5px 5px #FF0000;（水平阴影，垂直阴影，模糊距离，阴影颜色）
+- 6、文本换行word-wrap：break-word（对长的不可分割单词换行）
+- 7、边框图片：border-image:url(border.png) 30 30 round
+- 8、 background-image (多背景，逗号隔开)
+background-size：length|percentage|cover|contain;
+background-repeat：no-repeat|repeat-x  
+background-origin(content-box/padding-box/border-box) 
+- 9、transform转换：旋转、缩放、定位
+- 10、transition过渡
+- 11、animation动画
+- 12、媒体查询：当浏览器的尺寸变化时会采用不同的属性
+- 13、弹性布局flex
+- 14、栅格布局grid
+
 ## 选择器有哪些
 - id选择器#myid
 - 类选择器.myclassname
@@ -601,6 +620,15 @@ display:inline-block
 - 最后将覆盖的三角形颜色该为背景色即可。
 
 ![气泡框](./img/CSS-demo-bubble.png)
+
+## 预处理器和后处理器
+- 预处理器
+    - Less、Sass、Stylus，用来预编译Sass或Less文件，编译出合法的CSS给浏览器用。
+    - 功能：嵌套层级、mixin、变量、循环、函数等，模块化开发，提高可复用行和工作效率。
+
+- 后处理器
+    - PostCSS，通常被视为在完成的样式表中根据CSS规范处理CSS，让其更有效
+    - 功能：添加浏览器私有前缀，单位换算。
 
 ## 管理CSS
 - 如何选择：对外公共组件库，可用BEM。业务代码可用局部作用域。

@@ -12,8 +12,8 @@ function webpack(options) {
 ...
 ```
 - 3、确定入口：根据entry找到入口文件
-- 4、编译模块：用loader进行翻译后，找出对应依赖模块
-- 5、完成编译：确定了翻译的内容和依赖关系
+- 4、编译模块：用loader进行转换后，找出对应依赖模块，
+- 5、完成编译：确定了转换好的内容和依赖关系
 - 6、输出准备：根据入口和模块的依赖关系，组装成包含多个模块的chunk，每个chunk转成一个文件并生成hash，加载到输出列表【代码优化和功能添加的关键环节】。
 - 7、执行输出：根据output路径和文件名，写入文件系统。
 - 执行run开始编译：过程中触发一些钩子beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出dist目录），每个节点会触发对应的webpack事件。
@@ -91,9 +91,9 @@ module.exports = {
 
 ### Loader和Plugin的区别
 - Loader(加载器)
-    - 用于文件转换
+    - 用于文件转换，webpack链式调用每个loader,从后往前
     - webpack原生只能解析js，loader使webpack可以加载和解析非js文件(css、图片)
-    - 用法：module.rules配置，数组里面每项都是object，描述了{ test针对类型、loader使用什么加载、options使用的参数 }
+    - 用法：module.rules配置，数组里面每项都是object，描述了{ test针对类型、loader使用什么加载、options配置的参数 }
         ```js
         module: {
             rules: [
@@ -110,11 +110,12 @@ module.exports = {
         }
         ```
 - 常见Loader
+    - file-loader：加载文件资源
     - url-loader：小文件以 base64 的方式把文件内容注入到代码中去
     - css-loader：加载 CSS，支持模块化、压缩、文件导入等特性
     - style-loader：把外部 CSS 代码注入到 html 中，通过 DOM 操作去加载 CSS。
     - sass-loader: sass语法转换
-    - babel-loader:把 ES6 转换成 ES5
+    - babel-loader:把 ES6+ 转换成 ES5
     - eslint-loader： ESLint 检查 JavaScript 代码
 
 - Plugin(插件)
@@ -133,6 +134,7 @@ module.exports = {
         ]
         ```
 - 常见Plugin
+    - split-chunks-plugin: 代码分割 
     - define-plugin：定义环境变量（或全局版本号：通过日期时间计算拼接，代码中直接使用）
     ```js
     new webpack.DefinePlugin({
@@ -529,6 +531,44 @@ module.exports = {
     }
     ```
 
+## babel原理
+- 它的功能：是个编译器，将源代码字符串传入，返回一段新的代码字符串，即不运行代码，也不组合打包代码，比如输入ES6+的代码，编译为ES5。
+- 示例是一个简单的声明赋值语句，经过AST转化后各部分内容的含义就更为清晰明了
+![webpack-babel](./img/webpack-babel.png)
+- 有三个步骤：
+    - 第一步解析：将代码字符串解析成AST 抽象语法树，字符串变为对象结构【细分为：分词 + 语义分析】
+    - 第二步变换：遍历AST 抽象语法树进行修改，变换成另一个AST树【.babelrc里配置的presets和plugins在此处工作】
+    - 第三步再建：遍历变换后的AST 抽象语法树再生成代码字符串
+```js
+// webpack.base.conf.js
+module.exports = {
+    module: {
+        rules: [
+        {
+            test: /\.js$/,
+            loader: 'babel-loader',
+            include: [resolve('src'), resolve('test'), resolve('node_modules/webpack-dev-server/client')]
+        },
+        ]
+    }
+}
+
+// .babelrc配置文件
+{
+  "presets": ["es2015", "stage-0"],           // 一组插件集合
+  "plugins": ["transform-object-rest-spread", // 单独的每个插件
+    [
+      "transform-runtime", // 对于ES6+新特性，会自动引用模块babel-runtime中的polyfill(helper)
+      {
+        "helpers": false,
+        "polyfill": false, //是否切换（Promise，Set，Map等）为使用非全局污染的 polyfill。
+        "regenerator": true,
+        "moduleName": "babel-runtime" //引入 helper要使用的模块的名称/路径
+      }
+    ]]
+}
+```
+
 ## Git
 - 参考[廖雪峰的Git教程](https://www.liaoxuefeng.com/wiki/896043488029600/897013573512192)
 
@@ -857,7 +897,8 @@ module.exports = {
 - 跨域
 - 奔溃、卡顿
 
-### 处理方式总结（try-catch -> window.onerror -> addEventListener捕获 -> unhandledrejection未处理的reject -> Vue捕获）
+### 处理方式总结
+- try-catch -> window.onerror -> addEventListener捕获 -> unhandledrejection未处理的reject -> Vue捕获
 
 1. 可疑区域使用`try-catch`:监控特定的错误，捕获同步的运行时的错误
 
