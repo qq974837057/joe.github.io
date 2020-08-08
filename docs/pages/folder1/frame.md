@@ -766,6 +766,55 @@ Vue.use(Vuex)
           }
         }
         ```
+    - store.js示例
+      ```js
+      import Vuex from 'vuex';
+      Vue.use(Vuex);
+      export default new Vuex.Store({
+          state: {
+              deviceInfo: {},
+              deviceDetail: {}
+          },
+          getters: {
+              deviceName(state) {
+                  return state.isInited ? state.deviceInfo.deviceName : '';
+              },
+              isPowerOn(state) {
+                  return state.isInited && state.deviceDetail.power == 'on';
+              }
+          },
+          mutations: {
+              setDeviceInfo(state, payload) {
+                  state.deviceInfo = payload;
+              },
+              setDeviceDetail(state, payload) {
+                  state.deviceDetail = payload;
+              }
+          },
+          actions: {
+              // 查设备信息
+              async updateDeviceInfo({ commit }) {
+                  const response = await nativeService.getDeviceInfo().catch(err => nativeService.toast('设备信息获取失败'));
+                  commit('setDeviceInfo', response.result);
+                  return response;
+              },
+              // 查询lua状态
+              async updateDeviceDetail({ commit }, { isShowLoading = true } = {}) {
+                  const response = await nativeService
+                      .sendLuaRequest(
+                          {
+                              operation: 'luaQuery',
+                              params: {}
+                          },
+                          isShowLoading
+                      )
+                      .catch(err => nativeService.toast(err));
+                  commit('setDeviceDetail', response.result);
+                  return response;
+              }
+          }
+      });
+      ```
     - state：
       - 【状态中心】用于数据的存储，是store中的**唯一数据源**，
       - 【读取方式】`this.$store.state.A`
@@ -974,9 +1023,9 @@ Vue.use(Vuex)
 
 ## Vue3.0重要特性
 相比于Vue2.x 主要有四方面的优势和特性：
-    - 性能更好：采用proxy劫持对象 和 Diff算法优化
-    - 体积更小：Tree-shaking
-    - 逻辑清晰：组合式API Composition API 解决代码反复横跳的问题
+  - 性能更好：采用proxy劫持对象 和 Diff算法优化
+  - 体积更小：Tree-shaking
+  - 逻辑清晰：组合式API Composition API 解决代码反复横跳的问题
 
 #### Proxy与Object.defineProperty的优劣对比?
 - 基于数据劫持的双向绑定有两种实现

@@ -227,7 +227,7 @@
     node server.js
     ```
 
-  - CDN：剥离第三方库依赖（vue、element-ui）放在cdn如 jsDelivr，在html中通过script引入，不会被打包到代码文件，减少包的体积，降低自己服务器压力，CDN提升依赖加载速度。【如vue、vue-router、vuex、element-ui和axios】，使用CDN后卸载对应npm包【npm uninstall ...】
+  - CDN：剥离第三方库依赖（vue、element-ui）放在cdn如 jsDelivr，在html中通过script引入，不会被打包到代码文件vendor.js中，减少包的体积，降低自己服务器压力，CDN提升依赖加载速度。【如vue、vue-router、vuex、element-ui和axios】，使用CDN后卸载对应npm包【npm uninstall ...】
     - 将依赖的vue、vue-router、vuex、element-ui和axios这五个库，改为通过CDN链接获取。借助HtmlWebpackPlugin,可以方便的使用循环语法在index.html里插入js和css的CDN链接。
     ```js
     <!-- CDN文件，配置在config/index.js下 -->

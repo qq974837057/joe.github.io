@@ -134,8 +134,8 @@ module.exports = {
         ]
         ```
 - 常见Plugin
-    - split-chunks-plugin: 代码分割 
-    - define-plugin：定义环境变量（或全局版本号：通过日期时间计算拼接，代码中直接使用）
+    - split-chunks-plugin: 代码分割 （Webpack 4 满足条件会自动拆分 chunk，如默认大于30kb的文件、可复用...）
+    - define-plugin：定义环境变量（开发环境和生产环境的域名或API，或全局版本号：通过日期时间计算拼接，代码中直接使用）
     ```js
     new webpack.DefinePlugin({
         'WEIGHT_VERSION': JSON.stringify(getPluginVersion())
@@ -148,7 +148,7 @@ module.exports = {
         raw: true // banner内容直出，不以注释出现
     }),
     ```
-    - html-webpack-plugin：简化html文件创建，设置loading
+    - html-webpack-plugin：打包入口 html 文件，设置loading
     - TerserWebpackPlugin：webpack4默认的代码压缩插件，默认开启多进程和缓存
     - uglifyjs-webpack-plugin：通过UglifyES压缩ES6代码
     ```js
@@ -472,8 +472,25 @@ module.exports = {
     - 二次打包：8s
 
 ### webpack在vue cli3的使用
+
 - 默认splitChunks和minimize
     - 代码就会自动分割、压缩、优化，
+    - 可结合import和魔术注释实现代码分割，通过配置对分离出的chunk命名
+        ```js
+        // index.js
+        import (
+        /* webpackChunkName: “my-chunk-name” */
+        './footer'
+        )
+
+        // webpack.config.js
+        {
+        output: {
+            filename: “bundle.js”,
+            chunkFilename: “[name].lazy-chunk.js”
+        }
+        }
+        ```
     - 可单独拆包配置，如elementUI
     - 同时 webpack 也会自动帮你 Scope hoisting（变量提升） 和 Tree-shaking
     ```js
@@ -530,6 +547,9 @@ module.exports = {
       }
     }
     ```
+
+### 参考阅读
+- [Webpack 4 和单页应用入门](https://github.com/wallstreetcn/webpack-and-spa-guide)
 
 ## babel原理
 - 它的功能：是个编译器，将源代码字符串传入，返回一段新的代码字符串，即不运行代码，也不组合打包代码，比如输入ES6+的代码，编译为ES5。
@@ -997,5 +1017,3 @@ window.addEventListener('load', function () {
 - 它的作用：消除重复代码；更容易找到BUG；
 - 执行时机：添加功能时；修复BUG时；
 - 新业务紧急和重构技术的选择：新模块考虑用新做法，旧模块建议先融入并整理逻辑，待后期业务不紧急考虑进行重构。
-
-## 埋点方案
