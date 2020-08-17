@@ -1,8 +1,8 @@
 ## webpack
 
 ### 构建流程
-- 1、初始化参数：拷贝配置文件webpack.config.js合并参数，并加载插件，得到最终options对象。
-- 2、开始编译：初始化Compiler编译对象，执行Compiler的run方法开始编译，以下是一些关键事件点。
+- 1、初始化参数：拷贝配置文件webpack.config.js合并参数，并实例化插件，得到最终options对象。
+- 2、开始编译：初始化Compiler编译对象，传入插件的apply方法，为事件挂载对应的回调，执行Compiler的run方法开始编译，以下是一些关键事件点。
 ```js
 function webpack(options) {
   var compiler = new Compiler();
@@ -17,7 +17,7 @@ function webpack(options) {
 - 6、输出准备：根据入口和模块的依赖关系，组装成包含多个模块的chunk，每个chunk转成一个文件并生成hash，加载到输出列表【代码优化和功能添加的关键环节】。
 - 7、执行输出：根据output路径和文件名，写入文件系统。
 - 执行run开始编译：过程中触发一些钩子beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出dist目录），每个节点会触发对应的webpack事件。
-- 【编写插件plugin的时候，钩子发出对应的事件`compilation.plugin('xxx', callback)`，监听到就会执行特定的逻辑】
+- 【编写插件plugin的时候，在apply中执行`compilation.plugin('xxx', callback)`绑定对应的监听事件，监听到就会执行特定的逻辑】
 
 ### webpack.config.js 配置
 
@@ -91,7 +91,7 @@ module.exports = {
 
 ### Loader和Plugin的区别
 - Loader(加载器)
-    - 用于文件转换，webpack链式调用每个loader,从后往前
+    - 用于文件转换，单一原则，每个Loader只做一种"转义"工作。webpack链式调用每个loader，从后往前，可以理解为出栈过程。
     - webpack原生只能解析js，loader使webpack可以加载和解析非js文件(css、图片)
     - 用法：module.rules配置，数组里面每项都是object，描述了{ test针对类型、loader使用什么加载、options配置的参数 }
         ```js
@@ -117,6 +117,11 @@ module.exports = {
     - sass-loader: sass语法转换
     - babel-loader:把 ES6+ 转换成 ES5
     - eslint-loader： ESLint 检查 JavaScript 代码
+- 自己实现loader
+    - 写一个js文件，导出一个函数，这个函数接收content匹配到的文件内容，对这些传入的字符串进行处理，然后返回，在webpack.config.js的module.rules数组里加上一个对象，描述匹配的文件和导入js文件和写options配置。
+    - 获取options配置：loader-utils库`loaderUtils.getOptions(this)`
+    - 返回形式推荐写法：`this.callback(null, "{};" + content)`两个参数，error + 编译完的content。
+    - 异步loader：使用async-await
 
 - Plugin(插件)
     - 用于扩展webpack的功能（如打包优化、压缩、定义变量）
@@ -166,6 +171,8 @@ module.exports = {
     ```
     - webpack-parallel-uglify-plugin: 多核压缩,提高压缩速度
     - webpack-bundle-analyzer: 可视化webpack输出文件的体积
+- 自己实现plugin
+    - 本质是一个带apply方法的class类，可以新建plugin实例，传入的参数，就是plugin的配置options。事件流开始的时候，实例化所有插件，执行apply方法，在事件流上挂载回调的方法，构建过程中钩子广播出事件，然后调用API，改变输出结果。
 
 ### HMR热更新原理（hot module replacement）
 
@@ -755,7 +762,32 @@ module.exports = {
 ![测试图](./img/git-rebase.png)
 
 
-### git commit 规范(git cz)
+
+
+## 前端工程化
+- 模块化
+    - JS模块化
+    - CSS模块化
+    - 资源模块化
+- 组件化
+    - 复杂页面按功能拆分成多个独立的组件
+    - 通用组件
+    - 业务组件
+- 规范化
+    - UI 规范
+    - 接口规范
+    - 编码规范(eslint)
+    - 提交规范(commitizen 工具 + cz-conventional-changelog 规范适配器)
+    - 开发流程(四大阶段、GitFlow工作流、CodeReview、测试、部署)
+
+### 项目开发流程
+总的来说有四个阶段：需求阶段、开发阶段、测试阶段、发布阶段
+- 需求阶段：提交需求，评审，评估工作量和开发人员，定稿。
+- 开发阶段：UI开发，软件开发联调，提交测试。
+- 测试阶段：UI交互检查，SIT环境测试，UAT测试，大回归测试。
+- 发布阶段：灰度发布，正式发布。
+
+### 提交规范(git cz)
 - [掘金参考](https://juejin.im/post/5afc5242f265da0b7f44bee4#heading-4)
 
 > commitizen 可使用git cz + cz-conventional-changelog 规范适配器 + commitlint 校验 + husky
@@ -869,6 +901,88 @@ module.exports = {
 - affect issues: 影响的哪个issues`（re #123、fix #123）`
 
 
+### 代码规范(eslint)
+- 作用：统一代码风格，避免低级错误。常见规则如：分号，引号，禁止console，禁止条件判断出现常量，禁止return，break后面出现不可到达代码等。
+- 安装在开发环境
+```
+npm install eslint --save-dev
+```
+- 创建.eslintrc文件（在根目录）
+```
+eslint --init
+```
+```js
+// .eslintrc.js
+module.exports = {
+    // 指定解析器
+    'parse': '',
+    // 指定脚本的运行环境
+    'env': {
+        node: true,
+        es6: true
+    },
+    // 扩展引入规则
+    'extends': [
+        // 同时对 .vue 文件中的 js 代码进行检测，就需要利用 eslint-plugin-vue 插件来搭配使用。
+        'plugin:vue/essential',
+        // 启用推荐的规则
+        'eslint:recommended'
+    ],
+    // 别人可以直接使用你配置好的ESLint
+    'root': true,
+    // 脚本在执行期间访问的额外的全局变量
+    'globals': {},
+    // 启用的规则及其各自的错误级别
+    'rules': {
+        // 禁止使用 console，提醒开发者，上线时要禁止
+        'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off',
+        // 禁止 debugger 语句，提醒开发者，上线时要禁止
+        'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
+    },
+    
+    // 指定解析器选项
+    'parserOptions': {
+        parser: 'babel-eslint'
+    },
+};
+```
+- 配置文件中引入规则配置
+    - extends扩展了（集成）配置，如element的
+        - 增加了eslint-plugin-vue来更好的校验 vue中的js代码。
+        - 默认是严格的 plugin:vue/recommended 来校验代码，觉得太严格可修改为essential。
+    ```js
+    npm install --save-dev eslint-config-elemefe
+
+    'extends': [
+        // 同时对 .vue 文件中的 js 代码进行检测，就需要利用 eslint-plugin-vue 插件来搭配使用。
+        'plugin:vue/essential',
+        // 启用推荐的规则
+        'eslint:elemefe'
+    ],
+    ```
+    - 或者覆盖规则，在rules中开启自定义
+        - "semi"分号 和 "quotes"引号 是 ESLint 中 规则 的名称。第一个值是错误级别，可以使下面的值之一：
+        - "off" or 0 - 关闭规则
+        - "warn" or 1 - 将规则视为一个警告（不会影响退出码）
+        - "error" or 2 - 将规则视为一个错误 (退出码为1)
+    ```js
+    {
+        "rules": {
+            "semi": ["error", "always"],
+            "quotes": ["error", "double"]
+        }
+    }
+    ```
+        
+- 关闭校验
+    - vcli3以下：module.rules中将eslint-loader给注释掉即可。
+    - vcli3以上：只要找到 vue.config.js 文件。 进行如下设置 lintOnSave: false 即可。
+- 使用命令修复简单错误
+    ```
+    npm run lint -- --fix
+    ```
+
+
 ### 编码风格-分号
 
 > 尤大总结：至于说 “很难总结什么时候加不加”，其实真的很简单。真正会导致上下行解析出问题的 token 有 5 个：括号，方括号，正则开头的斜杠，加号，减号。我还从没见过实际代码中用正则、加号、减号作为行首的情况，所以总结下来就是一句话：一行开头是括号或者方括号的时候加上分号就可以了，其他时候全部不需要。其实即使是这两种情况，在实际代码中也颇为少见。
@@ -888,23 +1002,6 @@ module.exports = {
             semi: ["error", "never"]
             ```
         - 也可以用数字表示：0，1，2分别表示off, warning, error    
-
-
-## 前端工程化
-- 模块化
-    - JS模块化
-    - CSS模块化
-    - 资源模块化
-- 组件化
-    - 复杂页面按功能拆分成多个独立的组件
-    - 通用组件
-    - 业务组件
-- 规范化
-    - UI 规范
-    - 接口规范
-    - 编码规范(eslint)
-    - 提交规范(commitizen 工具 + cz-conventional-changelog 规范适配器)
-    - 开发流程(GitFlow工作流、CodeReview、测试、部署)
 
 ## 前端错误监控体系
 - [错误监控参考](http://jartto.wang/2018/11/20/js-exception-handling/)

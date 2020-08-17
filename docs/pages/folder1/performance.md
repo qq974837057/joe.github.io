@@ -516,6 +516,42 @@
 - 常见场景：
   - 插件关联时：不选择对应品类的话，会展示所有品类的全部版本插件，每个插件可能是几十上百个版本，所有品类最多可上万条版本数据供关联。
 
+#### 长列表渲染-虚拟列表
+- 原因：DOM元素的创建和渲染时间成本很高,大数据完整渲染列表比较慢。
+- 场景：适用复杂情况的列表item，如element-ui组件
+- 原理：从总数据取一部分数据，只对「可见区域」进行渲染，不可见部分不渲染。
+- 步骤：基于Vue
+- item高度相同同情况下：
+    - 创建容器：在容器中创建两块元素，一个是真实可视列表，一个是不可见的元素撑开列表，使用计算属性根据列表数据计算这个不可见元素整个高度，占位让列表滚动条出现。computed:{ contentHeight() { return this.data.length * itemHeight + 'px' } }
+    -  监听滚动：scrollTop表示已滚出屏幕的高度。监听最外的容器滚动：@scroll="handleScroll" 
+    -  执行更新：计算高度const scrollTop = this.$el.scrollTop; 再执行下面update(scrollTop)方法，更新可视区域数据。
+        - 计算可视区域放数据的个数const visibleCount = Math.ceil(this.$el.clientHeight / this.itemHeight); 
+        - 计算可视区域的起始item坐标start （比如0）const start = Math.floor(scrollTop / this.itemHeight); 向下取整
+        - 计算可视区域的结束item坐标end （比如10） const end = start + visibleCount;
+        - 取出需要显示的数据，并更新渲染 this.visibleData = this.data.slice(start, end);
+        - 把可见区域的 top 设置为起始元素在整个列表中的位置，也就是向下滚动 this.$refs.content.style.transform = `translateY(${ start * this.itemHeight }px)`;
+
+-  item高度不同（动态高度）情况下：`Element.getBoundingClientRect`返回元素的大小和相对于视口的位置
+    - 方案：传入预估高度属性先渲染部分数据，在**updated**钩子中，使用**getBoundingClientRect**获取每一个节点真实高度和top和bottom，存放在一个列表中维护，并缓存下来，根据和预估高度的差值，进行调整，然后使用偏移量执行向下移动。
+        - 定义一个`props :estimatedItemSize` 预估高度
+        - 定义一个`this.positions = [ {top:0,bottom:100,height:100} ,{...}] `保存每一项的高度及位置信息
+        - 执行初始化，将预估高度保存入positions里，里面有高度、top、bottom
+        - 列表总高度contentHeight：最后一项距离列表顶部的位置`this.positions[this.positions.length - 1].bottom;`
+        - 渲染后，**获取真实位置并缓存**：在updated钩子里，遍历列表item的数组，获取每个node节点的高度**getBoundingClientRect.height**，与预估高度进行对比，如果有差值，进行bottom减去这个差值。height替换为新的height。更新所有后面的项位置。
+        - 屏幕显示的数量visibleCount：`Math.ceil(this.screenHeight / this.estimatedItemSize);`
+        - 查找起始item：遍历positions，找到bottom>scrollTop的第一项（bottom是从小到大递增的，这里可用二分法查找优化）
+        - 偏移量offset：`this.offset = this.positions[this.start - 1].bottom`，再执行向下滚动this.$refs.content.style.transform = `translateY(${ offset }px)`
+        - 查找结束坐标：`this.end = this.start + this.visibleCount`;
+    - 滚动太快导致白屏的解决方案：
+      - 可见区域的上方和下方渲染额外的项目，而不是刚好卡着屏幕能显示的数量。
+      ```js
+      visibleData(){
+        let start = this.start - this.aboveCount;
+        let end = this.end + this.belowCount;
+        return this._listData.slice(start, end);
+      }
+      ```
+
 ### Web Worker多线程
 现代浏览器为JavaScript创造的 多线程环境。**可以将复杂计算任务分配到worker线程并行运行，等worker完成计算任务，再将结果返回主线程**，两个线程可 独立运行，互不干扰，可通过自带的 **消息机制** 相互通信，为了节省系统资源，使用完毕记得关闭。
 
@@ -586,30 +622,7 @@ self.importScripts()：加载 JS 脚本。
     - DOM限制：无法使用 document / window / alert / confirm
     - 文件限制：无法读取本地资源
 
-#### 长列表渲染-虚拟列表
-- 原因：DOM元素的创建和渲染时间成本很高,大数据完整渲染列表比较慢。
-- 场景：适用复杂情况的列表item，如element-ui组件
-- 原理：从总数据取一部分数据，只对「可见区域」进行渲染，不可见部分不渲染。
-- 步骤：基于Vue
-- item高度相同同情况下：
-    - 创建容器：在容器中创建两块元素，一个是真实可视列表，一个是不可见的元素撑开列表，使用计算属性根据列表数据计算这个不可见元素整个高度，占位让列表滚动条出现。computed:{ contentHeight() { return this.data.length * itemHeight + 'px' } }
-    -  监听滚动：scrollTop表示已滚出屏幕的高度。监听最外的容器滚动：@scroll="handleScroll" 
-    -  执行更新：计算高度const scrollTop = this.$el.scrollTop; 再执行下面update(scrollTop)方法，更新可视区域数据。
-        - 计算可视区域放数据的个数const visibleCount = Math.ceil(this.$el.clientHeight / this.itemHeight); 
-        - 计算可视区域的起始item坐标start （比如0）const start = Math.floor(scrollTop / this.itemHeight); 向下取整
-        - 计算可视区域的结束item坐标end （比如10） const end = start + visibleCount;
-        - 取出需要显示的数据，并更新渲染 this.visibleData = this.data.slice(start, end);
-        - 把可见区域的 top 设置为起始元素在整个列表中的位置，也就是向下滚动 this.$refs.content.style.transform = `translateY(${ start * this.itemHeight }px)`;
 
--  item高度不同（动态高度）情况下：
-    - 预估高度先渲染，再获取真实高度并缓存下来。
-        - 定义一个props :estimatedItemSize 预估高度
-        - 定义一个this.positions = [ {top:0,bottom:100,height:100} ,{...}] 保存每一项的高度及位置信息
-        - 执行初始化，将预估高度保存入positions里，里面有高度、top、bottom
-        - 列表总高度contentHeight：最后一项距离列表顶部的位置this.positions[this.positions.length - 1].bottom;
-        - 渲染后，**获取真实位置并缓存**：在updated钩子里，遍历列表item的数组，获取每个node节点的高度**getBoundingClientRect.height**，与预估高度进行对比，如果有差值，进行bottom减去这个差值。height替换为新的height。更新所有后面的项位置。
-        - 查找起始item：遍历positions，找到bottom>scrollTop的第一项（bottom是从小到大递增的，这里可用二分法查找优化）
-        - 偏移量offset：this.offset = this.positions[this.start - 1].bottom，再执行向下滚动this.$refs.content.style.transform = `translateY(${ offset }px)`
 
 
 #### 长列表渲染-时间切片

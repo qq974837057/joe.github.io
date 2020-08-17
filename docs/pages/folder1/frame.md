@@ -114,19 +114,41 @@
 - Angular则是脏检查操作。
 
 ### nextTick原理和队列
-- 场景：在DOM更新结束之后执行延迟回调，在修改数据之后，视图并不会立即更新，在下一个循环开始前更新视图，获得更新后的 DOM，然后执行回调。
+- 场景：下一个循环：在DOM更新结束之后，执行nextTick()中的回调，在修改数据之后，视图并不会立即更新，在下一个循环更新视图，获得更新后的 DOM，然后执行回调。
 - 原理：nextTick函数传入callback，存储到callback数组队列中，下一个tick触发时执行队列所有的callback，清空队列。
 - 实现：2.6新版本中默认优先是microtasks,再考虑macrotasks，都不支持则用setTimeout。 Promise.then(microtasks)【p.then(flushCallbacks)】 -> MutationObserver的回调(microtasks) -> setImmediate(ie&node macrotasks) -> setTimeout【setTimeout(flushCallbacks, 0)】
+  ```js
+  // 修改数据
+  this.message = 'changed'
+  // DOM 还没有更新
+  this.$nextTick(function () {
+    // DOM 现在更新了
+  })
+  ```
+- 全局API
+  ```js
+  // 修改数据
+  vm.msg = 'Hello'
+  // DOM 还没有更新
+  Vue.nextTick(function () {
+    // DOM 更新了
+  })
 
+  // 作为一个 Promise 使用 (2.1.0 起新增，详见接下来的提示)
+  Vue.nextTick()
+    .then(function () {
+      // DOM 更新了
+    })
+  ```
 ### 视图更新优化
 
 >  为什么频繁变化但只会更新一次（一个number从0循环增加1000次，只更新至最后的值）
 
-- 原理：放在异步队列中，下个tick更新视图。优化：同个Watcher在同个tick中只能被执行一次。队列中不应该出现重复的Watcher对象，也就是说，number的Watcher只会执行一次更新，就是从0 -> 1000
+- 原理：Vue视图更新DOM是异步执行的，检测到数据有变化，Vue开启一个异步队列，下个tick更新视图。同一个 watcher 被多次触发，只会被推入到队列中一次。也就是说，number的Watcher只会执行一次更新，就是从0 -> 1000。
+    - 重点：先完成DOM更新后，执行排在后面的nextTick(callback)内的回调，nextTick是用户定义的其他操作，本质都是异步队列，只是视图更新在它前面。
     - 执行++操作时，不断触发对应Dep中的Watcher 对象的 update 方法。
     - 如果一个Watcher对象触发多次，只push一次进异步队列queue中。
     - 下一个循环tick时，触发Watcher对象的run方法(执行patch)，执行更新DOM视图，number直接从0->1000
-    - 先完成DOM更新后，执行排在后面的nextTick(callback)内的回调，nextTick是用户定义的其他操作，本质都是异步队列。
     
 ## Vue生命周期
 - Vue 实例从创建到销毁的过程，就是生命周期。
@@ -135,10 +157,10 @@
 - 周期：前四个钩子为第一次页面加载调用。
     - `beforeCreate`：刚创建Vue空实例，只有一些生命周期函数和默认事件，data、methods、el都不可访问。
     - `created`：完整的实例创建好，数据劫持完成，data、methods可访问、el不可访问，没有生成真实DOM。
-    - `beforeMount`：完成编译模板的工作，生成一个render function并调用，生成虚拟DOM，没有生成真实DOM。
-    - `mounted`：完成挂载，生成真实DOM，data、method可访问、el可访问。
+    - `beforeMount`：已经完成编译模板的工作，生成一个render function并调用，生成虚拟DOM在内存中，没有生成真实DOM。
+    - `mounted`：完成挂载，生成真实DOM，页面显示内容，data、method可访问、el可访问。
     - `beforeUpdate`：data数据是新的，但页面是旧的，发生在虚拟 DOM 打补丁之前。适合在更新之前访问现有的 DOM，比如手动移除已添加的事件监听器。
-    - `updated`：虚拟 DOM 重新渲染和打补丁，组件真实DOM更新之后，页面和data都是最新的。
+    - `updated`：虚拟 DOM 重新渲染和打补丁，组件真实DOM更新之后，页面和data都是最新的。更新完成后，如果有nextTick回调，会在视图更新后执行。
     - `beforeDestroy`：组件销毁前调用，实例仍然完全可用。
     - `destroyed`：组件销毁后调用，解绑指令，移除监听，子组件销毁，都不可用。
     - keep-alive相关的：
@@ -163,8 +185,8 @@
     }
     ```
   - 挂载阶段
-    - `beforeMount`：【data、methods可访问、el不可访问】
-    - `mounted`：【data、methods可访问、el可访问】【最早可操作DOM】
+    - `beforeMount`：【data、methods可访问、el不可访问】【虚拟DOM编译好在内存中，还未挂载】
+    - `mounted`：【data、methods可访问、el可访问】【最早可操作DOM】【页面已显示】
     ```js
     mounted() {
         // 允许
@@ -173,10 +195,10 @@
         let a = document.getElementById('')
     }
     ```
-  - 运行阶段：
-    - `beforeUpdate`：【data数据是新的，但页面是旧的】
+  - 运行阶段
+    - `beforeUpdate`：【数据更新后执行】【data数据是新的，但页面是旧的】
     - 中间执行：`re-render和patch`进行虚拟DOM的diff和更新渲染
-    - `updated`：【data和页面都是最新的】
+    - `updated`：【视图更新完执行】【data和页面都是最新的】
   - 销毁阶段
     - `beforeDestroy`：【实例的data、methods、指令完全可用】
     - `destroyed`：【实例的data、methods、指令都不可用】
@@ -185,6 +207,7 @@
       - v-if 与 v-for 指令（v-show 不行）
       - 路由切换、关闭或刷新浏览器
 
+![vue-created-write](./img/vue-created-write.png)
 ![vue-created](./img/vue-created.png)
 
 - 服务器端渲染：beforeCreate、created，其他不可调用

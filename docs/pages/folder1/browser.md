@@ -700,14 +700,6 @@ http://www.domain2.com/b.js        不同域名                         不允�
         - Access-Control-Allow-Origin就不能设为星号（*），必须指定明确的、与发起跨域请求网页一致的的域名(a.com)。
     - 遵循同源政策：服务器(b.com)设置cookie的才会上传，其他域的cookie不会上传，跨域原网页代码也获取不到服务器设置的cookie
 
-## 正向代理和反向代理
-- [解释和优缺点](https://juejin.im/post/5cc26dfef265da037b611738#heading-18)
-- 正向代理
-    - 代理的对象是客户端、隐藏真实客户端
-    - 应用：国外搭建一个代理服务器，代理请求google
-- 反向代理(通过负载均衡设备实现)
-    - 代理的对象是服务端、隐藏真实服务端
-    - 应用：www.baidu.com就是我们的反向代理服务器。Nginx就是性能非常好的反向代理服务器，用来做负载均衡，将过多请求分布给多个真实的服务器。隐藏IP端口号，更安全。
 
 ## get和post
 ![知乎参考](https://www.zhihu.com/question/28586791)
@@ -1075,7 +1067,7 @@ removeAttribute(key);
 - XSS：跨站脚本攻击
     - 攻击：在URL或者页面输入框中插入恶意JS代码，用户访问时完成攻击，如获取cookie。
     - 存储型：将恶意代码存入服务器的数据库，如发表文章、评论等，访问即会触发，比较危险。属于服务端的安全漏洞。是持久化的。
-    - 反射型：引诱点击带恶意代码的url，如带参数的搜索，跳转，服务器响应返回，属于服务端的安全漏洞。是非持久化的。
+    - 反射型：恶意代码存在url上，如带参数的搜索，跳转，引诱点击，服务器取出恶意代码并拼在HTML中返回浏览器，属于服务端的安全漏洞。是非持久化的。
     - DOM型：构造包含恶意代码的URL，前端取出URL的恶意代码，不小心地执行了该代码，获取用户数据，调用相关接口，属于前端代码漏洞。
     ```html
     <!-- 链接内包含恶意代码 -->
@@ -1102,7 +1094,7 @@ removeAttribute(key);
     - 攻击：攻击者通过第三方网站（如图片链接src、自动提交的表单）发送跨站请求，访问一个用户曾经认证过的网站（带有cookie），利用登录凭证，请求一些接口执行恶意操作（只借用cookie，不能获取）
     - 防范1：阻止不明外域的访问
         - 同源检测：header里的`Origin`和 `Referer` 字段：服务器判断请求来源，校验该地址是否合法。
-        - `Samesite=Strict`: Set-Cookie时将同站cookie属性设为严格模式，表明这个 Cookie 在任何情况下都能作为第三方 Cookie
+        - `Samesite=Strict`: Set-Cookie时将同站cookie属性设为严格模式，表明这个 Cookie 在任何情况下都不能作为第三方 Cookie
     - 防范2：提交时要求附加本域才能获取的信息
         - 服务器生成CSRF token（常用）：服务器根据用户信息 哈希算法生成 token 字符串 发给前端，前端存储在localStorage中，再次请求时前端请求头带上token，服务端验证token是否正确（请求头可通过拦截器在接口调用时添加token），一次性有效token，每次接口校验完返回新token。
         - 双重提交Cookie：用户访问后，返回一个随机字符串注入cookie，下次请求时取出，添加到URL参数上，验证与cookie是否一致。
@@ -1257,4 +1249,82 @@ removeAttribute(key);
           // 发送还没结束
         }
         ```
-        
+
+## nginx用途
+- 最常用：反向代理  
+    - 使用代理服务器接受internet的请求，将请求转发到内部网络的服务器上，将服务器得到的结果返回给internet请求连接的那个客户端。
+    - 隐藏真实的服务器，不直接被外部网络访问。代理服务器可以直接被外部网络访问。代理服务器和真实服务器在同个网络环境。设置location的proxy_pass作为目标服务器如下面的8080
+    ```
+    server {  
+    listen 80;                                                         
+    server_name  localhost;                                               
+    client_max_body_size 1024M;
+
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host:$server_port;
+    }
+    }
+    ```
+- 负载均衡
+    - 当有2台或以上服务器时，根据策略，随机地将请求分发到指定的服务器上处理。
+    - 自带3种负载均衡策略
+        - RR（默认）：按请求时间顺序逐一分配，如果其中一台服务器挂掉，自动避开
+            ```
+            upstream test {
+                server localhost:8080;
+                server localhost:8081;
+            }
+            ```
+        - 权重：按照设置的比例weight来分配请求
+            ```
+            upstream test {
+                server localhost:8080 weight=9;
+                server localhost:8081 weight=1;
+            }
+            ```
+        - ip_hash：每个请求按访问ip的hash结果分配，这样每个访客固定访问一个后端服务器，可以解决session的问题
+            ```
+            upstream test {
+                ip_hash;
+                server localhost:8080;
+                server localhost:8081;
+            }
+            ```
+- gzip压缩
+    ```
+    // nginx的配置方式
+    http {
+      gzip on;
+      gzip_static on;
+      gzip_min_length 1024;
+      gzip_buffers 4 16k;
+      gzip_comp_level 2;
+      gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php application/vnd.ms-fontobject font/ttf font/opentype font/x-woff image/svg+xml;
+      gzip_vary off;
+      gzip_disable "MSIE [1-6]\.";
+    }
+    ```
+- 启动和停止
+    ```
+    /etc/init.d/nginx start/restart # 启动/重启Nginx服务
+
+    /etc/init.d/nginx stop # 停止Nginx服务
+
+    /etc/nginx/nginx.conf # Nginx配置文件位置
+    ```
+- 热启动重新读取配置
+    ```
+    nginx -s reload
+    // window
+    nginx.exe -s reload
+    ```
+
+## 正向代理和反向代理
+- [解释和优缺点](https://juejin.im/post/5cc26dfef265da037b611738#heading-18)
+- 正向代理
+    - 代理的对象是客户端、隐藏真实客户端
+    - 应用：国外搭建一个代理服务器，代理请求google
+- 反向代理(通过负载均衡设备实现)
+    - 代理的对象是服务端、隐藏真实服务端
+    - 应用：www.baidu.com就是我们的反向代理服务器。Nginx就是性能非常好的反向代理服务器，用来做负载均衡，将过多请求分布给多个真实的服务器。隐藏IP端口号，更安全。

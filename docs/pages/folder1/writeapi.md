@@ -108,7 +108,7 @@
 ![寄生组合继承](./img/inherit-4.png)
 #### ES6 : class / extends 语法糖
 
-- 子类构造函数先调用super方法(相当于执行父类构造函数`Parent.call(this)`，this指向子类)
+- 子类构造函数先调用super方法(相当于执行父类构造函数ES5`Parent.call(this)`，this指向子类)
 - 然后可以在子类的构造函数中定义自己的属性。
   ```js
   class Parent {
@@ -122,7 +122,7 @@
 
   class Child extends Parent {
     constructor(name, position) {
-      super(name);
+      super(name);  // 调用父类的 constructor(name)
       this.position = position;
     }
     sayChildHello() {
