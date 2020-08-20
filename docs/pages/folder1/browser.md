@@ -910,6 +910,7 @@ http://www.domain2.com/b.js        不同域名                         不允�
     - 移动端常用，一般Access Token设置一周，Refresh Token一个月
     - Refresh Token 设置更长有效期，当Access Token过期，可通过携带Refresh Token去请求新的Acesss Token。当Refresh Token过期只能重新登录 了 
 - JWT注意（JSON Web Token）
+    - 本质是用秘钥secret对header和payload的base64编码进行签名，不是隐藏或保密数据，而是确保数据不被篡改。
     - Header（头部）+Payload（负载）+Signature（签名）：字符串：Header.Payload.Signature
       ```
         // Header
@@ -923,15 +924,19 @@ http://www.domain2.com/b.js        不同域名                         不允�
           "name": "John Doe",
           "admin": true
         }
-        // Signature
+        // Signature： HMACSHA256 算法进行签名
           HMACSHA256(
               base64UrlEncode(header) + "." +
               base64UrlEncode(payload),
               secret)
       ```
-    - 服务器签发token，客户端保存localStorage或者cookie ，每次请求放在header上的Authorization ，服务器接收解密验证。
-    - 优点：无状态认证，不保存session数据，降低查询数据库次数，服务器认方便扩展
-    - 缺点：服务器不保存session，无法废弃某个token，一旦 JWT 签发了，到期之前就会始终有效
+    
+    - 应用：可用于接口调用验证合法性，无状态登录认证，注册邮箱链接验证。
+        - 做法：服务器签发token，客户端保存localStorage或者cookie ，每次请求放在header上的Authorization ，服务器接收解密验证。
+    - 优点：无状态认证，不保存session数据，降低查询数据库次数，服务器方便扩展
+    - 缺点：
+        - 服务器不保存session，无法废弃某个token，一旦 JWT 签发了，到期之前就会始终有效。
+        - 如果涉及登录设备数量的控制，session会更方便些。
     - 减少盗用的方式：使用HTTPS、和 有效期设置短一些
 - JWT和token的区别
     - token验证发过来的token后，还要查数据库获取用户信息，验证是否有效。
