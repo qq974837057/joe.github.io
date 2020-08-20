@@ -438,7 +438,8 @@
     
 ### 减少内存泄漏
 - [参考](https://mp.weixin.qq.com/s?__biz=MzUxMzcxMzE5Ng==&mid=2247496779&idx=2&sn=892d968a86ebd083582ae2e28f48ab8f&chksm=f9524108ce25c81e960471a63357cf2bc59971e2a22ca9549f67c5266100474712fcaa208f28&mpshare=1&scene=1&srcid=&sharer_sharetime=1592813500572&sharer_shareid=f72feefcc9c2c137677aa7f49d02e0f4&key=5275bdb85f6fecb5b863a0f4364938b0f20d3068a623c70bb17408602e09ad9840bc8824054c5f5f3e8b5fdacdf41cf6d13413049806b41cdb497e6abe7e48742dabb92c99874d17f7c19bace4019ecd&ascene=1&uin=MjI1NjQ0MTU1&devicetype=Windows+7+x64&version=62090523&lang=zh_CN&exportkey=AZvo2t51y73c8EhAeN7gjAk%3D&pass_ticket=KfXN%2BILZIw36ijjDu%2F7KSM38UJxJ2Cjf8FTYPf6jp%2Fg%3D)
-
+- 价值：保持小内存开销，有利于用户体验；避免因为内存泄漏，导致浏览器奔溃；
+- 内存泄漏往往会发生在使用 Vue 之外的其它进行 **DOM 操作**的三方库时。请在适当的时机做必要的组件清理，比如beforeDestroy钩子中。
 - 查看内存泄露： 
   - Chrome 中的 Performance 面板，可视化查看内存的变化情况，找出异常点。
   ![JS-heap-check](./img/JS-heap-check.png)
@@ -464,7 +465,7 @@
   - 预防：会用到，但要知道何时创建，保留哪些对象
 - 定时器: 未被正确关闭，导致所引用的外部变量无法被释放
   - 预防：必要时销毁定时器如clearInterval
-- 事件监听: 没有正确销毁，如使用监听执行匿名内联函数，无法使用removeEventListener() 将其删除
+- 事件监听: 没有正确销毁，如使用监听执行匿名函数，无法使用removeEventListener() 将其删除
   ```js
   document.addEventListener('keyup', function() { 
     doSomething(hugeString); 
@@ -551,6 +552,8 @@
         return this._listData.slice(start, end);
       }
       ```
+
+### 节流防抖【参考JS章节】
 
 ### Web Worker多线程
 现代浏览器为JavaScript创造的 多线程环境。**可以将复杂计算任务分配到worker线程并行运行，等worker完成计算任务，再将结果返回主线程**，两个线程可 独立运行，互不干扰，可通过自带的 **消息机制** 相互通信，为了节省系统资源，使用完毕记得关闭。

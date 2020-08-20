@@ -724,7 +724,34 @@ http://www.domain2.com/b.js        不同域名                         不允�
     - get一般用于获取资源，post一般用来创建资源。
     - 私密数据，合理选择是用POST + body，比如登录。
     - axios的get方法不支持在body传参，只支持params，如果要传递，需要使用post。或者自己xhr封装实现，理论上是可以在body里传，但一般不这么做。
-
+- get能传图片吗
+    - base64放在URL上
+    - file 放在body中，不过可能要一些特殊实现，在postman是可以发送的。
+    - 底层的 XMLHttpRequest 和fetchAPI 不允许 GET/HEAD请求带 body。
+    - XMLHttpRequest.send() -方法接受一个可选的参数，其作为请求主体；如果请求方法是 GET 或者 HEAD，则应将请求主体设置为 null。
+        ```js
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/server', true);
+        
+        xhr.onload = function () {
+        // 请求结束后,在此处写处理代码
+        };
+        
+        xhr.send(null);
+        ```
+        
+        ```js
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", '/server', true);
+        
+        //发送合适的请求头信息
+        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        
+        xhr.onload = function () { 
+            // 请求结束后,在此处写处理代码 
+        };
+        xhr.send("foo=bar&lorem=ipsum"); 
+        ```
 ## cookie和session区别
 - [知乎参考](https://zhuanlan.zhihu.com/p/63061864)
 - 安全性： Session 比 Cookie 安全，Session 是存储在服务器端的，Cookie 是存储在客户端的。

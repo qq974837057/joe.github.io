@@ -161,11 +161,11 @@
     - `mounted`：完成挂载，生成真实DOM，页面显示内容，data、method可访问、el可访问。
     - `beforeUpdate`：data数据是新的，但页面是旧的，发生在虚拟 DOM 打补丁之前。适合在更新之前访问现有的 DOM，比如手动移除已添加的事件监听器。
     - `updated`：虚拟 DOM 重新渲染和打补丁，组件真实DOM更新之后，页面和data都是最新的。更新完成后，如果有nextTick回调，会在视图更新后执行。
-    - `beforeDestroy`：组件销毁前调用，实例仍然完全可用。
-    - `destroyed`：组件销毁后调用，解绑指令，移除监听，子组件销毁，都不可用。
-    - keep-alive相关的：
+    - `beforeDestroy`：组件销毁前调用，实例仍然完全可用，做一些清理工作，如清除计时器，移除绑定了DOM/BOM 对象中的事件，清理echarts组件resize的监听事件等。也可以使用hook监听钩子，就不需要放在对应的钩子中。`this.$once('hook:beforeDestroy', () => { window.removeEventListener('resize', fn) })`
+    - `destroyed`：组件销毁后调用，解绑指令，所有事件监听被移除（重点），所有子组件实例销毁，都不可用。
+    - keep-alive在内存中保留组件的状态和元素：
       - `activated`：被keep-alive缓存的组件专属，组件被激活时调用
-      - `deactivated`： 被keep-alive缓存的组件专属，组件被销毁时调用
+      - `deactivated`： 被keep-alive缓存的组件专属，组件被销毁时调用， 可进行清理或改变数据。
 
 - 关键节点简述
   - 创建阶段
@@ -203,7 +203,7 @@
     - `beforeDestroy`：【实例的data、methods、指令完全可用】
     - `destroyed`：【实例的data、methods、指令都不可用】
     - 触发销毁钩子的方法
-      - 手动调用`$destory()`
+      - 手动调用`$destory()`销毁组件实例
       - v-if 与 v-for 指令（v-show 不行）
       - 路由切换、关闭或刷新浏览器
 
@@ -213,31 +213,78 @@
 - 服务器端渲染：beforeCreate、created，其他不可调用
 
 - 实践
-    - 【异步请求】：官方推荐在mounted中调用的，实际上可以在created生命周期中调用。 服务端渲染时不支持mounted，需要放到created中。
+    - 【异步请求常放在created】：官方推荐在mounted中调用，实际上可以在created生命周期中调用（能更快获取到服务端数据，减少页面 loading 时间）。 服务端渲染时不支持mounted，需要放到created中。
     - 【最早访问data】：在created钩子中可以对data数据进行操作，可以进行ajax请求将返回的数据赋给data。
     - 【最晚修改data】：beforeMount，此时还未挂载到页面。
     - 【最早操作DOM】：在mounted钩子对挂载的DOM进行操作，此时，DOM已经被渲染到页面上。
-    - 【updated函数注意】：在数据变化时被触发，但不能准确的判断是那个属性值被改变，可以用computed或watch函数来监听属性的变化，并做一些其他的操作。
+    - 【updated函数注意】：
+        - beforeUpdate中可以改data吗？可以改，但不建议。在更新前改变值和更新后再次改变值，可能会导致无限更新，死循环。
+        - 在数据变化时被触发，但不能准确的判断是那个属性值被改变，可以用computed或watch函数来监听属性的变化，并做一些其他的操作。
     - 【缓存组件使用activated】：在使用vue-router时有时需要使用`<keep-alive></keep-alive>`来缓存组件状态，这个时候created钩子就不会被重复调用了，如果我们的子组件需要在每次加载或切换状态的时候进行某些操作，可以使用activated钩子触发。
     - 所有的生命周期钩子自动绑定 this 上下文到实例中，所以不能使用箭头函数来定义一个生命周期方法 (例如 `created: () => this.fetchTodos()`)。这会导致this指向父级。
+- 父子生命周期
+  - 父子组件渲染过程(子挂载完，父才算挂载完)
+  ```
+  父beforeCreate->父created->父beforeMount->
+  子beforeCreate->子created->子beforeMount->子mounted->父mounted
+  ```
+  - 子组件更新过程(通过props传递，或者vuex等存在数据流向触发时)
+  ```
+  父beforeUpdate->子beforeUpdate->子updated->父updated
+  ```
+  - 父组件更新过程(自身组件更新，自己组件的生命周期)
+  ```
+  父beforeUpdate->父updated
+  ```
+  - 销毁过程 
+  ```
+  父beforeDestroy->子beforeDestroy->子destroyed->父destroyed
+  ```
 
-- 父子组件渲染过程(子挂载完，父才算挂载完)
-```
-父beforeCreate->父created->父beforeMount->
-子beforeCreate->子created->子beforeMount->子mounted->父mounted
-```
-- 子组件更新过程(通过props传递，或者vuex等存在数据流向触发时)
-```
-父beforeUpdate->子beforeUpdate->子updated->父updated
-```
-- 父组件更新过程(自身组件更新，自己组件的生命周期)
-```
-父beforeUpdate->父updated
-```
-- 销毁过程 
-```
-父beforeDestroy->子beforeDestroy->子destroyed->父destroyed
-```
+- 例题：由data控制组件显示隐藏的生命周期过程
+    - v-if绑定一个组件，由data的show控制显示或隐藏
+        ```js
+        data(){
+            return {
+              show: true,
+            }
+        },
+        created(){
+            this.show = false;
+            console.log(`created: ${this.show}`);
+        },
+        mounted(){
+            this.show = true;
+            console.log(`mounted: ${this.show}`);
+            this.$nextTick(()=>{ 
+              this.show = false;
+              console.log(`nextTick: ${this.show}`)
+            })
+        },
+        beforeUpdate(){
+            console.log(`beforeUpdate: ${this.show}`);
+        },
+        updated(){
+            console.log(`updated: ${this.show}`);
+        }
+        ```
+    - created之前：data中show的默认值是true，
+    - created中：show被更改为false，此时页面还没挂载，进入渲染。
+    - mounted之前：show为false，根据指令编译模板，放在内存中。
+    - mounted中：页面初次挂载内容，此时组件不显示。此时将show更改为true，不会立即触发视图更新。
+    - 等到下一个循环开始更新视图，触发beforeUpdate，此时数据最新，但页面还没最新，再触发updated，此时数据和页面都是最新，组件显示。
+    - 视图更新完成，再执行nextTick()中的回调函数，将show更改为false，再次触发更新。
+    - 触发beforeUpdate，此时数据最新，但页面还没最新组件还是显示，再触发updated，此时数据和页面都是最新，组件消失。
+    - 最终呈现效果就是没有组件显示，刷新太快看不出来，断点调试可看到过程。
+      ```js
+      created: false      还未显示页面
+      mounted: true       组件不显示
+      beforeUpdate: true  组件不显示
+      updated: true       组件显示
+      nextTick: false     组件显示
+      beforeUpdate: false 组件显示
+      updated: false      组件消失
+      ```
 
 ## Vue组件通信
 - [Vue组件通信的方法如下:](https://juejin.im/post/5d267dcdf265da1b957081a3#heading-0)
@@ -415,6 +462,10 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 - 它们来自同个构造函数，如果data是对象，也就是引用类型，会影响到所有实例。
 - 为了防止实例间data的冲突，将data变为函数，用return返回值，让每个实例维护一份返回对象的独立拷贝。
 
+### 不要在选项或回调上使用箭头函数
+- 比如`created: () => console.log(this.a)` 或 `vm.$watch('a', newValue => this.myMethod())`
+- 因为箭头函数并没有 this，this 会作为变量一直向上级词法作用域查找，直至找到为止，会导致比如读取不到属性或者方法的错误。
+
 ### computed和watch的区别
 - computed
     - 是计算属性，依赖其他属性值来计算，将复杂逻辑放在计算属性中而不是模板。
@@ -443,7 +494,7 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
     - v-html移除节点所有的内容，添加innerHTML属性，内容为v-html里的内容。
 
 ## Vue2.x 检查数组变化
-- 本质：Object.defineProperty无法监听到数组内部变化、也无法探测普通对象新增的属性(`this.myObject.newProperty = 'hi'`)
+- 本质：Object.defineProperty无法监听到数组内部变化、也无法探测创建实例之后普通对象新增的属性(`this.myObject.newProperty = 'hi'`)
 - 方案：Vue采用hack的方法实现数组监听
   ```js
   push()
@@ -461,7 +512,7 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 - 直接`vm.items[indexOfItem] = newValue`是无法检测到的，length属性不能监听因为无法触发obj的get方法。
 - 另外的方法：
   - 实例的$set方法【vm.$set( target, propertyName/index, value )】
-  - 或者全局API 【Vue.set( target, propertyName/index, value )】：向响应式对象中添加一个 属性property，并确保这个新 property 同样是响应式的，且触发视图更新。
+  - 或者全局API 【Vue.set( target, propertyName/index, value )】：向响应式对象中添加一个 属性property，并确保这个新 property 同样是响应式的，且可以触发视图更新。
 - 最好方案：Vue3.0采用Proxy监听对象和数组
 
 ## Vue 路由
