@@ -1,6 +1,6 @@
 ## webpack
 
-### 构建流程
+### 构建流程 ✨
 - 1、初始化参数：拷贝配置文件webpack.config.js合并参数，并实例化插件，得到最终options对象。
 - 2、开始编译：初始化Compiler编译对象，传入插件的apply方法，为事件挂载对应的回调，执行Compiler的run方法开始编译，以下是一些关键事件点。
 ```js
@@ -89,7 +89,7 @@ module.exports = {
 - module和chunk的图解
 ![module和chunk](./img/webpack-chunk.jpg)
 
-### Loader和Plugin的区别
+### Loader和Plugin的区别 ✨
 - Loader(加载器)
     - 用于文件转换，单一原则，每个Loader只做一种"转义"工作。webpack链式调用每个loader，从后往前，可以理解为出栈过程。
     - webpack原生只能解析js，loader使webpack可以加载和解析非js文件(css、图片)
@@ -174,7 +174,7 @@ module.exports = {
 - 自己实现plugin
     - 本质是一个带apply方法的class类，可以新建plugin实例，传入的参数，就是plugin的配置options。事件流开始的时候，实例化所有插件，执行apply方法，在事件流上挂载回调的方法，构建过程中钩子广播出事件，然后调用API，改变输出结果。
 
-### HMR热更新原理（hot module replacement）
+### HMR热更新原理（hot module replacement）✨
 
 > 当你对代码进行修改并保存后，webpack 将对代码重新打包，并将新的模块发送到浏览器端，浏览器通过新的模块替换老的模块，这样在不刷新浏览器的前提下就能够对应用进行更新。
 
@@ -268,7 +268,7 @@ module.exports = {
             }
             ```
 
-### webpack打包加速优化(缓存 + 多核 + 抽离)
+### webpack打包加速优化(缓存 + 多核 + 抽离) ✨
 - 提高热更新速度：
     - 提高热更新速度，上百页 2000ms内搞定，10几页面区别不大
     ```js
@@ -663,7 +663,7 @@ module.exports = {
 - git pull 实际上是两个命令合成了一个：git fetch 和 git merge。
     - 当我们从来源拉取修改时，我们首先是像 git fetch 那样取回所有数据，然后最新的修改会自动合并到本地分支中。
 
-### git checkout / git reset / git revert的区别
+### git checkout / git reset / git revert的区别 ✨
 
 
 > reset使用--hard需要小心，会影响工作区的修改内容。--soft只回退commit历史记录，修改内容仍保留在工作区和暂存区。
@@ -715,7 +715,7 @@ module.exports = {
     git reflog  //查看所有命令历史。包括已被回退的commit id，可用于穿梭到未来的commit点。
     ```
 
-### git merge / git rebase 的区别
+### git merge / git rebase 的区别 ✨
 - [知乎解释](https://zhuanlan.zhihu.com/p/75499871)
 - [git解释](https://github.com/geeeeeeeeek/git-recipes/wiki/5.1-%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%EF%BC%9AMerge%E3%80%81Rebase-%E7%9A%84%E9%80%89%E6%8B%A9)
 - [其他解释](https://www.html.cn/archives/10077)
@@ -1106,6 +1106,18 @@ window.addEventListener('load', function () {
     alert('Hey, welcome back from your crash, looks like you crashed on: ' + sessionStorage.getItem('time_before_crash'));
   }
 ```
+
+9. 监听AJAX
+- [知乎参考](https://zhuanlan.zhihu.com/p/73397401)
+- 用途
+    - 我们要监控接口报错的情况，及时定位线上问题产生的原因
+    - 我们要分析接口的性能，以辅助我们对前端应用的优化。
+- 本质
+    - 封装的请求库都是对浏览器的这个对象 window.XMLHttpRequest 进行了封装
+    - 我们可以监听 XMLHttpRequest 对象的两个事件 loadstart， loadend。
+- 注意：
+    - 一个页面上会有很多个请求，当一个页面发出多个请求的时候，ajaxLoadStart事件被监听到，但是却无法区分出来到底发送的是哪个请求，只返回了一个内容超多的事件对象，而且事件对象的内容几乎完全一样。当ajaxLoadEnd事件被监听到的时候，也会返回一个内容超多的时间对象，这个时候事件对象里包含了接口请求的所有信息。幸运的是，两个对象是同一个引用，也就意味着，ajaxLoadStart和ajaxLoadEnd事件被捕获的时候，他们作用的是用一个对象。那我们就有办法分析出来了。
+    - 当ajaxLoadStart事件发生的时候，我们将回调方法中的事件对象全都放进数组timeRecordArray里，当ajaxLoadEnd发生的时候，我们就去遍历这个数据，遇到又返回结果的事件对象，说明接口请求已经完成，记录下来，并从数组中删除该事件对象。这样我们就能够逐一分析出接口请求的内容了。
 
 ## 项目重构
 - [参考](https://www.itzhai.com/refactoring/refactoring-principle.html)

@@ -210,7 +210,7 @@ function isObj(obj) {
   - 结果 0.1 + 0.2 = 0.30000000000000004
 
 
-## 原型、原型链、继承
+## 原型、原型链、继承 ✨
 ![JS-prototype](./img/JS-prototype.png)
 
 - 原型：用来实现对象的属性继承的对象（instance的`__proto__`）（构造函数的prototype）
@@ -275,7 +275,7 @@ var obj = Object.create(proto);
 Object.getPrototypeOf(obj) === proto; // true
 ```
 
-## 作用域、作用域链
+## 作用域、作用域链 ✨
 - 作用域：代码中定义变量的区域，确定当前执行代码对变量的访问权限范围。可以看做一个封闭空间。
 - 作用域链：由**多个执行上下文(作用域)的变量对象构成的链表**就叫做作用域链。
   - 变量查找特性：(只能下往上查找，不能由上往下，找到就停止，不会继续向上找)
@@ -371,7 +371,7 @@ Object.getPrototypeOf(obj) === proto; // true
 - [知乎解释](https://zhuanlan.zhihu.com/p/26533735)
 
 
-## new运算符的实现
+## new运算符的实现 ✨
 - new Object()创建新的对象obj。
 - obj的`__proto__`链接到构造函数的原型`fn.prototype`。
 - 执行构造函数，用apply使this指向新建的对象`fn.apply(obj, [...arguments].slice(1))`。
@@ -379,7 +379,7 @@ Object.getPrototypeOf(obj) === proto; // true
 - 执行完无返回，则返回创建的对象obj。
 
 
-## this和call、apply、bind
+## this和call、apply、bind ✨
 - 非箭头函数
     - 执行时才确定this指向
     - 默认情况下，this是指向全局对象的，浏览器就是指向window
@@ -487,7 +487,7 @@ Object.getPrototypeOf(obj) === proto; // true
 
     ```
 
-## 数组
+## 数组 ✨
 - 切割推入排序
     - `slice(start, end)`: 返回选中的数据组成的新数组（从start到end），不改变原数组
     - `splice(start, number, value...)`: 返回删除元素组成的数组，**改变原数组**，由value 替换被删除的位置，无需替换则直接删除。
@@ -548,7 +548,7 @@ var result = arr.findIndex(item => {
     3.  Array.isArray(arr) // true
     ```
 
-## JS中的遍历、枚举
+## JS中的遍历、枚举 ✨
 
 - 标准for循环
     - 需要维护【下标i和边界length】
@@ -708,7 +708,7 @@ ECMAScript和JavaScript的关系
 
 - 历史：ES5(2011) -> ES6(2015) -> ES7(2016) -> ES8(2017)
 
-## ES6
+## ES6 ✨
 - [ES6-掘金参考](https://juejin.im/post/5d9bf530518825427b27639d#heading-7)
 - 块级作用域(let,const)：（ 块级作用域、不存在变量提升、不允许重复声明、const常量）
 - Symbol：新基本数据类型
@@ -893,7 +893,7 @@ let { firstName: fName, position="默认" } = employee;
   ```
 
 
-## Map、Set、WeakMap、WeakSet
+## Map、Set、WeakMap、WeakSet ✨
 - 总结：
 - Map/Set、WeakMap/WeakSet的作用
     - 它们是构造函数，用于生产新的数据结构
@@ -1166,7 +1166,7 @@ let { firstName: fName, position="默认" } = employee;
       - 进程作为拥有资源的基本单位，它拥有资源(地址空间，数据，代码)。
       - 线程作为调度和分配的单位，不拥有资源，但线程共享进程内的所有资源。
 
-## 浏览器事件循环(Event Loop)
+## 浏览器事件循环(Event Loop) ✨
 -  浏览器多进程的，进程表示cpu资源分配的最小单位，一个进程中可以有多个线程
 -  关键为**渲染进程**（浏览器内核）分为多条线程，线程是cpu调度最小单位
     - GUI渲染线程
@@ -1199,17 +1199,17 @@ let { firstName: fName, position="默认" } = employee;
     - 重复以上过程
     ![JS-eventloop-1](./img/JS-eventloop-1.png)
 
-- 宏任务（Macro-Task）：`script`(整体代码)、I/O 操作(点击)、`setTimeout`、`setInterval`、`setImmediate`（IE&Node独有、事件队列尾部执行）、requestAnimationFrame(浏览器独有)
+- 宏任务（Macro-Task）：`script`(整体代码)、I/O 操作(点击)、`setTimeout`、`setInterval`、`setImmediate`（IE&Node独有、事件队列尾部执行）、requestAnimationFrame(浏览器独有)、ajax中的回调函数
 - 微任务（Micro-Task）：`Promise.then`、`MutationObserver`的回调(监听DOM、浏览器独有)、`Process.nextTick`（Node独有）
 - （调用）栈：后进先出
 - （任务) 队列：先进先出
 - 细节
+  - 总的来说：宿主环境提供的方法是宏任务，比如setTimeout、setInterval、requestAnimationFrame、ajax中的回调函数。JS引擎自身提供的是微任务，例如Promise。
   - setTimeout：经过指定时间，将回调函数置入Event Queue，等待主线程空闲时来执行。`setTimeout(fn, 0)`表示立即加入宏任务队列，当主线程同步任务执行完后，执行完微任务队列，立即执行。即使主线程啥也没有，规范也是最低4毫秒。（多个宏任务setTimeout记得看时间长短排序）
   - setInterval：每隔指定的时间将注册的函数置入Event Queue。比如使用定时器每隔300ms循环执行一个promise请求，如果promise有响应，就关闭定时器，如果promise响应时间太长，定时器不断将请求加入任务队列，等到promise.then返回数据，就会清除计时器，不再往队列里添加，但此时任务队列的多个请求会依次执行完。
   - promise：new Promise立即执行，then的回调函数分发到微任务Event Queue。
   - 遇到resolve后，不管嵌套多少then，将最近的then加入微任务，然后继续执行其他同步代码
   - async/await基于promise，await前面类似new promise ，后面类似promise.then
-  - 浏览器的requestAnimationFrame姑且也算是宏任务吧，requestAnimationFrame在MDN的定义为，下次页面重绘前所执行的操作，而重绘也是作为宏任务的一个步骤来存在的。
 
 - 优先级
     - 对于微任务micro-task：process.nextTick(node)(微任务优先级最高) > Promise.then
@@ -1217,7 +1217,7 @@ let { firstName: fName, position="默认" } = employee;
 
 - setTimeout和requestAnimationFrame(rAF)的区别
   - setTimeout根据我们设定延时决定函数执行时机，由于事件队列的原因，实际执行时间不一致，或者与屏幕刷新间隔不同，容易出现丢帧。
-  - requestAnimationFrame的优点是由系统决定回调函数执行时机，在浏览器下一次重绘之前执行，参数只需要传递回调函数。常用于动画优化，动画还没结束记得回调函数继续调用`window.requestAnimationFrame()`。
+  - requestAnimationFrame的优点是由**系统决定回调函数执行时机，在浏览器下一次重绘之前执行**，参数只需要传递回调函数。常用于动画优化，动画还没结束记得回调函数继续调用`window.requestAnimationFrame(callback)`。
     - 保证回调函数在屏幕每次刷新间隔中只被执行一次，避免丢帧
     - 刷新率60Hz，回调函数就每16.7ms被执行一次
     - 刷新率75Hz，回调函数就每`1000/75 = 13.3ms`被执行一次
@@ -1322,7 +1322,7 @@ test()
 - 浏览器中的微任务是在每个相应的宏任务完成后执行的，而node10中的微任务是每个阶段的宏任务都执行完毕再执行的，也就是在每个阶段之间。而在 node11之后
 ，一个阶段里的一个宏任务(setTimeout,setInterval和setImmediate)执行完成后，就立刻执行当时的微任务队列。
 
-## 异步方案
+## 异步方案 ✨
 
 - 回调函数（callback）:如setTimeout【回调地狱】
     - 优点:实现异步
@@ -1402,7 +1402,7 @@ test()
 
 - [Async/Await 如何通过同步的方式实现异步](https://juejin.im/post/5d2c814c6fb9a07ecd3d8e43#comment)
 
-## Promise
+## Promise ✨
 > 表示一个尚未完成且预计在未来完成的异步操作。
 
 - 立即执行:
@@ -1654,7 +1654,7 @@ console.log(it.next(13)) // => {value: 42, done: true}
   - 当执行第二次 next 时，传入的参数等于上一个 yield 的返回值，如果你不传参，yield 永远返回 undefined。此时 `let y = 2 * 12`，所以第二个 yield 等于` 2 * 12 / 3 = 8`
   - 当执行第三次 next 时，传入的参数会传递给 z，所以 `z = 13, x = 5, y = 24，`相加等于 42
 
-## async/await
+## async/await ✨
 - Generator 的语法糖，`async function` 代替了` function*`，`await` 代替了 `yield`，不用手写run自动执行器：内置执行器。
 - 返回Promise：async执行完后返回是一个Promise，return的值，可使用then接收，指定下一步操作
 
@@ -1731,7 +1731,7 @@ console.log(it.next(13)) // => {value: 42, done: true}
   // result is 900
   ```
 
-## 闭包
+## 闭包 ✨
 > 概念：闭包 =『函数』和『函数对外部作用域的变量引用』的捆绑，即闭包可以从让内部函数访问外部函数作用域。本质是当前环境中存在指向父级作用域的**引用**。
   - 如在父函数声明a=1，在子函数`console.log(a)`
   - 闭包的作用域链包含着它自己的作用域，以及包含它的函数的作用域和全局作用域。
@@ -1952,7 +1952,7 @@ sum(1,2)(3,4) // 10
 - 第四种方案是 ES6 提出的方案，使用 import 和 export 的形式来导入导出模块。
 
 
-## ES6模块与CommonJS模块有什么区别？
+## ES6模块与CommonJS模块有什么区别？ ✨
 > 其实也就是import（ES6 Module）和require（CommonJS）的区别
 
 > CommonJS 是一种模块规范，最初被应用于 Nodejs，成为 Nodejs 的模块规范。运行在浏览器端的 JavaScript 由于也缺少类似的规范，在 ES6 出来之前，前端也实现了一套相同的模块规范 (例如: AMD)，用来对前端模块进行管理。自 ES6 起，引入了一套新的 ES6 Module 规范，在语言标准的层面上实现了模块功能，而且实现得相当简单，有望成为浏览器和服务器通用的模块解决方案。但目前浏览器对 ES6 Module 兼容还不太好，我们平时在 Webpack 中使用的 export 和 import，会经过 Babel 转换为 CommonJS 规范。在使用上的差别主要有：
@@ -2017,7 +2017,7 @@ sum(1,2)(3,4) // 10
   // obj => { a: 0, b: 1, c: 3, d: 4, e: 5 }
   ```
 
-## 深浅拷贝
+## 深浅拷贝 ✨
 
 ### 浅拷贝
 ![浅拷贝](./img/JS-copy-shallow.jpg)
@@ -2084,7 +2084,7 @@ sum(1,2)(3,4) // 10
   // 手写递归 - 详见手写API
   ```
 
-## 防抖节流
+## 防抖节流 ✨
 - 作用：节约性能开销，避免业务逻辑复杂造成卡顿。
 - 防抖debounce：连续触发只执行一次，停止触发N秒后，才能继续执行。
     - 事件触发后，计时n秒后执行回调，n秒内再次触发，重新计时。
@@ -2235,7 +2235,7 @@ sum(1,2)(3,4) // 10
 
 > 注意：获取dom之后要将所有图片dom节点转为数组对象才能使用数组遍历方法：Array.from
 
-## 内存管理
+## 内存管理 ✨
 - 基本类型普遍被存放在『栈』中，而引用类型是被存放在堆内存的。
   - 不是所有基本类型都存在栈中，当基本类型被闭包引用后，也可以长期在内存堆中。
 - 执行栈的函数如何使用保存在堆中的引用类型呢？
@@ -2368,7 +2368,7 @@ function add() {
 
 - JS延迟加载还有另外两种：JS脚本放在文档底部、动态创建标签插入script标签引入脚本。
 
-## 代码复用
+## 代码复用 
 基本有三种形式
 - 函数封装
 - 继承、借用apply/call
@@ -2386,7 +2386,7 @@ function add() {
   - 禁止this指向全局对象
   - 增加了保留字（比如protected、static和interface）
 
-## 设计模式
+## 设计模式 ✨
 - 面向对象三大要素： 封装，继承，多态。
 - 面向对象的软件设计原则：开放封闭原则。
     - 对扩展开放，意味着有新的需求或变化时，可以对现有代码进行扩展，以适应新的情况。

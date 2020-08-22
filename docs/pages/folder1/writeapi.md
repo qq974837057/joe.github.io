@@ -75,7 +75,8 @@
   child1.say()
   child2.say()
   ```
-#### 寄生组合继承：使用构造函数继承属性，使用原型链继承方法，创造一个父类原型的副本作为子类构造函数的原型。
+#### 寄生组合继承 ✨
+- 使用构造函数继承属性，使用原型链继承方法，创造一个父类原型的副本作为子类构造函数的原型。
 - 前面组合式由于共用一个原型对象(Parent.prototype)，子类无自己构造函数，向上找构造函数是Parent。所以用Object.create隔离开原型，再给子类添加自己的构造函数）
 - `Object.create(obj)`创建的中间对象以参数为原型对象，形成原型链
 - 内部原理：创建一个新的构造函数，它的prototype指向参数obj，再返回这个构造函数的实例，也就是新对象Obj。
@@ -159,7 +160,7 @@ function create(obj) {
 }
 ```
 
-## new
+## new ✨
 
 - new Object()创建新的对象obj。
 - obj的`__proto__`链接到构造函数的原型`fn.prototype`。
@@ -213,7 +214,7 @@ console.log(joe2.age) // 25
 ```
 
 
-## call、apply
+## call、apply ✨
 ### call
 ```js
 // 设置目标this的fn为函数本身
@@ -471,9 +472,9 @@ document.addEventListener('scroll', betterFn)
 - 节流有个maxWait最大等待时间，相当于防抖一直不执行的话，到最大等待时间就必须执行一次，里面会根据配置去判断剩余等待时间。
 - 对外暴露一些方法cancel(取消、清除定时器)、flush(立即执行)、pending(检查是否在计时)
 
-## 浅拷贝、深拷贝
+## 浅拷贝、深拷贝 ✨
 ### 浅拷贝
-- 思路：直接递归赋值再返回即可。
+- 思路：直接遍历赋值再返回即可。
 
 ```js
 function clone(target) {
@@ -483,7 +484,7 @@ function clone(target) {
   }
   return copy;
 }
-let obj1 = {name:'joe',sport:{name:'swim'}};
+let obj1 = {name:'joe', sport:{ name:'swim' }};
 let obj2 = clone(obj1);
 console.log(obj2); // { name: 'joe', sport: { name: 'swim' } }
 
@@ -778,7 +779,7 @@ function resolvePromise(x, resolve, reject) {
 }
 ```
 
-#### Promise.all实现
+#### Promise.all实现 ✨
 - 实现Promise.all
 - 思路
   - 首先返回个new Promise
@@ -807,7 +808,7 @@ function all(promises) {
 }
 ```
 
-#### Promise.race实现
+#### Promise.race实现 ✨
 ```js
 function race(promises) {
   return new Promise((resolve, reject) => {

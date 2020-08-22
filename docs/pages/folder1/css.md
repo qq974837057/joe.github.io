@@ -4,7 +4,7 @@
     - 浮动后，后面的元素无视它占据的区域，直接在它身下布局。但是后面文字会认同浮动元素的区域，围绕它布局，没有脱离文本流。
     - 绝对定位就既脱出文档流又脱出文本流，后面文字无视它占据的区域，不会环绕，直接身下布局。
 
-## 盒子模型
+## 盒子模型 ✨
 - 盒模型由content（内容）、padding（内边距）、border（边框）、margin（外边距）组成。
 - 标准模型（w3c）
     - box-sizing：content-box
@@ -16,7 +16,7 @@
 ![border-box](./img/CSS-border-box.png)
 
 
-## 选择器优先级（权重）
+## 选择器优先级（权重）✨
 - CSS选择器的优先级是：!important > 内联 > ID选择器 > 类选择器 > 标签选择器
 - !important声明的样式优先级最高
 - 优先级相同，最后出现的优先级高   
@@ -57,7 +57,7 @@
     @import url(CSS文件路径地址);
     ```
     
-## 居中
+## 居中 ✨
 ### 水平居中
 - 行内元素
     - text-align: center
@@ -146,7 +146,7 @@ background-origin(content-box/padding-box/border-box)
 - 属性选择器a[href="http://www.w3school.com.cn"]{...}、input[type="text"]{...}， `[attribute=value]`用于选取带有指定属性和值的元素。
 
 
-## 伪类和伪元素（本质：是否抽象创造了新元素）
+## 伪类和伪元素（本质：是否抽象创造了新元素）✨
 
 - 伪类：表示元素的一个状态
     - 一个冒号（:）
@@ -172,7 +172,7 @@ background-origin(content-box/padding-box/border-box)
         ::after 	// 选中元素的最后一个子元素。
         ```
 
-## BFC
+## BFC ✨
 - BFC全称是Block Formatting Context，即块级格式化上下文。
 - 特点：
     - BFC是个独立的容器，外面的元素和里面的元素互不干扰。内部会垂直方向一个个放置。
@@ -191,7 +191,7 @@ background-origin(content-box/padding-box/border-box)
     - 4、overflow不为visible: hidden、auto、scroll。
 
 
-## 位置position属性介绍
+## 位置position属性介绍 ✨
 
 - static：默认值。位置设置为static的元素，正常文档流的位置，此时 top, right, bottom, left 和 z-index 属性无效。
 - inherit，规定应该从父元素继承 position 属性的值。
@@ -232,7 +232,7 @@ background-origin(content-box/padding-box/border-box)
 - BFC：父级添加overflow: auto或overflow: hidden
 
 
-## flex布局
+## flex布局 ✨
 - 容器：
     - flex-direction 主轴方向 ： row/column/row-reverse/column-reverse
     - flex-wrap 换行:nowrap/wrap/wrap-reverse
@@ -356,7 +356,7 @@ background-origin(content-box/padding-box/border-box)
 
 总结：在不考虑 max/min-width 的前提下，子元素的宽度一定会被调整到适应父元素，或放大或缩小，放大计算比较简单，直接将剩余空间 * 放大比例即可得出。缩小计算比较复杂，要把自身宽度加入权重比例的计算。
 
-## px、em、rem、vw、vh区别
+## px、em、rem、vw、vh区别 ✨
 - px ：pixel，像素，绝对单位，页面按精确像素展示。
 - em：相对长度单位，基准点为父节点字体的大小，自身有font-size的按自身计算，可用于缩进，如text-indent: 2em。
 - rem：相对长度单位，根(root em)，相对根节点html的字体大小，CSS3新加属性，chrome/firefox/IE9+支持，常用于移动端适配

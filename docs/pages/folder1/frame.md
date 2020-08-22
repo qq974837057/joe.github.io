@@ -1,4 +1,4 @@
-## Vue全流程
+## Vue全流程 ✨
 ![Vue全流程1](./img/frame-vueAll1.png)
 ![Vue全流程](./img/frame-vueAll.jpg)
 
@@ -150,7 +150,7 @@
     - 如果一个Watcher对象触发多次，只push一次进异步队列queue中。
     - 下一个循环tick时，触发Watcher对象的run方法(执行patch)，执行更新DOM视图，number直接从0->1000
     
-## Vue生命周期
+## Vue生命周期 ✨
 - Vue 实例从创建到销毁的过程，就是生命周期。
 - 从开始创建、初始化数据、编译模板、挂载DOM → 渲染、更新 → 渲染、销毁一系列过程
 - 分为4个阶段：创建阶段(前/后), 挂载阶段(前/后), 运行阶段(更新前/后), 销毁阶段(前/后)。
@@ -286,7 +286,7 @@
       updated: false      组件消失
       ```
 
-## Vue组件通信
+## Vue组件通信 ✨
 - [Vue组件通信的方法如下:](https://juejin.im/post/5d267dcdf265da1b957081a3#heading-0)
 
 - props/$emit+v-on: 父子通信：通过props将数据自上而下传递，而通过$emit和v-on(@)来向上传递信息。
@@ -420,7 +420,7 @@ class Vue {
 }
 ```
 
-## Vue双向绑定v-model
+## Vue双向绑定v-model ✨
 vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等元素上创建双向数据绑定，我们知道 v-model 本质上不过是语法糖，v-model 在内部为不同类型的标签，绑定不同的属性并传入，并抛出不同的事件：
 
 - input 和 textarea 元素使用 value 属性和 input 事件；
@@ -455,7 +455,7 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
     }
     ```
 
-## options
+## options ✨
 
 ### data为什么是函数
 - 组件被复用时，会创造多个实例。
@@ -477,7 +477,7 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
     - 依赖于其他数据的数值计算时，使用computed
     - 某个数据变化时做某些异步操作（请求API），使用watch
 
-## 常见指令
+## 常见指令 ✨
 ### v-if、v-show
 - v-if
     - v-if如果不成立不会生成对应的vnode，render时不会渲染
@@ -493,7 +493,7 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 - 原理：
     - v-html移除节点所有的内容，添加innerHTML属性，内容为v-html里的内容。
 
-## Vue2.x 检查数组变化
+## Vue2.x 检查数组变化 ✨
 - 本质：Object.defineProperty无法监听到数组内部变化、也无法探测创建实例之后普通对象新增的属性(`this.myObject.newProperty = 'hi'`)
 - 方案：Vue采用hack的方法实现数组监听
   ```js
@@ -1043,7 +1043,7 @@ Vue.use(Vuex)
     ```
 
 
-## keep-alive
+## keep-alive ✨
 - keep-alive 是 Vue 内置的一个组件，keep-alive可以实现组件缓存，当组件切换时不会对当前组件进行卸载，避免重新渲染 。
 - 提供两个属性include/exclude：允许组件有条件的进行缓存。   
   - include 表示只有名称匹配的组件会被缓存，exclude 表示任何名称匹配的组件都不会被缓存 。
@@ -1054,11 +1054,17 @@ Vue.use(Vuex)
 
 
 
-## mixin混入
+## 选项的mixins混入和extends ✨
+- 区别：
+  - 【继承数量】选项mixins可以混入多个mixin，extends只能继承一个
+  - 【优先级】 Vue.extend(挂载到某个节点) > extends > mixins
+  - 【动态渲染】构造器`Vue.extend(options) `+ 实例挂载`vm.$mount('#demo')` 实现动态渲染组件到指定的DOM节点下
+
+### mixins
 - 用来实现组件内容的复用，如埋点发送方法在多个页面都需要使用的，就可以作为mixin对象混入。
-- 使用：对象混入可以包含任意组件选项Options，引入方式就是在mixins选项，放入数组中。
-  - data在混入时进行递归合并，如果属性有冲突，以当前组件为主。
-  - 生命周期钩子：
+- 使用：对象混入可以包含任意组件选项Options，引入方式就是在mixins选项，放入数组中。下面是合并策略
+  - data在混入时进行【递归合并】，如果属性有冲突，以当前组件为主。
+  - 生命周期钩子函数【合并为一个数组】：
     - 同名钩子放在一起，混入的钩子要优先执行于组件自身的钩子
     - 如果多个对象混入，按mixins数组顺序执行。
     ```js
@@ -1079,7 +1085,9 @@ Vue.use(Vuex)
       }
     }
     ```
-  - 其他如methods/components/filter/props等，都是合并为同个对象，键名冲突，以组件自身键值为准。
+  - 其他如methods/components/filter/props等，都是【合并为同个对象】，键名冲突，以组件自身键值为准。
+
+### Vue.mixin(mixin)
 - 全局混入：在所有组件内都生效，影响到每个Vue实例，包括第三方组件，需要慎用。
   ```js
   Vue.mixin({
@@ -1095,7 +1103,45 @@ Vue.use(Vuex)
   })
   ```
 
-## Vue3.0重要特性
+### extends
+- 继承组件，合并策略和mixins一致。
+- 为了便于扩展单文件组件，而无需使用 Vue.extend。
+```js
+// 简单选项对象或构造函数
+var CompA = { ... }
+
+// 在没有调用 `Vue.extend` 时候继承 CompA
+var CompB = {
+  extends: CompA,
+  ...
+}
+```
+
+
+### Vue.extend(options)
+- 为了创建可复用的组件
+- `var fn = Vue.extend(options)`生成一个构造函数，参数是组件选项对象，可以用`new fn()`创建子类实例然后挂载到某个节点
+```js
+// 创建构造器
+var Profile = Vue.extend({
+  template: '<p>{{firstName}} {{lastName}} aka {{alias}}</p>',
+  data: function () {
+    return {
+      firstName: 'Walter',
+      lastName: 'White',
+      alias: 'Heisenberg'
+    }
+  }
+})
+// 创建 Profile 实例，并挂载到一个元素上。
+new Profile().$mount('#mount-point')
+```
+```html
+<p>Walter White aka Heisenberg</p>
+```
+
+
+## Vue3.0重要特性 ✨
 相比于Vue2.x 主要有四方面的优势和特性：
   - 性能更好：采用proxy劫持对象 和 Diff算法优化
   - 体积更小：Tree-shaking
@@ -1530,7 +1576,7 @@ Vue.use(Vuex)
   </second-hand-house>
   ```
 
-## weex架构
+## weex架构 ✨
 - 早期混合开发：
   - 使用客户端内置浏览器也就是webview，前端开发的是H5页面。
   - 优点：提高开发效率，满足跨平台需求
