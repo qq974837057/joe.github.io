@@ -367,6 +367,13 @@ background-origin(content-box/padding-box/border-box)
 
     > 类似百分比，不过百分比大部分针对的是父元素
 
+## 中后台常见布局
+- 最外层设`relative`，并分为左侧和右侧两大部分
+- 左侧：导航栏，`position:fixed`固定定位，里面存放多个菜单选项el-submenu
+- 右侧：整体距离左侧`margin-left`为导航栏的宽度，内部设为竖型的flex布局，上下两部分
+    - 上部分：横向固定信息栏`position:fixed`，top和right都为0
+    - 下部分：主视区域，存放显示的路由子页面内容`<router-view :key="key"></router-view>`
+
 ## 方案&图标集合
 - 画0.5px线（0.5px相当于高清屏物理像素的1px）
     - 方案：svg/transform在IOS和安卓的设备上都能完美支持

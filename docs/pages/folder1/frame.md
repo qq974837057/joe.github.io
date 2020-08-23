@@ -454,7 +454,17 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
       },
     }
     ```
-
+  - vue2.2新增model选项，自定义prop和event，就不需要限定于默认的value和input。下面的prop是checked，event是change
+    ```
+    model: {
+      prop: 'checked',
+      event: 'change'
+    },
+     props: {
+      checked: Boolean
+    },
+    // 再使用this.$emit('change', '值')即可触发值的改变，实现双向绑定
+    ```
 ## options ✨
 
 ### data为什么是函数

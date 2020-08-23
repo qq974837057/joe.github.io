@@ -553,12 +553,12 @@ var result = arr.findIndex(item => {
 - 标准for循环
     - 需要维护【下标i和边界length】
 - forEach
-    - 【无法中止循环】数组太大时，无法在特定条件下`break/continue/return`退出遍历，造成资源浪费。
-- for in
+    - 【缺点：无法中止循环】数组太大时，无法在特定条件下`break/continue/return`退出遍历，造成资源浪费。
+- for in 【读取键名，包括继承】
     - 普遍使用，兼容性好，支持`break/continue/return`
     - 遍历对象【自身+继承】的可枚举(enumerable:true)的属性（不含 Symbol 属性）。
     - 若不想获取继承的属性，可多加判断`if(obj.hasOwnProperty(key)) {...}`，不想某些原型属性被遍历，可在原型属性设置(enumerable:false)
-- for of(推荐)
+- for of(推荐)【默认读取键值】
     - 简洁，支持`break/continue/return`，需要ES6以上，兼容性一般
     - 依赖对象遍历器Iterator的遍历，每次执行遍历器的next方法
     - 大多数JavaScript的内置对象都支持迭代，例如：Array、Set、Map、String、函数的 arguments 、NodeList等
@@ -629,9 +629,9 @@ var result = arr.findIndex(item => {
     // 'a'
     // 'b'
     ```
-- Object.keys()
-    - ES5，兼容好，返回值顺序不定，对顺序有需求，使用map结构或set集合,按成员被添加进时的顺序。
-    - 获取对象本身的可枚举属性的键名（不包括继承属性）
+- Object.keys() 【读取键名，不包括继承】
+    - ES5，兼容好，返回值顺序不定，若对顺序有需求，使用map结构或set集合,按成员被添加进时的顺序。
+    - 获取对象【自身的可枚举属性的键名】（不包括继承属性）
     ```js
       let joe = {
         name:'joe',
@@ -653,8 +653,8 @@ var result = arr.findIndex(item => {
         //    configurable: true
         //  }
         ```
-    - `for...in`【返回键值，自身+继承+可枚举（不含Symbol）】
-    - `Object.keys(obj)`【返回键名数组，自身+可枚举（不含Symbol）】
+    - `for...in`【返回键名，自身 + 可枚举 + 继承（不含Symbol）】
+    - `Object.keys(obj)`【返回键名数组，自身 + 可枚举（不含Symbol）】
     - `Object.getOwnPropertyNames(obj)`【返回键名数组，自身 + 可枚举 + 不可枚举（不含Symbol）】
     - `Object.getOwnPropertySymbols(obj)`【返回键名数组，里面是自身Symbol属性】
     - `Reflect.ownKeys(obj)`【返回键名数组，自身 + 可枚举 + 不可枚举 + Symbol属性】
