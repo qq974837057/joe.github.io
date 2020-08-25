@@ -392,12 +392,14 @@
 - 1XX  信息 (服务器收到请求，需要继续处理)
 - 2XX 成功
     - 200 OK，表示从客户端发来的请求在服务器端被正确处理 ✨
+        - 200 (from disk cache) 命中强缓存，从磁盘获取内容
+        - 200 (from memory cache) 命中强缓存，从内存获取内容
     - 204 No content，表示请求成功，但没有返回任何内容。
     - 206 Partial Content，客户端通过发送范围请求头Range抓取到资源的部分数据，断点下载/上传
 - 3XX 重定向
     - 301 moved permanently，永久性重定向，表示资源已被分配了新的 URL
     - 302 found，临时性重定向，表示资源临时被分配了新的 URL ✨，请求还是原url
-    - 304 not modified，未修改，可使用缓存✨（强缓存/协商缓存）
+    - 304 not modified，未修改，可使用缓存✨（协商缓存）
     - 307 temporary redirect，临时重定向，和302含义相同
     - 308 Permanent Redirect 类似301，但不允许浏览器将原本为 POST 的请求重定向到 GET 请求上。
     - 重定向307，308，303，302的区别？
@@ -829,11 +831,11 @@ http://www.domain2.com/b.js        不同域名                         不允�
 
 - 缓存策略可分为 强缓存 和 协商缓存（未过期时，直接使用强缓存，过期使用协商缓存）
     - 客户端请求资源，服务端设置`Cache-Control`和`ETag`，在强缓存没过期时，直接使用本地缓存200`from cache`，过期了才发起请求询问是否有新资源，有则拉取新资源。
-    - 协商缓存，下次请求头携带，传给服务器对比，若有更改，则返回新资源200，若无更改，则返回304`Not Modified`，使用本地缓存即可。
+    - 协商缓存，下次请求头携带，传给服务器对比，若有更改，则返回新资源200(from cache)，若无更改，则返回304`Not Modified`，使用本地缓存即可。
     - 不加Cache-Control的情况：
         - 默认强缓存Expires = (响应头Date - Last-Modified) * 10%
         - 响应头的Date时间与`Last-Modified`的时间差的十分之一作为缓存的过期时间
-- 强缓存
+- 强缓存【命中返回200】
     - `Cache-Control`(缓存的时间长度)(优先)(HTTP / 1.1)
         - `Cache-Control:max-age=600`（单位s）
         - `Cache-Control`:
@@ -844,7 +846,7 @@ http://www.domain2.com/b.js        不同域名                         不允�
     - `Expires`(特定过期时间))(http1.0)
         - `expires`: Wed, 07 Aug 2019 23:15:20 GMT
         - 到期时间是服务器端的时间，客户端时间可修改，有误差
-- 协商缓存
+- 协商缓存【命中返回304】
     - `ETag`(唯一标识)(优先)
         - `ETag`(response 携带)根据hash或size/mtime :"50b1c1d4f775c61:df3"
         - `If-None-Match`(再次请求由request携带，上一次返回的 Etag)
@@ -853,7 +855,9 @@ http://www.domain2.com/b.js        不同域名                         不允�
         - `If-Modified-Since` (再次请求由request携带，上一次返回的Last-Modified)
         - 周期修改但内容没变，缓存会失效
         - s以内的改动监测不到
-        
+- 流程图
+![HTTP-cache-flow](./img/HTTP-cache-flow.jpg)
+
 - 最佳实践：
     - 两种情况：
         - 不带hash(指纹)的资源：每次都使用协商缓存，进行新鲜度校验。

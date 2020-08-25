@@ -255,11 +255,6 @@ function isObj(obj) {
 - 在创建新的对象或者类时，方法通常应该关联于对象的原型，而不是定义到对象的构造器中。
   - 原因是这将导致每次构造器被调用时，方法都会被重新赋值一次（也就是说，对于每个对象的创建，方法都会被重新赋值）。
 
-- 创建对象
-  - 1、字面量（简洁性能好）
-  - 2、构造函数（要调用函数）
-  - 3、Object.create
-
 - 获取指定对象的原型（内部`[[Prototype]]`属性的值）
   - `obj.__proto__`
   - `obj.constructor.prototype`
@@ -486,6 +481,34 @@ Object.getPrototypeOf(obj) === proto; // true
     a(); // global
 
     ```
+## 对象
+- 创建对象
+  - 1、字面量（简洁性能好）
+  - 2、构造函数（要调用函数）
+  - 3、Object.create
+- 对象常用方法
+  - Object.create(proto) 以proto为原型对象，创建一个对象
+  - Object.assign(target, ...obj) 浅拷贝
+  - Object.defineProperty(obj, prop, descriptor) 修改自有属性并返回，prop为某个属性名，descriptor描述符对象
+    - 数据描述符
+      - configurable  为true，该属性的描述符能够被改变
+      - enumerable 为true，该属性出现在对象的枚举属性
+      - writable 为true时，value能被赋值运算符改变
+      - value 该属性对应的值
+    - 存取描述符
+      - get  当访问该属性时，会调用此函数
+      - set  当属性值被修改时，会调用此函数
+    - 如果一个描述符同时拥有 value 或 writable 和 get 或 set 键，则会产生一个异常。
+    - 拥有布尔值的键 configurable、enumerable 和 writable 的默认值都是 false。
+    - 属性值和函数的键 value、get 和 set 字段的默认值为 undefined。
+  - Object.freeze(obj) 冻结对象
+  - Object.entries(obj) 返回对象键值对数组
+  - Object.is(value1, value2) 判断两个值是否为同一个值
+    - 与"=="不同，不会强制转换类型。
+    - 与"==="不同，用Object.is判断，-0和+0不相等，NaN和NaN相等。
+  - Object.getOwnPropertyNames(obj) 返回自身属性名
+  - Object.getPrototypeOf(obj) 返回对象原型
+  ![JS-object-fun](./img/JS-object-fun.png)
 
 ## 数组 ✨
 - 切割推入排序
