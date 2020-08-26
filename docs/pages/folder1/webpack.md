@@ -113,8 +113,9 @@ module.exports = {
     - file-loader：加载文件资源
     - url-loader：小文件以 base64 的方式把文件内容注入到代码中去
     - css-loader：加载 CSS，支持模块化、压缩、文件导入等特性
-    - style-loader：把外部 CSS 代码注入到 html 中，通过 DOM 操作去加载 CSS。
+    - style-loader：把外部 CSS 代码注入到 html 的head标签中。
     - sass-loader: sass语法转换
+    - node-sass: sass-loader依赖需要
     - babel-loader:把 ES6+ 转换成 ES5
     - eslint-loader： ESLint 检查 JavaScript 代码
 - 自己实现loader
@@ -902,6 +903,7 @@ module.exports = {
 
 
 ### 代码规范(eslint)
+- 常用规则：`eslint:recommended`
 - 作用：统一代码风格，避免低级错误。常见规则如：分号，引号，禁止console，禁止条件判断出现常量，禁止return，break后面出现不可到达代码等。
 - 安装在开发环境
 ```

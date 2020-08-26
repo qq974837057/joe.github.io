@@ -15,6 +15,14 @@
 ![content-box](./img/CSS-content-box.png)
 ![border-box](./img/CSS-border-box.png)
 
+## 获取元素的宽度和高度
+
+- 元素自身宽高:`element.clientWidth / element.clientHeight`
+    - 包括padding 但不包括边框 border、外边距 margin 和垂直滚动条（如果有的话）
+- 布局宽高:`element.offsetWidth/element.offsetHeight`
+    - 包含元素的边框(border)、水平线上的内边距(padding)、竖直方向滚动条(scrollbar)（如果存在的话）、以及CSS设置的宽度(width)的值
+- element.style.width/height 内联样式
+- element.getBoundingClientRect().width/height 宽高和视口位置
 
 ## 选择器优先级（权重）✨
 - CSS选择器的优先级是：!important > 内联 > ID选择器 > 类选择器 > 标签选择器

@@ -28,6 +28,7 @@
   - 使用 new + 构造函数 生成的实例，叫对象。构造函数上有定义默认属性和方法。
   - 函数也是对象。
   - 函数参数是按值传递的，和赋值是一样的。基本类型就是复制该变量的值，如果参数是引用类型，赋值对象的内存地址值给函数内的局部变量，改动这个局部变量，外部对象会跟着改变，局部对象使用完会被销毁，如果局部对象更改成另一个对象内存地址，则指向另一个对象，原参数对象不会被改变。
+  - JavaScript 中使用双精度浮点数，有效数字是52位尾数，11个指数位，1个符号位。最大的安全整数 (2^53 - 1)。最小的安全整数 (-(2^53 - 1)).
 
 - null和undefined的区别
   - undefined 表示变量声明但未初始化时的值
@@ -195,7 +196,7 @@ function isObj(obj) {
 
 - 计算过程
   - 转换过程：0.1 > 二进制 > 科学计数法 > IEEE 754(指数和小数分开表示) > 十进制(精度可能丢失)
-  - 指数偏移的计算：双浮点固定偏移值 [2^(11-1)]-1 = 1023 加上 科学计数法的指数[如-4] 再转为11位的二进制表示。
+  - 指数偏移的计算：双浮点固定偏移值 `[2^(11-1)]-1 = 1023` 加上 科学计数法的指数`[如-4]` 再转为11位的二进制表示。
   - 尾数计算：科学计数法的小数位选取52位，四舍五入。
   ```
   小数转为二进制：小数部分，乘以 2，然后取整数部分的结果(最后组合起来)，再用计算后的小数部分继续乘以 2，直到小数部分为 0。
@@ -486,28 +487,27 @@ Object.getPrototypeOf(obj) === proto; // true
   - 1、字面量（简洁性能好）
   - 2、构造函数（要调用函数）
   - 3、Object.create
+
 - 对象常用方法
-  - Object.create(proto) 以proto为原型对象，创建一个对象
-  - Object.assign(target, ...obj) 浅拷贝
-  - Object.defineProperty(obj, prop, descriptor) 修改自有属性并返回，prop为某个属性名，descriptor描述符对象
-    - 数据描述符
-      - configurable  为true，该属性的描述符能够被改变
-      - enumerable 为true，该属性出现在对象的枚举属性
-      - writable 为true时，value能被赋值运算符改变
-      - value 该属性对应的值
-    - 存取描述符
-      - get  当访问该属性时，会调用此函数
-      - set  当属性值被修改时，会调用此函数
+  - `Object.create(proto)` 以proto为原型对象，创建一个对象
+  - `Object.assign(target, ...obj)` 浅拷贝
+  - `Object.defineProperty(obj, prop, descriptor)` 修改自有属性并返回，prop为指定某个属性名，descriptor描述符对象(如下)
+    - configurable  为true，该属性的描述符能够被改变
+    - enumerable 为true，该属性出现在对象的枚举属性
+    - writable 为true时，value能被赋值运算符改变
+    - value 该属性对应的值
+    - get  当访问该属性时，会调用此函数
+    - set  当属性值被修改时，会调用此函数
     - 如果一个描述符同时拥有 value 或 writable 和 get 或 set 键，则会产生一个异常。
     - 拥有布尔值的键 configurable、enumerable 和 writable 的默认值都是 false。
     - 属性值和函数的键 value、get 和 set 字段的默认值为 undefined。
-  - Object.freeze(obj) 冻结对象
-  - Object.entries(obj) 返回对象键值对数组
-  - Object.is(value1, value2) 判断两个值是否为同一个值
+  - `Object.freeze(obj)` 冻结对象
+  - `Object.entries(obj)` 返回对象键值对数组
+  - `Object.is(value1, value2)` 判断两个值是否为同一个值
     - 与"=="不同，不会强制转换类型。
     - 与"==="不同，用Object.is判断，-0和+0不相等，NaN和NaN相等。
-  - Object.getOwnPropertyNames(obj) 返回自身属性名
-  - Object.getPrototypeOf(obj) 返回对象原型
+  - `Object.getOwnPropertyNames(obj)` 返回自身属性名
+  - `Object.getPrototypeOf(obj)` 返回对象原型
   ![JS-object-fun](./img/JS-object-fun.png)
 
 ## 数组 ✨
