@@ -514,7 +514,7 @@ Object.getPrototypeOf(obj) === proto; // true
 - 切割推入排序
     - `slice(start, end)`: 返回选中的数据组成的新数组（从start到end），不改变原数组
     - `splice(start, number, value...)`: 返回删除元素组成的数组，**改变原数组**，由value 替换被删除的位置，无需替换则直接删除。
-    - `push / pop`: 末尾推入/弹出，**改变原数组**， 返回推入/弹出项，一般可用作栈实现。
+    - `push / pop`: 末尾推入/弹出，**改变原数组**，push返回该数组的新长度， pop返回弹出项的值，一般可用作栈实现，。
     - `unshift / shift`: 头部推入/弹出，**改变原数组**，返回新的长度/操作项
     - `sort(fn) / reverse`: 排序与反转，**改变原数组**，**不传入对比函数，元素按照转换为的字符串的各个字符的Unicode位点进行排序（从小到大）。**
 - 连接数组
@@ -556,6 +556,14 @@ var result = arr.find(item => {
 var result = arr.findIndex(item => {
     return item > 3
 }); //返回数组中满足条件的第一个元素的下标，没有返回-1
+```
+
+- 两个数组取差集
+```js
+let difference = arr1.filter(v => !arr2.includes(v));
+let difference = arr1.filter(v => {
+  return arr2.indexOf(v) === -1
+});
 ```
 
 - 判断是否为数组
