@@ -154,7 +154,7 @@ module.exports = {
         raw: true // banner内容直出，不以注释出现
     }),
     ```
-    - html-webpack-plugin：打包入口 html 文件，设置loading
+    - html-webpack-plugin：生成 html 文件，里面添加了JS文件的script 标签，还可以设置loading
     - TerserWebpackPlugin：webpack4默认的代码压缩插件，默认开启多进程和缓存
     - uglifyjs-webpack-plugin：通过UglifyES压缩ES6代码
     ```js

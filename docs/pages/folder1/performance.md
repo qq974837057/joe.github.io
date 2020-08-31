@@ -4,13 +4,12 @@
 - 所以优化方向就是让用户觉得加载得快！不仅包括加载指标速度的提升，还包括提高用户的体验，如有趣的loading或顺畅的骨架屏会让用户感觉并没有等太久。
 
 - 性能优化方案步骤
-1.分析目前性能缺陷，确定性能提升目标
-2.针对特定场景，做对应方案，如加载时(首屏)，运行时(动画、内存泄漏、长列表)
-3.实施方案，查看优化效果
+  - 1.分析目前性能缺陷，确定性能提升目标
+  - 2.针对特定场景，做对应方案，如加载时(首屏)，运行时(动画、内存泄漏、长列表)
+  - 3.实施方案，查看优化效果
 
 ## 性能指标
 - [知乎参考](https://zhuanlan.zhihu.com/p/82981365)
-
 - 指标概念
   - 是否发生？FP(首次绘制) - 屏幕首次有视觉变化的时间点
   - 是否发生？FCP(首次内容绘制) - 浏览器第一次向屏幕绘制内容(文本、图片...)
@@ -35,7 +34,7 @@
     - Main：倒置火焰图，横坐标表示消耗时间，纵坐标为函数调用栈，除了函数的耗时，还有Recalculate Style：样式计算。Layout：布局位置。
     - Frames:FPS帧率，水平线越低且持续时间长，同时上方会出现红色线条，代表画面卡顿。
     - Rendering：勾选FPS，可查看帧率和GPU内存使用情况
-  - 代码：使用window.performance.timing
+  - 代码：使用API[window.performance.timing](https://developer.mozilla.org/zh-CN/docs/Web/API/PerformanceTiming)，时间戳单位都是毫秒。
     ![timing API1](./img/Per-timingAPI-1.jpg)
     ![timing API2](./img/Per-API.jpg)
     - 起始点可选择：navigationStart(在URL输入栏回车或者页面按F5刷新的时间点) vs fetchStart(准备用 HTTP 请求获取文档的时间，除去重定向)
@@ -48,7 +47,9 @@
     let dnsTime = t.domainLookupEnd - t.domainLookupStart;         // dns查询耗时
     ```
 - 数据上传
-  - `navigator.sendBeacon(url, data);`通过HTTP将少量数据异步传输到Web服务器(不支持IE)
+  - `navigator.sendBeacon(url, data);`通过HTTP将少量数据**异步传输**到Web服务器(不支持IE)
+  - 同步的缺点：导致卸载延时。统计和诊断代码通常要在 unload 或者 beforeunload 事件处理器中发起一个同步 XMLHttpRequest 来发送数据。同步的 XMLHttpRequest 迫使用户代理延迟卸载文档，并使得下一个导航出现的更晚。
+  - 异步sendBeacon的优点：不会导致延迟。使用 sendBeacon() 方法会使用户代理在有机会时异步地向服务器发送数据，同时不会延迟页面的卸载或影响下一导航的载入性能。这就解决了提交分析数据时的所有的问题：数据可靠，传输异步并且**不会影响下一页面的加载**。
   ```js
   window.addEventListener('unload', logData, false);
   function logData() {
@@ -77,7 +78,9 @@
     // TTI 谷歌npm包 - tti-polyfill
 
     // FPS
-    //不掉帧的情况，requestAnimationFrame 这个方法在一秒内会执行 60 次。假设动画在时间 A 开始执行，在时间 B 结束，耗时 x ms。而中间 requestAnimationFrame 一共执行了 n 次，则此段动画的帧率大致为：n / (B - A)。
+    // 不掉帧的情况，requestAnimationFrame 这个方法在一秒内会执行 60 次。
+    // 假设动画在时间 A 开始执行，在时间 B 结束，耗时 x ms。
+    // 而中间 requestAnimationFrame 一共执行了 n 次，则此段动画的帧率大致为：n / (B - A)。
 
     // 设备信息
     window.navigator.userAgent     // 获取用户设备信息
@@ -154,14 +157,29 @@
 
 ## 加载时
 > 加载时可以以首屏加载速度来做优化
+- [参考](https://zhuanlan.zhihu.com/p/37148975)
 
 ### 首屏加载
 > 首屏的加载速度很重要,过长的白屏会导致用户流失。
 > WEEX生成的是JS渲染成原生组件，此部分不适用
 
 - 用户体验感知
-  - 前置loading：插件html-webpack-plugin，白屏时展示loading图。
-  - 骨架屏占位：插件vue-server-renderer，展示大体结构，视觉过渡流畅。
+  - 前置简单loading：插件html-webpack-plugin，将loading提前到白屏时展示(首屏体积 = html + css)，不需要等JS加载，写好loading的html和css，在html中使用模板插入对应的loading变量到根节点。
+  ```html
+  <!DOCTYPE html>
+  <html lang="en">
+      <head>
+          <%= htmlWebpackPlugin.options.loading.css %>
+      </head>
+
+      <body>
+          <div id="root">
+              <%= htmlWebpackPlugin.options.loading.html %>
+          </div>
+      </body>
+  </html>
+  ```
+  - 骨架屏占位：插件**vue-server-renderer**，展示大体结构，视觉过渡流畅。
     - 将vue文件转为html 和css字符串，骨架屏的样式通过`<style></style>`标签直接被插入，而骨架屏的内容也被放置在`div#app`之间
 
 - 网络和缓存
@@ -285,7 +303,7 @@
   - 动态加载 ES6 代码：ES6意味着不用经过Babel转译，体积更小，性能更好，`<script type="module">`这个标签来判断浏览器是否支持 es6。
 
 - 预渲染&服务端渲染
-  - 预渲染：插件prerender-spa-plugin，预渲染静态 html 内容，构建过程中，本地模拟开启页面，捕获内容并输出html文件，放在指定路由同名的文件夹，访问时返回对应的已渲染好的index.html文件，适合静态内容多的页面。
+  - 预渲染：插件**prerender-spa-plugin**，预渲染静态 html 内容，构建过程中，在 dist 目录中开启一个静态服务器，使用无头浏览器（puppeteer）访问对应的路径，执行 JS，捕获内容并输出html文件，放在指定路由同名的文件夹，访问时返回对应的已渲染好的index.html文件，适合静态内容多的页面（不考虑动态数据的话）。
     - router设为history模式，然后安装插件
     ```
     npm i prerender-spa-plugin --save-dev
