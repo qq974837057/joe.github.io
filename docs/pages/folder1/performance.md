@@ -184,8 +184,11 @@
 
 - 网络和缓存
   - HTTP2：二进制分帧、多路复用、头部压缩、服务端推送
-  - 拆包 + 缓存策略：webpack 4.x 对SplitChunksPlugin插件进行拆包配置 + 强制缓存和协商缓存，将第三方库设置较长的强缓存时间
-
+  - 拆包 + 缓存策略：webpack 4.x 对SplitChunksPlugin插件进行拆包配置 + 强制缓存和协商缓存，将第三方库分别拆开设置较长的强缓存时间并加上hash
+    - 如基础型的 react 等库与工具性的 lodash 和特定库 Echarts 进行拆分
+  - 组件的缓存keep-alive
+    - 在页面已经跳转后依然不销毁组件,保存组件的实例在内存中,再次渲染时可以利用缓存的组件实例。
+    - 大量实例不销毁,保存在内存中,存在内存泄漏的风险,要调用deactivated销毁。
 - 懒加载
   - 图片懒加载（vue-lazyload）原理：进入可视区域再加载图片
     - 使用：src换成v-lazy
@@ -203,10 +206,7 @@
     ```
   - 组件级别懒加载
     - 思路：IntersectionObserver条件判断是否出现在屏幕(图片懒加载也使用过此API) + v-if 指令渲染组件 + 骨架屏触发屏幕条件判断(大体灰白结构)
-  - 组件keep-alive
-    - 在页面已经跳转后依然不销毁组件,保存组件的实例在内存中,再次渲染时可以利用缓存的组件实例。
-    - 大量实例不销毁,保存在内存中,存在内存泄漏的风险,要调用deactivated销毁。
-
+  
 - 减少体积
   - Tree Shaking：webpack4.x 默认支持，基于ES6的modules，要设置 modules: false 避免转为commonjs规范。
   - gzip压缩：效果 Content-Encoding：gizp，文件大小降为30%。服务器nginx设置压缩比等 或者 前端安装compression-webpack-plugin，再配置productionGzip，构建时生成.gz 文件，服务器就无须再压缩。一般图片不压缩。
