@@ -682,7 +682,7 @@
 
 - 同源：“协议+域名+端口”三者相同
   - 非同源会被限制：无法完成 AJAX 请求，无法读写其他域 localStorage，非指定域名的 Cookie 不会发送。
-- 不同域之间相互请求资源，就算作“跨域”。
+- 不同源之间相互请求资源，就算作“跨域”。
   ![域名地址组成](./img/HTTP-domain.png)
 
 ```
@@ -720,8 +720,8 @@ http://www.domain2.com/b.js        不同域名                         不允�
   - 核心实现：创建 script 标签发起 get 请求，前端定义函数，在后端把数据放入回调，然后返回前端执行。
   - 优点：简单就可实现跨域、兼容好
   - 缺点：只支持 get 请求，`<script>`标签只能 get，且容易受 xss 攻击
-  - 具体：创建一个`<script>`标签，src 为跨域的 API 数据接口,声明一个回调函数，window[show]=function(){ resolve(data)}参数值为函数名(如 show)在地址中向服务器传递该函数名（可以通过问号传参:?callback=show），服务器特殊处理 show(data)返回给客户端，客户端再调用执行回调函数（show），对返回的数据进行操作。
-- cors 跨域资源共享
+  - 具体：创建一个`<script>`标签，src 为跨域的 API 数据接口,声明一个回调函数，`window[show]=function(){ resolve(data)}` 在地址中向服务器传递该函数名(如 show)（问号 query 形式传参:`?callback=show`），服务器特殊处理把数据放在回调函数中 `show(data)` 返回给客户端，客户端再调用执行回调函数（show），对返回的数据进行操作。
+- CORS 跨域资源共享
   - 主流跨域方案:http 头告诉浏览器允许访问不同源服务器上的资源
   - 优点：简单配置即可跨域，支持所有类型的 HTTP 请求
   - 缺点：某些老旧浏览器不支持 CORS
@@ -789,37 +789,39 @@ http://www.domain2.com/b.js        不同域名                         不允�
 
 - 如何支持发送 cookie（a.com 请求 -> b.com 的接口）
   - 默认情况下，跨域不携带 cookie，所以要进行设置
-  - 前端：
-    - AJAX 请求中打开 xhr.withCredentials= true;属性允许发送 cookie 和接收服务器 set-cookie。
-  - 服务器：
-    - Access-Control-Allow-Credentials：true(服务器同意发送 cookie)
-    - Access-Control-Allow-Origin 就不能设为星号（\*），必须指定明确的、与发起跨域请求网页一致的的域名(a.com)。
+  - 前端
+    - AJAX 请求中打开 `xhr.withCredentials= true;` 属性允许发送 cookie 和接收服务器 set-cookie。
+  - 服务器
+    - `Access-Control-Allow-Credentials：true` (服务器同意发送 cookie)
+    - `Access-Control-Allow-Origin ` 就不能设为星号（\*），必须指定明确的、与发起跨域请求网页一致的的域名(a.com)。
   - 遵循同源政策：服务器(b.com)设置 cookie 的才会上传，其他域的 cookie 不会上传，跨域原网页代码也获取不到服务器设置的 cookie
 
 ## get 和 post ✨
 
 ![知乎参考](https://www.zhihu.com/question/28586791)
 
+- 概述：GET和POST本质上就是TCP链接，并无差别。最大的区别就是语义不同：get一般用于获取资源，post一般用来创建或修改资源。
 - 参数
-  - get 通过 url 传输，post 通过请求体 body 传输(HTTP 本身没限制，get 实际上也可以带 body，post 也可以在 url 上携带数据)
-- 类型
-  - get 只允许 ASCII 字符(其实是 URL 用的编码)，post 无限制(其实是 body 用的编码)
-- 限制
-  - get 有长度限制(浏览器限制 URL 的长度、Chrome 的 URL 限制是 2MB)，post 无限制，
+  - get通过url传输，post通过请求体body传输
+  - HTTP协议本身没有这个限制。浏览器的Ajax api，Postman工具发出来的GET和POST请求符合http规范，不受参数携带位置的限制。get方法可以在body中传递数据，post可以在url传递数据。
+  - 但是由于浏览器/服务器的限制，不一定能收到，不同浏览器和服务器处理方式不同
+  - 限制
+    - get有长度限制(浏览器限制URL的长度、Chrome的URL限制是8K个字符)，post无限制
+  - 编码
+    - get只允许ASCII字符(其实是URL用的编码)，post无限制(其实是body用的编码)
 - 安全
-  - get 不安全，参数在 url 上，通过地址栏/代理/历史记录可查到，post 较安全，数据在请求体里。不过也是可以被记录的，最安全的还是 https。
-- 有害
-  - get 无害，刷新后退不会引起重复提交。
+  - get不安全，参数一般在url上，通过地址栏/代理/历史记录可查到。
+  - post较安全，数据在请求体里。不过也是可以被记录的，最安全的还是https。
 - 幂等性
-  - get 幂等(反复读取不会对访问的数据有副作用)，post 非幂等(比如请求会让服务器做事情，如下单，有副作用)
-  - 不过不过开发者可以将 GET 实现为有副作用，POST 实现为没有副作用，只是和与浏览器预期不符。
-- TCP 数据包
-  - get 一个，post 两个(先发 header，返回 100 再发 body 的数据)
-  - 发两次只是一个优化，为了服务端能够先校验请求头，通过再发送数据给服务器，不通过就拒绝，避免浪费带宽传输 body。
+  - get幂等(反复读取不会对访问的数据有副作用)
+  - post非幂等(比如请求会让服务器做事情，如下单，有副作用)
+  - 不过开发者可以将GET实现为有副作用，POST实现为没有副作用，只是和与浏览器预期不符
+- 有害
+  - get无害，刷新后退不会引起重复提交
 - 场景
-  - get 一般用于获取资源，post 一般用来创建资源。
-  - 私密数据，合理选择是用 POST + body，比如登录。
-  - axios 的 get 方法不支持在 body 传参，只支持 params，如果要传递，需要使用 post。或者自己 xhr 封装实现，理论上是可以在 body 里传，但一般不这么做。
+  - 私密数据，合理选择是用POST + body，比如登录
+  - axios的get方法不支持在body传参，只支持params，如果要传递，需要使用post。或者自己xhr封装实现，理论上是可以在body里传，但一般不这么做
+
 - get 能传图片吗
 
   - base64 放在 URL 上
