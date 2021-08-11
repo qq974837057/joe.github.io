@@ -429,7 +429,7 @@
 
 ## 状态码
 
-- 进行一个 http 请求的时候，我们看到的只是最后服务器返回来的状态码
+- 进行一个 http 请求的时候，可以根据服务器返回来的状态码进行对应的处理，可分为以下几类
 - 1XX 信息 (服务器收到请求，需要继续处理)
 - 2XX 成功
   - 200 OK，表示从客户端发来的请求在服务器端被正确处理 ✨
@@ -437,32 +437,32 @@
     - 200 (from memory cache) 命中强缓存，从内存获取内容
   - 204 No content，表示请求成功，但没有返回任何内容。
   - 206 Partial Content，客户端通过发送范围请求头 Range 抓取到资源的部分数据，断点下载/上传
-- 3XX 重定向
+- 3XX 重定向和缓存
   - 301 moved permanently，永久性重定向，表示资源已被分配了新的 URL
   - 302 found，临时性重定向，表示资源临时被分配了新的 URL ✨，请求还是原 url
   - 304 not modified，未修改，可使用缓存 ✨（协商缓存）
   - 307 temporary redirect，临时重定向，和 302 含义相同
   - 308 Permanent Redirect 类似 301，但不允许浏览器将原本为 POST 的请求重定向到 GET 请求上。
   - 重定向 307，308，303，302 的区别？
-    - 302 是 http1.0 的协议状态码，在 http1.1 版本的时候为了细化 302 状态码又出来了两个 303 和 307
-    - 303 明确表示客户端应当采用 get 方法获取资源，他会把 POST 请求变为 GET 请求进行重定向。
-    - 307 会遵照浏览器标准，不会从 post 变为 get。
-    - 308 类似 301，不会从 post 变为 get。
+    - 302 是 http1.0 的协议状态码，在 http1.1 版本细化 302 状态码又加入 303 和 307
+    - 303 （跟 302 处理方式一致）明确表示客户端应当采用 get 方法获取资源，他会把 POST 请求变为 GET 请求进行重定向
+    - 307 （跟 302 处理方式不一致）类似 302，但不会从 post 变为 get
+    - 308 类似 301，但不会从 post 变为 get
 - 4XX 客户端错误
   - 400 (错误请求)bad request，请求存在语法错误 ✨
-  - 401 (未授权)unauthorized，请求要求身份验证。 ✨
+  - 401 (未授权)unauthorized，请求要求身份验证 ✨
   - 403 (禁止)forbidden，服务器拒绝请求 ✨
   - 404 (未找到)not found，请求的资源不存在 ✨
-  - 405 (方法禁用)， 禁用请求中指定的方法。
-  - 409 (冲突)Conflict，请求的资源可能引起
-  - 415 (支持的媒体类型)请求的格式不受请求页面的支持，如 json 传成 formdata。
+  - 405 (方法禁用)， 禁用请求中指定的方法
+  - 409 (冲突)Conflict，请求的资源可能引起服务端数据冲突
+  - 415 (支持的媒体类型)请求的格式不受请求页面的支持，如 json 传成 formdata
 - 5XX 服务器错误
   - 500 (服务器内部错误)internal sever error，表示服务器端内部错误 ✨
   - 501 (尚未执行)Not Implemented， 不支持请求的功能（无法完成请求方法）
-  - 502 (错误网关) 服务器作为网关或代理，从上游服务器收到无效响应。
+  - 502 (错误网关) 服务器作为网关或代理，从上游服务器收到无效响应
   - 503 (服务不可用) service unavailable，服务器暂时处于超负载或正在停机维护(暂时状态)
-  - 504 (网关超时) Gateway Time-out， 服务器作为网关或代理，但是没有及时从远端服务器收到请求。
-  - 505 (HTTP 版本不受支持)， 服务器不支持请求中所用的 HTTP 协议版本。
+  - 504 (网关超时) Gateway Time-out， 服务器作为网关或代理，但是没有及时从远端服务器收到请求
+  - 505 (HTTP 版本不受支持)， 服务器不支持请求中所用的 HTTP 协议版本
 
 ## Content-Type
 
@@ -520,56 +520,84 @@
 - [XMLHttpRequest](https://developer.mozilla.org/zh-CN/docs/Web/API/XMLHttpRequest)
 - 概念：异步 JS 和 XML 缩写，现在一般用 JSON 代替 XML。
 - 用处：在不刷新页面的情况下，向浏览器发起请求和接受响应，最后局部更新页面。
-- 实现：基于 XMLHttpRequest 对象，可发起 HTTP 请求，监听 readystate 的变化获得响应，然后执行刷新。
+- 实现：基于 XMLHttpRequest 对象，可发起 HTTP 请求，监听 readyState 的变化获得响应，然后执行刷新。
 - 使用：
 
   ```js
-  var xhr = new XMLHttpRequest(); // 声明一个请求对象
-  xhr.open("GET", "url/xxxx", true); // (默认为true，异步请求)
-  xhr.setRequestHeader("Content-Type", "application/json");
-  // 设置请求头 xhr.setRequestHeader(header, value);
-  xhr.send(null); // get方法 send null(亦或者不传) , post 的 send 则是传递值("firstName=Henry&lastName=Ford")
+  let xhr = new XMLHttpRequest(); // 声明一个请求对象
 
   xhr.onreadystatechange = function () {
+    // 保证兼容，在调用open之前先赋值
     if (xhr.readyState === 4) {
       // readyState 4 代表已向服务器发送请求
       if (xhr.status === 200) {
         // status 200 代表服务器返回成功
-        var json = JSON.parse(xhr.responseText); // 这是返回的文本
+        var json = JSON.parse(xhr.responseText); // 这是返回的响应体文本
       } else {
         console.log("Error: " + xhr.status); // 连接失败的时候抛出错误
       }
     }
   };
+
+  xhr.open("GET", "url/xxxx", true); // 默认为true，异步请求
+  xhr.setRequestHeader("Content-Type", "application/json");
+  // xhr.setRequestHeader(header, value); 设置请求头
+  xhr.send(null); // get方法 send null , post 的 send 则是传递值("firstName=Henry&lastName=Ford")
   ```
 
 - 优点：无刷新请求数据
 - 缺点：浏览器限制不能跨域，跨域看下面的方案。
 
-- XMLHttpRequest.readyState 属性
+- xhr 对象的 readyState 属性
 
-  - 0 代理被创建，但尚未调用 open() 方法。
-  - 1 open() 方法已经被调用。
-  - 2 send() 方法已经被调用，并且头部和状态已经可获得。
-  - 3 下载中； responseText 属性已经包含部分数据。
-  - 4 下载操作已完成。
+  - 0 未初始化： 尚未调用 open() 方法
+  - 1 已打开： open() 方法已经被调用
+  - 2 已发送： send() 方法已经被调用，但未收到响应
+  - 3 接收中； 收到部分响应 ，responseText 属性已经包含部分数据
+  - 4 完成： 已收到所有响应，可使用
 
+- xhr 对象的 responseText 属性：表示响应体数据
+- xhr 对象的 timeout 属性: 设置超时时间(毫秒)
+
+- `xhr.open()`方法
+  - 参数：请求类型(get/post 等)，请求的 URL(相对或绝对路径)，布尔值(是否异步)
+  - 为发送请求做好准备，并未发送请求
+- `xhr.send()`方法
+  - 参数：请求体的数据，如果不需要必须传 null
+  - 调用 send 后，请求就发到服务器
+  - get 方法 `send(null)` , post 的 send 则是传递值("firstName=Henry&lastName=Ford")，或者使用`send(new FormData(form))`序列化表单内容
+- `xhr.abort()`方法
+  - 调用这个方法后，取消异步请求,xhr 对象会停止触发事件，并阻止访问有关响应的任何属性。
+  - 取消后请求后，建议取消对 xhr 对象的引用
 - 应用：利用事件监听其他项目或不可控代码的 AJAX 请求
   - 原理：监听 xhr 对象的一些事件，再合适的事件节点做对应的操作，比如说 onreadystatechange 请求加密，onload 响应解密。
-  - 事件类型：直接 on + 事件监听执行回调，如`XMLHttpRequest.onload = callback;`
+  - 事件类型：直接 on + 事件监听执行回调（DOM0 风格）
     ```js
     xhr.onload = function () {
       // 此处readyState 为 4 ，可处理取回的数据
     };
     ```
     - readystatechange： readyState 属性发生变化，调用处理函数
-    - loadstart：请求触发时，如调用 send。
-    - progress：响应数据接收中
+    - loadstart：接收到响应的第一个字节触发。
+    - progress：响应数据接收中，反复触发
     - load：请求成功时，数据接收完毕
-    - abort：请求被取消时
-    - error：请求遇到错误时
+    - abort：请求被取消时触发
+    - error：请求遇到错误时触发
     - loadend：请求结束时（无论是 load、abort、error 都会触发）
     - timeout：预设时间中没有收到响应时
+- 进度事件 onprogress 的 event 对象属性
+  - lengthComputable 进度信息是否可用
+  - position 接收到的字节数
+  - totalSize 总字节数
+
+```js
+xhr.onprogress = function (event) {
+  if (event.lengthComputable) {
+    // event.position
+    // event.totalSize
+  }
+};
+```
 
 ## Axios 使用
 
@@ -760,7 +788,7 @@ http://www.domain2.com/b.js        不同域名                         不允�
 - postMessage/onmessage
   - 允许来自不同源的脚本采用异步方式进行通信，可以实现跨文本档、多窗口、跨域消息传递。
 
-## CORS
+## CORS 跨域资源共享
 
 - 简单请求： GET、POST、HEAD
 - 非简单请求：请求方法 PUT 和 DELETE，或者 Content-Type 为 application/json（POST 时常用），或特殊请求头如 Token
@@ -800,27 +828,28 @@ http://www.domain2.com/b.js        不同域名                         不允�
 
 ![知乎参考](https://www.zhihu.com/question/28586791)
 
-- 概述：GET和POST本质上就是TCP链接，并无差别。最大的区别就是语义不同：get一般用于获取资源，post一般用来创建或修改资源。
+- 概述：GET 和 POST 本质上就是 TCP 链接，并无差别。最大的区别就是语义不同：get 一般用于获取资源，post 一般用来创建或修改资源。
 - 参数
-  - get通过url传输，post通过请求体body传输
-  - HTTP协议本身没有这个限制。浏览器的Ajax api，Postman工具发出来的GET和POST请求符合http规范，不受参数携带位置的限制。get方法可以在body中传递数据，post可以在url传递数据。
+  - get 通过 url 传输，post 通过请求体 body 传输
+  - HTTP 协议本身没有这个限制。浏览器的 Ajax api，Postman 工具发出来的 GET 和 POST 请求符合 http 规范，不受参数携带位置的限制。get 方法可以在 body 中传递数据，post 可以在 url 传递数据。
   - 但是由于浏览器/服务器的限制，不一定能收到，不同浏览器和服务器处理方式不同
   - 限制
-    - get有长度限制(浏览器限制URL的长度、Chrome的URL限制是8K个字符)，post无限制
+    - get 有长度限制(浏览器限制 URL 的长度、Chrome 的 URL 限制是 8K 个字符)，post 无限制
   - 编码
-    - get只允许ASCII字符(其实是URL用的编码)，post无限制(其实是body用的编码)
+    - get 只允许 ASCII 字符(其实是 URL 用的编码)，post 无限制(其实是 body 用的编码)
 - 安全
-  - get不安全，参数一般在url上，通过地址栏/代理/历史记录可查到。
-  - post较安全，数据在请求体里。不过也是可以被记录的，最安全的还是https。
+  - get 不安全，参数一般在 url 上，通过地址栏/代理/历史记录可查到。
+  - post 较安全，数据在请求体里。不过也是可以被记录的，最安全的还是 https。
 - 幂等性
-  - get幂等(反复读取不会对访问的数据有副作用)
-  - post非幂等(比如请求会让服务器做事情，如下单，有副作用)
-  - 不过开发者可以将GET实现为有副作用，POST实现为没有副作用，只是和与浏览器预期不符
+  - get 幂等(反复读取不会对访问的数据有副作用)
+  - post 非幂等(比如请求会让服务器做事情，如下单，有副作用)
+  - 不过开发者可以将 GET 实现为有副作用，POST 实现为没有副作用，只是和与浏览器预期不符
 - 有害
-  - get无害，刷新后退不会引起重复提交
+  - get 无害，刷新后退不会引起重复提交
 - 场景
-  - 私密数据，合理选择是用POST + body，比如登录
-  - axios的get方法不支持在body传参，只支持params，如果要传递，需要使用post。或者自己xhr封装实现，理论上是可以在body里传，但一般不这么做
+
+  - 私密数据，合理选择是用 POST + body，比如登录
+  - axios 的 get 方法不支持在 body 传参，只支持 params，如果要传递，需要使用 post。或者自己 xhr 封装实现，理论上是可以在 body 里传，但一般不这么做
 
 - get 能传图片吗
 
