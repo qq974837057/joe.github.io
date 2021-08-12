@@ -708,16 +708,17 @@ xhr.onprogress = function (event) {
     - 通过循环 promise.then 调用链表，按顺序请求
     - 最后返回 promise 给业务处理
 
-    ```js
-    while (chain.length) {
-      promise = promise.then(chain.shift(), chain.shift());
-    }
-    ```
+      ```js
+      while (chain.length) {
+        promise = promise.then(chain.shift(), chain.shift());
+      }
+      return promise;
+      ```
 
   - dispatchRequest
     - 根据适配器不同，选择请求前后的数据包装方式
   - 流程图示意
-  
+
     ![源码流程](./img/axios-1.png)
 
 ## 域名
