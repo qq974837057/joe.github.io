@@ -1343,8 +1343,10 @@ removeAttribute(key);
   - HTTP 通信无状态，且只能由客户端发起
   - WebSocket 有状态，全双工 TCP 通道，服务器也可以主动向客户端推送消息。
   - 主要应用：即时通信、实时音视频、在线教育等
-  - 优点: - 实时性：服务器可以主动给客户端下发数据 - 开销少：交换数据时的头部较小 - 保持状态：是有状态的协议
-    ![HTTP-websoket](./img/HTTP-websocket.png)
+  - 优点
+    - 实时性：服务器可以主动给客户端下发数据
+    - 开销少：交换数据时的头部较小 - 保持状态：是有状态的协议
+      ![HTTP-websoket](./img/HTTP-websocket.png)
 
 - WebSocket 与 长轮询
 
@@ -1352,7 +1354,7 @@ removeAttribute(key);
   - WebSocket 在握手成功后，就是全双工的 TCP 通道，数据可以主动从服务端发送到客户端。
     ![WebSocket-Long-Pollin](./img/WebSocket-Long-Polling.png)
 
-- 特点：
+- 特点
 
   - 握手阶段采用 HTTP 协议
   - 无同源限制，客户端可以跟任意服务器通信
@@ -1361,7 +1363,7 @@ removeAttribute(key);
 - 客户端的使用
 
   ```js
-  var ws = new WebSocket("wss://echo.websocket.org");
+  const ws = new WebSocket("wss://echo.websocket.org");
 
   ws.onopen = function (evt) {
     console.log("Connection open ...");
@@ -1382,9 +1384,20 @@ removeAttribute(key);
 
   - WebSocket 构造函数：新建 WebSocket 实例
     ```js
-    var ws = new WebSocket("ws://localhost:8080");
+    const ws = new WebSocket("ws://localhost:8080");
     // 执行完后，客户端与服务器进行连接
     ```
+  - 属性
+    - readyState 实例的状态
+    - bufferedAmount
+  - 方法
+    - send() 发送
+    - close() 关闭
+  - 事件
+    - open
+    - close
+    - message
+    - error
   - ws.readyState：返回实例对象的当前状态
     ```js
     switch (ws.readyState) {
@@ -1417,30 +1430,21 @@ removeAttribute(key);
   - ws.onclose：连接关闭后的回调函数
     ```js
     ws.onclose = function (event) {
-      var code = event.code;
-      var reason = event.reason;
-      var wasClean = event.wasClean;
+      const { code, reason, wasClean } = event;
       // handle close event
     };
     ```
   - ws.onmessage：收到服务器的数据后的回调函数
     ```js
     ws.onmessage = function (event) {
-      var data = event.data;
+      let data = event.data;
       // 处理数据
     };
     // 多个回调可以使用下面监听
     ws.addEventListener("message", function (event) {
-      var data = event.data;
+      let data = event.data;
       // 处理数据
     });
-    ```
-  - ws.send：向服务器发送数据
-    ```js
-    ws.send("your message");
-    // 发送文件
-    var file = document.querySelector('input[type="file"]').files[0];
-    ws.send(file);
     ```
   - ws.onerror： 报错时的回调函数
     ```js
@@ -1448,13 +1452,20 @@ removeAttribute(key);
       // handle error event
     };
     ```
-  - ws.bufferedAmount：表示还有多少字节的二进制没发送出去，为 0 表示发送结束。
+  - 方法 ws.send：向服务器发送数据
+    ```js
+    ws.send("your message");
+    // 发送文件
+    var file = document.querySelector('input[type="file"]').files[0];
+    ws.send(file);
+    ```
+  - 属性 ws.bufferedAmount：队里中剩下多少字节的二进制没发送出去，为 0 表示发送结束。
 
     ```js
-    var data = new ArrayBuffer(10000000);
-    socket.send(data);
+    const data = new ArrayBuffer(10000000);
+    ws.send(data);
 
-    if (socket.bufferedAmount === 0) {
+    if (ws.bufferedAmount === 0) {
       // 发送完毕
     } else {
       // 发送还没结束
