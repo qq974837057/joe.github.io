@@ -698,6 +698,28 @@ xhr.onprogress = function (event) {
       })
   ```
 
+- axios 源码解读
+
+  - 责任链 chain，按顺序调用
+
+    - 遍历`chain.unshift()` 请求拦截器
+    - 请求 `dispatchRequest`
+    - 遍历`chain.push()` 响应拦截器
+    - 通过循环 promise.then 调用链表，按顺序请求
+    - 最后返回 promise 给业务处理
+
+    ```js
+    while (chain.length) {
+      promise = promise.then(chain.shift(), chain.shift());
+    }
+    ```
+
+  - dispatchRequest
+    - 根据适配器不同，选择请求前后的数据包装方式
+  - 流程图示意
+  
+    ![源码流程](./img/axios-1.png)
+
 ## 域名
 
 - 一个完整的域名由二个或二个以上部分组成，各部分之间用英文的句号"."来分隔。
