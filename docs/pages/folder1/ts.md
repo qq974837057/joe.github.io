@@ -547,4 +547,7 @@
 
 - 参考
   - [接口 Interfaces、枚举 enum、泛型 Generics](https://github.com/xcatliu/typescript-tutorial/blob/master/advanced/generics.md)
+  - [掘金阿宝哥](https://juejin.cn/post/6872111128135073806#heading-118)
+- 工具
+  - [TypeDoc](TS生成文档)
   - [在线 TS 编译效果面板](https://www.typescriptlang.org/play?#code/MYewdgzgLgBApmArgWxgKRHGBvAUDAmMAQ2SwF4YAiAK0yoBp9DiBzC6gJgFZHmBfZqEiw6cAILsYlDHAB0JMgG4gA)
