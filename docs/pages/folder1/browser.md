@@ -7,12 +7,12 @@
    - 客户端向服务器发送一个建立连接的请求 syn（您好，我是 A）
    - 服务器接到请求后发送同意连接的信号 syn+ack（收到，我是 B）；
    - 客户端接到同意连接的信号后，再次向服务器发送确认信号 ack（那我们建立连接了），客户端与服务器建立了连接。
-3. 请求：浏览器设置请求报文（请求行、头、主体），发起 HTTP 请求。
+3. 请求：浏览器设置请求报文（请求行、请求头、主体），发起 HTTP 请求。
 4. 响应: 服务器处理完成后返回响应报文,（起始行（状态码），响应头、主体）浏览器接收文件（HTML、JS、CSS、图象等）；
 5. 浏览器对加载到的资源（HTML、JS、CSS 等）进行语法解析，建立相应的内部数据结构（如 HTML 的 DOM）；
 6. 载入解析好的资源文件，进行渲染 UI 页面，完成。
 
-- 从总体看优化：
+- 从总体看优化
   - 优化目的是将信息**快速并友好**的展示给用户并能够与用户进行交互。
   - 缩短连接时间：DNS 优化
   - 减少响应内容大小：进行压缩和懒加载
@@ -20,7 +20,7 @@
 
 ### 细节：DNS 解析
 
-- 解析过程：
+- 解析过程
   - 首先在本地域名服务器中查询 IP 地址，没有找到就去 com 顶级域名服务器请求查找，找到后把 IP 地址缓存在本地域名服务器便于下次使用。
     ```
      . -> .com -> google.com. -> www.google.com.
@@ -48,8 +48,11 @@
 - 三次握手而不是两次，是因为要保证 client 和 server 均让对方知道自己**的接收和发送能力**没问题而保证的最小次数
 - 每次握手都会带一个标识 seq，后续的 ACK 都会**对 seq+1**来进行确认，保证每个数据包之间的顺序。
 - 三次握手的本质，中间的一次动作是（ACK 和 SYN）的合并。
-- 过程： - 客户端向服务器发送一个建立连接的请求 SYN（您好，我是 A），客户端为 syn_sent 状态（主动半打开） - 服务器接到请求后发送同意连接的信号 ACK + SYN （收到，我是 B），服务器端为 syn_rcvd 状态（被动半打开） - 客户端接到同意连接的信号后，客户端变成 Estalished 状态，再次向服务器发送确认信号 ACK（那我们建立连接了），服务器变成 Estalished 状态，客户端与服务器建立了连接。
-  ![三次握手](./img/HTTP-three.gif)
+- 过程：
+  - 客户端向服务器发送一个建立连接的请求 SYN（您好，我是 A），客户端为 syn_sent 状态（主动半打开）
+  - 服务器接到请求后发送同意连接的信号 ACK + SYN （收到，我是 B），服务器端为 syn_rcvd 状态（被动半打开）
+  - 客户端接到同意连接的信号后，客户端变成 Estalished 状态，再次向服务器发送确认信号 ACK（那我们建立连接了），服务器变成 Estalished 状态，客户端与服务器建立了连接。
+    ![三次握手](./img/HTTP-three.gif)
 
 ### 细节：TCP 数据传输
 
@@ -134,10 +137,10 @@
 
 ### 细节：HTTP 请求
 
-- 步骤：
+- 步骤
   - 构建 HTTP 请求报文
   - 通过 TCP 协议发送到服务器指定端口(HTTP 协议 80/8080, HTTPS 协议 443)。
-- 请求报文：
+- 请求报文
 
   - 请求行
   - 请求报头
@@ -160,10 +163,10 @@
 
 ### 细节：HTTP 响应
 
-- 步骤：
+- 步骤
   - 从端口接收到 TCP 报文，对请求进行解析
   - 请求处理完后，通过构建响应报文发送会客户端。
-- 响应报文：
+- 响应报文
   - 状态行
   - 响应报头
   - 响应体(正文)
@@ -294,7 +297,7 @@
 
 ### 阻塞问题
 
-- 资源文件异步不阻塞：浏览器在解析过程中，如果遇到请求外部资源时，如图像,iconfont,JS 等。请求过程是异步的，并不会影响 HTML 文档进行加载。
+- 资源文件异步不阻塞：浏览器在解析过程中，如果遇到请求外部资源时，如图像,iconfont 等。请求过程是异步的，并不会影响 HTML 文档进行加载。
 - JS 阻塞后续资源下载：当文档加载过程中遇到 JS 文件，HTML 文档会挂起渲染过程，等到文档中 JS 文件加载完毕+解析+执行完毕，才会继续 HTML 的渲染过程。因为 JS 可能会修改 DOM 结构。
 - CSS 不影响 JS 加载，但影响 JS 的执行。
 
@@ -909,33 +912,37 @@ http://www.domain2.com/b.js        不同域名                         不允�
 
 - [知乎参考](https://zhuanlan.zhihu.com/p/63061864)
 - 安全性： Session 比 Cookie 安全，Session 是存储在服务器端的，Cookie 是存储在客户端的。
-- 存取值的类型不同：Cookie 只支持存字符串数据，想要设置其他类型的数据，需要将其转换成字符串，Session 可以存任意数据类型。
 - 有效期不同： Cookie 可设置为长时间保持，比如我们经常使用的默认登录功能，Session 一般失效时间较短，客户端关闭（默认情况下，sessionId 被删导致失效的）或者 Session 超时都会失效。
 - 存储大小不同： 单个 Cookie 保存的数据不能超过 4K，Session 可存储数据远高于 Cookie，但是当访问量过多，会占用过多的服务器资源。
+- 存取值的类型不同：Cookie 只支持存字符串数据，想要设置其他类型的数据，需要将其转换成字符串，Session 可以存任意数据类型。
 
-- 跨域和跨站 - 首先要理解的一点就是跨站和跨域是不同的。同站(same-site)/跨站(cross-site)」和第一方(first-party)/第三方(third-party)是等价的。但是与浏览器同源策略（SOP）中的「同源(same-origin)/跨域(cross-origin)」是完全不同的概念。 - 同源策略的同源是指两个 URL 的协议/主机名/端口一致。例如，www.taobao.com/pages/...，它的协议是 https，主机名是 www.taobao.com，端口是 443。
-  同源策略作为浏览器的安全基石，其「同源」判断是比较严格的，相对而言，Cookie 中的「同站」判断就比较宽松：只要两个 URL 的 eTLD+1 相同即可，不需要考虑协议和端口。其中，eTLD 表示有效顶级域名，注册于 Mozilla 维护的公共后缀列表（Public Suffix List）中，例如，.com、.co.uk、.github.io 等。eTLD+1 则表示，有效顶级域名+二级域名，例如 taobao.com 等。 - 举几个例子，www.taobao.com 和 www.baidu.com 是跨站，www.a.taobao.com 和 www.b.taobao.com 是同站，a.github.io 和 b.github.io 是跨站(注意是跨站)。
+- 跨域和跨站
+  - 首先要理解的一点就是跨站和跨域是不同的。同站(same-site)/跨站(cross-site)和第一方(first-party)/第三方(third-party)是等价的。但是与浏览器同源策略（SOP）中的「同源(same-origin)/跨域(cross-origin)」是完全不同的概念。
+  - 同源策略的同源是指两个 URL 的协议/主机名/端口一致。例如，www.taobao.com/pages/...，它的协议是 https，主机名是 www.taobao.com，端口是 443。同源策略作为浏览器的安全基石，其「同源」判断是比较严格的。
+  - 相对而言，Cookie 中的「同站」判断就比较宽松：**只要两个 URL 的 eTLD+1 相同即可**，不需要考虑协议和端口。
+  - 其中，eTLD 表示有效顶级域名，注册于 Mozilla 维护的公共后缀列表（Public Suffix List）中，例如，`.com`、`.co.uk`、`.github.io` 等。eTLD+1 则表示，有效顶级域名+二级域名，例如 taobao.com 等。
+  - 举几个例子，www.taobao.com 和 www.baidu.com 是跨站，www.a.taobao.com 和 www.b.taobao.com 是同站，a.github.io 和 b.github.io 是跨站(注意是跨站)。
 
 ## cookie、sessionStorage、localStorage
 
 - 共同点：都是保存在浏览器端，同源。
-- 生命周期：
+- 生命周期
   - cookie：可设置失效时间，没有设置的话，默认是关闭浏览器后失效
   - sessionStorage： 仅在当前网页会话下有效，关闭页面或浏览器后就会被清除。
   - localStorage：除非被手动清除，否则将会永久保存。
-- 存放数据大小：
+- 存放数据大小
   - cookie：4KB 左右
   - localStorage 和 sessionStorage：可以保存 5MB。
-- http 请求：
+- http 请求
   - cookie：每次都会携带在 HTTP 头中，浪费带宽，如果使用 cookie 保存过多数据会带来性能问题
   - localStorage 和 sessionStorage：仅在客户端（即浏览器）中保存，不参与和服务器的通信
-- 应用：
+- 应用
 
   - cookie 一般用于验证用户登录信息、个性化设置、购物车
-  - 其他情况大部分用 storage（jwt、token、健康打卡缓存）
+  - 其他情况大部分用 storage（jwt、token、筛选项缓存）
 
-- 共享：
-  - sessionStorage 同源下也其他窗口无法共享
+- 共享
+  - sessionStorage 同源下其他窗口也无法共享
   - cookie、localStorage 所有同源窗口中都是共享的
     - 每次 localStorage 中有任何变动都会触发一个  storage  事件，所有窗口都监听这个事件，一旦有窗口更新 localStorage，其他窗口都会收到通知
 
