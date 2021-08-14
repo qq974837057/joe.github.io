@@ -951,43 +951,44 @@ http://www.domain2.com/b.js        不同域名                         不允�
 > 好的缓存策略不仅可以优化网站性能、提高用户体验；还能控制更少请求和更少流量，节省成本。
 
 - 缓存策略可分为 强缓存 和 协商缓存（未过期时，直接使用强缓存，过期使用协商缓存）
-  - 客户端请求资源，服务端设置`Cache-Control`和`ETag`，在强缓存没过期时，直接使用本地缓存 200`from cache`，过期了才发起请求询问是否有新资源，有则拉取新资源。
-  - 协商缓存，下次请求头携带，传给服务器对比，若有更改，则返回新资源 200(from cache)，若无更改，则返回 304`Not Modified`，使用本地缓存即可。
-  - 不加 Cache-Control 的情况：
-    - 默认强缓存 Expires = (响应头 Date - Last-Modified) \* 10%
+  - 客户端请求资源，服务端设置`Cache-Control`和`ETag`，在强缓存没过期时，直接使用本地缓存，状态码 `200 (from disk/memory cache)`，过期了才发起请求询问是否有新资源，有则拉取新资源。
+  - 协商缓存，下次请求头携带，传给服务器对比，若有更改，则返回新资源 200，若无更改，则返回状态码 `304 Not Modified`，使用本地缓存即可。
+  - 不加 Cache-Control 的情况
+    - **默认强缓存时间** Expires = (响应头 Date - Last-Modified) \* 10%
     - 响应头的 Date 时间与`Last-Modified`的时间差的十分之一作为缓存的过期时间
 - 强缓存【命中返回 200】
   - `Cache-Control`(缓存的时间长度)(优先)(HTTP / 1.1)
     - `Cache-Control:max-age=600`（单位 s）
     - `Cache-Control`:
-      - `no-cache`，允许缓存，但每次都和服务器协商,验证是否新鲜。相当于 max-age=0
+      - `no-cache`，允许缓存，但每次都和服务器协商，验证是否新鲜。相当于 max-age=0
       - `no-store`，不会缓存，每次都去拉资源。
       - `private`，仅客户端可以缓存
       - `public`，客户端和代理服务器都可以缓存
-  - `Expires`(特定过期时间))(http1.0)
+  - `Expires`(特定过期时间)(HTTP / 1.0)
     - `expires`: Wed, 07 Aug 2019 23:15:20 GMT
     - 到期时间是服务器端的时间，客户端时间可修改，有误差
 - 协商缓存【命中返回 304】
   - `ETag`(唯一标识)(优先)
     - `ETag`(response 携带)根据 hash 或 size/mtime :"50b1c1d4f775c61:df3"
-    - `If-None-Match`(再次请求由 request 携带，上一次返回的 Etag)
+    - `If-None-Match`(再次请求由 request 携带，上一次响应返回的 `ETag`)
   - `Last-Modified`(最后一次修改时间 mtime)
     - `Last-Modified`(response 携带) : Wed, 21 Oct 2015 07:28:00 GMT
     - `If-Modified-Since` (再次请求由 request 携带，上一次返回的 Last-Modified)
-    - 周期修改但内容没变，缓存会失效
-    - s 以内的改动监测不到
+    - 缺点
+      - 周期修改但内容没变，缓存会失效
+      - s 以内的改动监测不到
 - 流程图
   ![HTTP-cache-flow](./img/HTTP-cache-flow.jpg)
 
-- 最佳实践：
+- 最佳实践
 
-  - 两种情况：
+  - 两种情况
     - 不带 hash(指纹)的资源：每次都使用协商缓存，进行新鲜度校验。
     - 带 hash(指纹)的资源：使用强缓存，一年过期时间，即 31536000 秒，可以认为永久缓存。
   - 不带 hash(指纹)的资源：如**index.html**
-    - `Cache-Control：no-cache`，每次都去协商，校验资源是否过期，没有过期则返回 304`Not Modified`，继续使用本地缓存。
+    - `Cache-Control:no-cache`，每次都去协商，校验资源是否过期，没有过期则返回 304`Not Modified`，继续使用本地缓存。
   - 带 hash(指纹)的资源：如**JS、CSS 等**
-    - `Cache-Control：31536000`，设置一年过期，在此期间不发送请求。当资源内容发生变化，webpack 打包为文件添加新 hash 值，导致 hash 变化后，会发起新的请求请求最新的资源。
+    - `Cache-Control:31536000`，设置一年过期，在此期间不发送请求。当资源内容发生变化，webpack 打包为文件添加新 hash 值，导致 hash 变化后，会发起新的请求请求最新的资源。
     - 切割缓存：当所有 js 打包在一个文件里时，只要一个小更改，整个包缓存就会失效，所以要分开。
       - 每个页面独立分开
       - 不常用第三方且较大的模块(更新频率低)，单独打包，如 echarts。
@@ -1004,12 +1005,12 @@ http://www.domain2.com/b.js        不同域名                         不允�
     - 客户端再次请求，服务器通过 cookie 中的 sessionId 找到对应 session，知道是谁发来请求
     - 优点：同域下，HTTP 请求自动携带
     - 缺点：不好扩展，服务器集群需要共享 session
-  - JWT token（解析 token 时间换取 session 的空间）
-    - 用户登录后，将用户信息存在加密后的字符串 token 中，返回给客户端保存
-    - 推荐放在请求头 Authorization，解决 cookie 跨域问题
-    - 优点：无需查数据库或者少查。
+  - JWT token（用解析 token 时间换取 session 的空间）
+    - 用户登录后，将用户信息内容存在加密后的字符串 token 中，返回给客户端保存
+    - 推荐放在请求头 Authorization，解决 cookie 跨域不会携带的问题
+    - 优点：无需查数据库或者少查数据库
     - 缺点：有效期前一直有效，比如修改密码，无法阻止异常登录
-  - Token: 用 id+时间戳+hash 生成一串 token，通过请求响应给客户端，客户端进行保存，每次请求在 header 上携带，服务器验证，避免 CSRF 攻击。
+  - Token: 用 id+时间戳+hash 生成一串 token，通过请求响应给客户端，客户端进行保存，每次请求在 header 上携带，服务器验证请求头上的 token 是否正确，避免 CSRF 攻击。
   - SSO: 单点登录，常用 CAS 中央认证服务
 
 ### cookie 和 session
@@ -1022,15 +1023,15 @@ http://www.domain2.com/b.js        不同域名                         不允�
   - 无法跨域
   - HttpOnly：禁止 js 通过 document.cookie 读取 cookie（提高安全性，防范 xss 攻击）
   - Secure 设为 true，在 HTTPS 才有效
-  - MaxAge 表示失效时间（秒），负数表示临时 cookie，关闭浏览器就删除。默认-1，为 0 表示删除。
-  - Expires 设置过期时间，以客户端时间为准。不设置表示临时 cookie，保存在客户端内存，关闭浏览器失效。
+  - MaxAge 表示多久后失效（秒），负数表示临时 cookie，关闭浏览器就删除。默认-1，为 0 表示删除。
+  - Expires 设置过期时间点，以客户端时间为准。不设置表示临时 cookie，保存在客户端内存，关闭浏览器失效。
   - Domain 指定 cookie 所属域名，默认为当前主机，如使用单点登录时设置为二级域名`.taobao.com`，子域名下(`a.taobao.com` 还是 `b.taobao.com`)都可以使用该 cookie，自动发送 cookie，携带登录信息。注意：不能跨域设置 Cookie，只能设置跟自己同域的。
   - Path 指定了一个 URL 路径，子路径也会匹配，该路径下的可接收 cookie。比如设置 `Path=/docs`，`/docs/Web/` 下的资源会带 Cookie 首部，`/test` 则不会携带 Cookie 首部。
   - **SameSite：主流浏览器得到支持，在 Chrome80 版本之前是 none，之后默认屏蔽了第三方的 Cookie（Lax）**
     - SameSite 属性可以让 Cookie 在跨站请求时不会被发送，从而可以阻止跨站请求伪造攻击（CSRF）。
     - Strict 这个 Cookie 在任何情况下都不可能作为第三方 Cookie，跨站请求不能携带（即使 CORS 也行不通）。
     - Lax 允许部分第三方请求携带 Cookie（比如 get）
-    - None 无论是否跨站都会发送 Cookie
+    - None 无论是否跨站都允许发送该 Cookie
     - 影响：Post 表单，iframe（广告），AJAX，Image（埋点），`<script>`（jsonp）不发送三方 Cookie
     - 改造：SameSite=none，允许同站、跨站请求携带该 cookie
     - 注意：SameSite=none，不支持 HTTP，需要设置 cookie 的 Secure 属性，只有在 HTTPS 协议才发送。
@@ -1126,8 +1127,19 @@ http://www.domain2.com/b.js        不同域名                         不允�
     - 可将 token 存储在 localStorage 中，然后用 postMessage 来实现跨域共享。
     - 或可使用 cors 设置对应域名+xhr 配置 withCredentials，实现跨域获取 cookie，识别用户的登录态。
 
-- CAS 中央认证服务: 通过跳转中间域名的方式来实现登录，多个系统都跳转到这个中间域来认证，同个 SSO 的 cookie 可以携带，然后多系统都找 SSO 验证该用户是否通过。 - A 系统登录： - 进入 A 系统，发现未登录（无 sessionId），302 重定向跳转到 SSO 登录页 - 在 SSO 登录页通过请求有无 SSO 的 session，来验证是否登录过 - 未登录，则去 SSO 登录页，输入密码提交后，SSO 验证通过，设置一个 SSOsession 的 key 值在 cookie 中，且将 ST 放在 url 上，并 302 重定向到系统 A，系统 A 请求 SSO 判断 ST 是否正确，若正确，SSO 发送一些信息给系统 A。 - 系统 A 设置自己的 sessionId 存到客户端的 cookie，下次访问携带该 cookie 即可。 - B 系统登录： - 系统 B 进行登录，发现未登录（无 sessionId），302 重定向跳转到 SSO 登录页，由于之前登录过，SSO 的 cookie 会自动携带发送，SSO 验证通过，将 ST 放在 url 上，然后 302 重定向回系统 B，系统 B 请求 SSO 判断 ST 是否正确，正确则返回一些信息给系统 B - 系统 B 设置自己的 sessionId 存到客户端的 cookie，下次访问携带该 cookie 即可。
-  ![CAS](./img/CAS.jpg)
+- CAS 中央认证服务: 通过跳转中间域名的方式来实现登录，多个系统都跳转到这个中间域来认证，同个 SSO 的 cookie 可以携带，然后多系统都找 SSO 验证该用户是否通过。
+
+  - A 系统登录
+    - 进入 A 系统，发现未登录（无 sessionId），302 重定向跳转到 SSO 登录页
+    - 在 SSO 登录页通过请求有无 SSO 的 session，来验证是否登录过
+    - 未登录，则去 SSO 登录页，输入密码提交后，SSO 验证通过，设置一个 SSOsession 的 key 值在 cookie 中，且将 ST 放在 url 上，并 302 重定向到系统 A，系统 A 请求 SSO 判断 ST 是否正确，若正确，SSO 发送一些信息给系统 A。
+    - 系统 A 设置自己的 sessionId 存到客户端的 cookie，下次访问携带该 cookie 即可。
+  - B 系统登录
+
+    - 系统 B 进行登录，发现未登录（无 sessionId），302 重定向跳转到 SSO 登录页，由于之前登录过，SSO 的 cookie 会自动携带发送，SSO 验证通过，将 ST 放在 url 上，然后 302 重定向回系统 B，系统 B 请求 SSO 判断 ST 是否正确，正确则返回一些信息给系统 B
+    - 系统 B 设置自己的 sessionId 存到客户端的 cookie，下次访问携带该 cookie 即可。
+
+      ![CAS](./img/CAS.jpg)
 
 ## DOM 和 BOM
 
