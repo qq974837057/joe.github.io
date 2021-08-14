@@ -1171,8 +1171,8 @@ http://www.domain2.com/b.js        不同域名                         不允�
 
   - 捕获和冒泡
   - 三个阶段：第一阶段捕获，第二阶段目标阶段，第三阶段冒泡阶段
-  - 捕获流程：window -> document -> html -> body ->... -> 目标元素
-  - 冒泡流程：目标元素-> ... -> body-> html -> document -> window
+  - 捕获流程：window -> document -> html -> body ->... -> 目标元素 div
+  - 冒泡流程：目标元素 div -> ... -> body-> html -> document -> window
   - 当 addEventListener 方法的**第三个参数为 true 时，表示在捕获阶段调用事件处理函数**；**当第三个参数为 false，表示在冒泡阶段才调用事件处理函数**（默认情况）
 
 - IE 事件模型
@@ -1181,27 +1181,39 @@ http://www.domain2.com/b.js        不同域名                         不允�
   - 参数是（事件名称，处理函数）如：`btn.attachEvent('onclick', function(){})`，移除监听时必须是相同的参数，包括事件处理函数。
   - 注意：事件处理函数作用域是全局作用域，而 DOM0 是所属元素的作用域
 
-- DOM3 级事件在 DOM2 级事件的基础上添加了更多的事件类型,全部类型如下：
+- DOM3 级事件在 DOM2 级事件的基础上添加了更多的事件类型，全部类型如下：
 
-  - UI 事件，当用户与页面上的元素交互时触发，如：load、scroll、resize
+  - UI 事件，当用户与页面上的元素交互时触发，如：load、unload、scroll、resize
   - 焦点事件，当元素获得或失去焦点时触发，如：blur、focus
-  - 鼠标事件，当用户通过鼠标在页面执行操作时触发如：click、dbclick、mouseup
+  - 鼠标事件，当用户通过鼠标在页面执行操作时触发如：click、dblclick、mousedown、mousemove、mouseup
   - 滚轮事件，当使用鼠标滚轮或类似设备时触发，如：mousewheel（已废弃，现为 WheelEvent.deltaX 横线滚动量）
-  - 文本事件，当在文档中输入文本时触发，如：textInput
+  - 输入事件，当在文档中输入文本时触发，如：textInput
   - 键盘事件，当用户通过键盘在页面上执行操作时触发，如：keydown、keypress、keyup
+  - HTML5 事件，beforeunload 页面卸载时触发，DOMContentLoaded 在 DOM 树构建完成后触发（不用等其他 css/js），hashchange 在 URL#后面的散列值变化后触发
+  - 设备事件，orientationchange 设备旋转改变模式触发（取 window.orientation 属性：0 垂直/90 左转/-90 右转）
+  - 触摸和手势事件，touchstart、touchmove、touchend
   - 合成事件，当为 IME（输入法编辑器）输入字符时触发，如：compositionstart
 
 - event 对象
 
-  - event.preventDefault() 阻止默认事件（如 a 标签点击默认跳转）
-  - event.stopPropagation() 阻止事件捕获或冒泡（父元素不响应）
-  - event.stopImmediatePropagation() 阻止捕获或冒泡，且阻止其他事件执行。如同个按钮两个函数，可在 a 中阻止 b。
-  - event.currentTarget 正在处理事件的对象（挂载 onclick 的对象），总是等于事件处理函数内部 this
-  - event.target 父元素绑定事件监听子元素，表示被触发的那个子元素。
-  - 当挂载监听事件和触发是同个 dom，则 target 和 currentTarget 和 this 是同一个。
+  - `event.preventDefault()` 阻止默认事件（如 a 标签点击默认跳转）
+  - `event.stopPropagation()` 阻止事件捕获或冒泡（父元素不响应）
+  - `event.stopImmediatePropagation()` 阻止事件捕获或冒泡，且阻止调用任何事件处理函数。如同个按钮两个函数，可在 a 中阻止 b
+  - `event.bubbles` 布尔值，事件是否冒泡
+  - `event.defaultPrevented` 布尔值，是否已经调用 preventDefault 方法
+  - `event.currentTarget` 正在处理事件的对象（挂载 onclick 的对象），总是等于事件处理函数内部 this
+  - `event.target` 触发事件的真正目标，比如父元素绑定事件监听子元素，表示被触发的那个子元素
+  - 当挂载监听事件和触发是同个 dom，则 target 和 currentTarget 和 this 是同一个
+  - 其他修饰键属性：shiftKey、ctrlKey、altKey、metaKey(Command/Window 键) 被按下为 true，没有则为 false
 
-- 事件代理 - 概念：事件委托，利用了浏览器事件冒泡的机制。祖先级 DOM 元素绑定事件，触发子孙 DOM 元素，事件冒泡至祖先 DOM，由祖先的监听函数统一处理多个子元素的事件。
-  比如列表 li 的点击事件可以放在 ul 上注册。 - 作用：减少事件注册数量，减少内存消耗。适应动态绑定新增的子元素。
+- 事件代理
+
+  - 概念：也叫事件委托，利用了浏览器事件冒泡的机制。祖先级 DOM 元素绑定事件，触发子孙 DOM 元素，事件冒泡至祖先 DOM，由祖先的监听函数统一处理多个子元素的事件。比如列表 li 的点击事件可以放在 ul 上注册。
+  - 作用：减少事件注册数量，减少内存消耗。适应动态绑定新增的子元素。
+
+- 注意
+  - 作为事件处理函数，如果是匿名函数，是无法移除的，正确的做法是传递该函数的引用。
+  - 在页面卸载时或者删除页面 DOM 节点时，为了避免引用残留，要尽量把所有事件处理函数清除`btn.onclick = null`
 
 ## JS 的 DOM 操作(Node 节点获取及增删查改)
 
