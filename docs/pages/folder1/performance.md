@@ -53,6 +53,7 @@
     - 运行后会根据实际情况给出对应的评分和建议
     - 有 Performance 页面性能、PWA（渐进式 Web 应用）、Accessibility 可访问性（无障碍）、Best Practices 最佳实践、SEO 的评分
     - 有 FCP、FMP 等时间
+      ![Lighthouse](./img/performance-lighthouse.png)
 - 数据上传
   - `navigator.sendBeacon(url, data);`通过 HTTP 将少量数据**异步传输**到 Web 服务器(不支持 IE)
   - 同步的缺点：导致卸载延时。统计和诊断代码通常要在 unload 或者 beforeunload 事件处理器中发起一个同步 XMLHttpRequest 来发送数据。同步的 XMLHttpRequest 迫使用户代理延迟卸载文档，并使得下一个导航出现的更晚。
