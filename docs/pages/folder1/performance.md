@@ -52,7 +52,7 @@
   - Lighthouse 网站性能测评工具
     - 运行后会根据实际情况给出对应的评分和建议
     - 有 Performance 页面性能、PWA（渐进式 Web 应用）、Accessibility 可访问性（无障碍）、Best Practices 最佳实践、SEO 的评分
-    - 有 FCP、FMP 等时间
+    - 有 FCP 等时间
       ![Lighthouse](./img/performance-lighthouse.png)
 - 数据上传
   - `navigator.sendBeacon(url, data);`通过 HTTP 将少量数据**异步传输**到 Web 服务器(不支持 IE)
