@@ -98,6 +98,7 @@
     window.devicePixelRatio; // 获取设备像素比
     ```
 
+    ![fp-fcp](./img/performance-fp-fcp.png)
     ![用户设备信息](./img/Per-device.png)
 
 - 注意：
@@ -762,6 +763,50 @@
     }
     ```
 
+#### 长列表渲染-时间切片
+
+- 原因：DOM 元素的创建和渲染时间成本很高,大数据完整渲染列表比较慢。
+- 场景：大量简单的 dom
+- 原理：延时加载，setTimeout（回调与系统刷新不一致会有闪屏现象）或 window.requestAnimationFrame 进行分批渲染
+- window.requestAnimationFrame(回调函数执行与浏览器刷新频率保持一致，通常是每秒 60 次，更优)下次重绘之前继续更新下一帧动画
+- FPS 表示每秒钟画面更新次数，大多数显示器的刷新频率是 60Hz，相当于每秒钟重绘 60 次，人眼睛有视觉停留效应，间隔时间太短 16.7ms（1000/60 ms）让你以为屏幕的图像是禁止的。 50 ～ 60 FPS 的动画将会相当流畅，帧率在 30 FPS 以下的动画，明显的卡顿和不适感；
+- 实现：
+
+```html
+<div>
+  <ul id="container"></ul>
+</div>
+<script type="text/javascript">
+  let ul = document.getElementById("container");
+  // 总数
+  let total = 50000;
+  // 一次插入 20 条
+  let once = 20;
+  // 每条记录的索引
+  let index = 0;
+
+  //循环加载数据
+  function loop(curTotal, index) {
+    if (curTotal <= 0) {
+      return false;
+    }
+    //每页多少条
+    let pageCount = Math.min(curTotal, once);
+    window.requestAnimationFrame(function () {
+      for (let i = 0; i < pageCount; i++) {
+        let li = document.createElement("li");
+        li.innerText = index + ":" + i + ":" + ~~(Math.random() * total);
+        ul.appendChild(li);
+      }
+      // 添加下一批数据
+      loop(curTotal - pageCount, index + pageCount);
+    });
+  }
+
+  loop(total, index);
+</script>
+```
+
 ### Web Worker 多线程
 
 现代浏览器为 JavaScript 创造的 多线程环境。**可以将复杂计算任务分配到 worker 线程并行运行，等 worker 完成计算任务，再将结果返回主线程**，两个线程可 独立运行，互不干扰，可通过自带的 **消息机制** 相互通信，为了节省系统资源，使用完毕记得关闭。
@@ -851,50 +896,6 @@ self.importScripts()：加载 JS 脚本。
   - 同源限制：与主线程的脚本同源
   - DOM 限制：无法使用 document / window / alert / confirm
   - 文件限制：无法读取本地资源
-
-#### 长列表渲染-时间切片
-
-- 原因：DOM 元素的创建和渲染时间成本很高,大数据完整渲染列表比较慢。
-- 场景：大量简单的 dom
-- 原理：延时加载，setTimeout（回调与系统刷新不一致会有闪屏现象）或 window.requestAnimationFrame 进行分批渲染
-- window.requestAnimationFrame(回调函数执行与浏览器刷新频率保持一致，通常是每秒 60 次，更优)下次重绘之前继续更新下一帧动画
-- FPS 表示每秒钟画面更新次数，大多数显示器的刷新频率是 60Hz，相当于每秒钟重绘 60 次，人眼睛有视觉停留效应，间隔时间太短 16.7ms（1000/60 ms）让你以为屏幕的图像是禁止的。 50 ～ 60 FPS 的动画将会相当流畅，帧率在 30 FPS 以下的动画，明显的卡顿和不适感；
-- 实现：
-
-```html
-<div>
-  <ul id="container"></ul>
-</div>
-<script type="text/javascript">
-  let ul = document.getElementById("container");
-  // 总数
-  let total = 50000;
-  // 一次插入 20 条
-  let once = 20;
-  // 每条记录的索引
-  let index = 0;
-
-  //循环加载数据
-  function loop(curTotal, index) {
-    if (curTotal <= 0) {
-      return false;
-    }
-    //每页多少条
-    let pageCount = Math.min(curTotal, once);
-    window.requestAnimationFrame(function () {
-      for (let i = 0; i < pageCount; i++) {
-        let li = document.createElement("li");
-        li.innerText = index + ":" + i + ":" + ~~(Math.random() * total);
-        ul.appendChild(li);
-      }
-      // 添加下一批数据
-      loop(curTotal - pageCount, index + pageCount);
-    });
-  }
-
-  loop(total, index);
-</script>
-```
 
 ## Vue 项目优化
 
