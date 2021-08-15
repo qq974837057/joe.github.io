@@ -24,7 +24,7 @@
   - 整体：
     - 通过 Performance 工具可以用来录制一段时间的 CPU 占用、内存占用、FPS 等运行时性能问题，如 Bottom Up 看出一段时间较耗时的操作。
     - 通过 Network 工具或者代码统计页面的加载时间来分析加载性能问题。
-  - 手动查看分析：Chrome DevTools - Performance 面板
+  - 手动查看分析：**Chrome DevTools - Performance** 面板
     - Timings:查看 FP、FCP、FMP
     - CPU:通过下方的 summary 查看占用比例
       - Loading: 网络通信和 HTML 解析
@@ -34,7 +34,7 @@
       - System: 其它事件花费的时间
       - Idle: 空闲时间
       - Total: 总耗时
-    - Main：倒置火焰图，横坐标表示消耗时间，纵坐标为函数调用栈，除了函数的耗时，还有 Recalculate Style：样式计算。Layout：布局位置。
+    - Main：倒置火焰图，横坐标表示消耗时间，纵坐标为函数调用栈，最上层是父级函数，最下方是调用栈最顶端的函数，可关注哪个函数占据宽度最大，平顶可能表示函数有性能问题。除了函数的耗时，还有 Recalculate Style：样式计算。Layout：布局位置。
     - Frames:FPS 帧率，水平线越低且持续时间长，同时上方会出现红色线条，代表画面卡顿。
     - Rendering：勾选 FPS，可查看帧率和 GPU 内存使用情况
   - 代码：使用 API[window.performance.timing](https://developer.mozilla.org/zh-CN/docs/Web/API/PerformanceTiming)，时间戳单位都是毫秒。
@@ -49,6 +49,10 @@
     let tcpTime = t.connectEnd - t.connectStart; // tcp连接耗时
     let dnsTime = t.domainLookupEnd - t.domainLookupStart; // dns查询耗时
     ```
+  - Lighthouse 网站性能测评工具
+    - 运行后会根据实际情况给出对应的评分和建议
+    - 有 Performance 页面性能、PWA（渐进式 Web 应用）、Accessibility 可访问性（无障碍）、Best Practices 最佳实践、SEO 的评分
+    - 有 FCP、FMP 等时间
 - 数据上传
   - `navigator.sendBeacon(url, data);`通过 HTTP 将少量数据**异步传输**到 Web 服务器(不支持 IE)
   - 同步的缺点：导致卸载延时。统计和诊断代码通常要在 unload 或者 beforeunload 事件处理器中发起一个同步 XMLHttpRequest 来发送数据。同步的 XMLHttpRequest 迫使用户代理延迟卸载文档，并使得下一个导航出现的更晚。
@@ -544,7 +548,7 @@
     }
     ```
 
-  - 提升为合成层好处：
+  - 提升为合成层好处
     - 合成层的位图会交给 GPU 合成，速度比 CPU 快
     - 需要重绘时，只重绘自身，不会影响其他层
     - 可以使用 transform 和 opacity 实现动画效果，不会引发回流重绘，在其他渲染层就会。
@@ -554,14 +558,14 @@
     - 可关注 Composite 渲染层合并的时间来优化合成层的数量。
       ![查看合成层](./img/Per-Composite.png)
   - 硬件加速原理：
-    - 让容器有自己的独立合成层，由 GPU 直接处理。
-  - 硬件加速开启方式：
+    - 让容器有自己的单独的渲染层，由 GPU 直接处理完成样式或其他的处理。
+  - 硬件加速开启方式
     - will-change
     - 3D transform
     - video 元素
     - backface-visibility 为 hidden 的元素(翻转后背面不可见)
     - ...
-  - 硬件加速优缺点：
+  - 硬件加速优缺点
     - 建议：只在需要的情况下开启，不要滥用
     - 优点：提高渲染速度
     - 缺点：额外内存消耗，耗电量增加
@@ -697,6 +701,11 @@
   }
   appendElement();
   ```
+- React 常见内存泄漏
+  - 卸载组件，异步请求未取消
+  - 卸载组件，事件监听未取消
+  - 卸载组件，定时任务未清除
+  - console.log 打印错误，保持了对 DOM 的引用
 
 ### 节流防抖【参考 JS 章节】
 
