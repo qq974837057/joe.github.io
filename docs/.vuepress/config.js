@@ -56,6 +56,8 @@ module.exports = {
           title: "前端进阶",
           collapsable: false,
           children: [
+            ["design-pattern.md", "设计模式和架构"],
+            ["refactor.md", "代码重构之道"],
             ["algorithm-data.md", "数据结构和算法-概念"],
             ["algorithm-sort.md", "数据结构和算法-排序专题"],
             // ['algorithm-leetcode.md', '数据结构和算法-leetcode'],
