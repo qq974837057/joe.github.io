@@ -79,11 +79,15 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
     - 学习成本低、简洁易维护
     - 更灵活、自由选择 Hook 能力
 
-### 为什么需要 React Hook
+### 为什么需要 React Hook，它的优缺点
 
-- 【避开难以理解的 Class 组件】：this 的不确定性（常用 bind 和箭头函数解决）和生命周期会将逻辑打散塞进去，比如设置订阅和卸载订阅会被分散到不同生命周期去处理
-- 【让状态逻辑复用更简单】：以前是用 HOC 高阶组件等方式实现复用状态逻辑（会破坏组件结构），现在可以通过自定义 Hook 来实现
-- 【函数组件更契合 React 的理念】：UI=f(data)，数据驱动视图
+- 优点
+  - 【避开难以理解的 Class 组件】：this 的不确定性（常用 bind 和箭头函数解决）和生命周期会将逻辑打散塞进去，比如设置订阅和卸载订阅会被分散到不同生命周期去处理
+  - 【让状态逻辑复用更简单】：以前是用 HOC 高阶组件等方式实现复用状态逻辑（会破坏组件结构，容易导致嵌套地狱），现在可以通过自定义 Hook 来实现（不会破坏组件结构）
+  - 【函数组件更契合 React 的理念】：UI=f(data)，数据驱动视图
+- 缺点
+  - 不能完全补齐类组件的生命周期，如 getSnapshotBeforeUpdate、 componentDidCatch
+  - 使用层面有限制，比如说不能在嵌套、循环、判断中写 Hook
 
 ### 核心 Hook
 
@@ -122,8 +126,11 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
 
 > Hook 的执行是按照单向链表的顺序，而组成链表的成员就是一个个 Hook 对象。
 
+先看 useState 的初始化过程
+![](./img/react-hook-usestate.png)
+
 - 从 useState()源码来看
-  - 首次渲染：mountState 构建单向链表并渲染
+  - 首次渲染：mountState 构建单向链表并渲染，在 mountState 里，主要用 mountWorkInProgressHook 用来追加进链表的
   - 更新阶段：updateState 依次遍历链表并渲染
 - 条件或嵌套函数可能改变 hooks 的顺序
   - hook 相关的信息（memoizedState、baseState、next 等）放在一个 hook 对象里，hook 对象之间用单向链表串联起来。所以 hooks 的渲染是通过“依次遍历”来定位每个 hooks 内容的。
