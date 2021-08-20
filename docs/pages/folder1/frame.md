@@ -19,7 +19,9 @@
 
 - 简述：基于[数据劫持+发布者-订阅者模式]，分三个步骤：数据劫持、依赖收集、通知订阅者进行更新
 - 步骤：
+
   - 1、**数据劫持**：Vue 构造函数中，Vue 上的 data 的每个属性会被 Object.defineProperty 方法添加 getter 和 setter 属性。在 vue3.0 中通过 Proxy 代理对象进行类似的操作。
+
     ```js
     Object.defineProperty(obj, prop, descriptor)
 
@@ -31,18 +33,9 @@
     get ，获取属性的方法。
     set ，设置属性的方法。
     ```
+
   - 2、**依赖收集：** 劫持 data 后，根据前面解析器 Compile 新建的 Watcher 订阅者实例，在执行组件渲染 render 时候，data 被 Touch(被读)，getter 函数调用，进行依赖收集，执行 dep.addSub，将 Watcher（订阅者）对象实例添加进当前属性自己的 Dep（订阅器）中进行订阅。
   - 3、**通知订阅者进行更新**：data 改动(被写)时， setter 方法被调用, 执行 dep.notify 通知自己属性的订阅器 Dep 中的每一个 Watcher 订阅者数据有变化，触发 Watcher 订阅者对象自己的 update 方法，也就是所有依赖于此 data 的组件视图去调用他们的 update 和 render 函数进行更新视图。
-
-### 虚拟 DOM 的优缺点
-
-- Virtual DOM 即虚拟 DOM，是对 DOM 的抽象，本质是 JS 对象，可以轻量级描述 DOM。
-- 优点
-  - 提高开发效率：不用手动操作 DOM。
-  - 利于性能优化：减少操作 DOM，尽量一次性将差异更新到 DOM，性能虽然不是最优，但比粗暴操作 DOM 要好得多。
-  - 跨平台能力：虚拟 DOM 是 JS 对象，通过适配层如 nodeOps 对象判断不同平台所封装的 API（如 Web，Weex，Node），提供相同的接口如增加节点、删除节点，使这棵树映射到真实平台环境上。
-- 缺点
-  - 虚拟 DOM + 优化 可以满足大部分应用，但是对于性能要求高的，无法做到极致优化。
 
 ### 虚拟 DOM 的 diff 和 key 作用
 
@@ -326,6 +319,7 @@ EventBus.$off("test", {}); // 移除监听
 ```
 
 - provide/inject：跨级：父组件中通过**provide 来提供变量, 然后再子孙后代组件中通过 inject 来注入变**量。不论组件层次有多深，并在起上下游关系成立的时间里始终生效。
+
   ```js
   provide() {
       return {
@@ -335,6 +329,7 @@ EventBus.$off("test", {}); // 移除监听
 
   inject: ['user'],
   ```
+
 - $attrs/$listeners: 跨级： Vue2.4 中加入的$attrs/$listeners，$attrs含有父作用域**不被prop识别的特性**（class和style除外），$listeners 包含了父作用域中的 (不含 .native 修饰器的) v-on 事件监听器，并且可以通过 v-bind="$attrs/$listeners"继续传入内部组件,传递下去。
 
   - 适合仅传递数据的跨级通信，用 vuex 是大材小用。
@@ -584,9 +579,11 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 - 占位
   - `<router-view></router-view>`
 - 路由懒（按需）加载
+
   - 没配置路由懒加载的情况下，我们的路由组件在打包的时候，都会打包到同一个 js 文件去，导致越来越大，请求时间变长
   - 把不同路由对应的组件分割成不同的代码块，然后当路由被访问的时候才加载对应的组件， 首屏时不用加载过度的资源，从而减少首屏加载速度。
   - import()方法由 ES6 提出，import()方法是动态加载。
+
   ```js
   // webpack< 2.4 时
   {
@@ -602,101 +599,6 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
     components:()=>import('@/components/home')
   }
   ```
-
-### 实现原理
-
-> react-router/vue-router 都是基于前端路由的拓展和封装，原理有两种，hash 和 history
-
-> 回调指的是对应的路由路径，执行对应的页面跳转，或渲染对应的页面。
-
-    ```js
-    Router.route('/', function() {
-      changeBgColor('yellow');
-    });
-    ```
-
-- hash
-  - 优点：兼容性好
-  - 缺点：#符合不够美观，原理像 Hack
-  - 步骤：
-    - 简版：不带前进/回退
-    - 完整：创建一个 history 保存记录，创建 index 指针指向前进后退的位置，定义后退方法，通过 location.hash 设置回对应的 hash，再执行刷新方法执行回调。
-    ```js
-    // 简版
-    class Routers {
-      constructor() {
-        // 保存对应路径和回调
-        this.routes = {};
-        // 当前url
-        this.currentUrl = '';
-        this.refresh = this.refresh.bind(this);
-        // 监听路由hash变化
-        window.addEventListener('load', this.refresh, false);
-        window.addEventListener('hashchange', this.refresh, false);
-      }
-        // route方法定义回调
-      route(path, callback) {
-        // 将path路径与对应的callback函数储存
-        this.routes[path] = callback || function() {};
-      }
-        // 刷新方法，执行回调
-      refresh() {
-        this.currentUrl = location.hash.slice(1) || '/';
-        this.routes[this.currentUrl]();
-      }
-    }
-
-    html：
-    <li><a href="#/blue">turn blue</a></li>
-    <li><a href="#/green">turn green</a></li>
-    js:
-    window.Router = new Routers();
-    Router.route('/blue', function() {
-      changeBgColor('blue');
-    });
-    Router.route('/green', function() {
-      changeBgColor('green');
-    });
-    ```
-- history
-  - 优点：url 美观,实现简洁
-  - 缺点：HTML5 兼容性一般 IE10+ Chrome：5+
-  - 实现：
-    - 跳转 history.pushState(添加历史记录,修改当前 url,不跳转，执行回调)
-    - 初始化 history.replaceState(不加历史记录,修改当前 url 地址，执行回调)
-    - 监听 popstate(监听回退和前进,触发 pop,执行路由回调)
-    - 触发 popstate：只有用户点击浏览器倒退按钮和前进按钮，或者使用 JavaScript 调用 back、forward、go 方法时才会触发。
-    ```js
-    class Routers {
-      constructor() {
-        this.routes = {};
-        // 在初始化时监听popstate事件
-        this._bindPopState();
-      }
-      // 初始化路由
-      init(path) {
-        history.replaceState({ path: path }, null, path);
-        this.routes[path] && this.routes[path]();
-      }
-      // 将路径和对应回调函数加入hashMap储存
-      route(path, callback) {
-        this.routes[path] = callback || function () {};
-      }
-
-      // 判断链接被点击，触发go函数，执行路由对应回调
-      go(path) {
-        history.pushState({ path: path }, null, path);
-        this.routes[path] && this.routes[path]();
-      }
-      // 监听popstate事件
-      _bindPopState() {
-        window.addEventListener("popstate", (e) => {
-          const path = e.state && e.state.path;
-          this.routes[path] && this.routes[path]();
-        });
-      }
-    }
-    ```
 
 ### 路由(导航)守卫
 
@@ -1505,6 +1407,7 @@ new Profile().$mount("#mount-point");
 - 缺点：
   - Bug 很难被调试：界面异常有可能是 View 有 Bug，或者是 Model 代码有问题。不容易定位。
   - 大型图形应用维护成本高：视图状态较多，ViewModel 的构建和维护的成本都会比较高
+- Vue、Angular、React 都是 MVVM 框架
 
 ## 单页(SPA)和多页(MPA)的区别
 

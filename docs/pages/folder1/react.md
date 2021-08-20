@@ -55,14 +55,57 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
 - 解决方法
   - 可以转移到其他生命周期里做，比如 componentDidxxx
 
-## React Class
-
-## React Hook
+## React Class 和 React Hook
 
 ### 类组件和函数组件
 
 - 类组件：基于 ES6 的 Class 写法，继承 React.Component 的 React 组件。属于面向对象编程思想。
 - 函数组件：函数形态存在的 React 组件，早期没有 Hook，函数组件内部无法维护 state，所以也叫无状态组件。后来 Hook 出现后，补齐一些生命周期和 state 的管理缺失的能力。
+
+- 组件示例
+- 类组件
+
+```js
+class DemoClass extends React.Component {
+  // 初始化类组件的 state
+  state = {
+    text: "",
+  };
+  // 编写⽣命周期⽅法 didMount
+  componentDidMount() {
+    // 省略业务逻辑
+  }
+  // 编写⾃定义的实例⽅法
+  changeText = (newText) => {
+    // 更新 state
+    this.setState({
+      text: newText,
+    });
+  };
+  // 编写⽣命周期⽅法 render
+  render() {
+    return (
+      <div className="demoClass">
+        <p>{this.state.text}</p>
+        <button onClick={this.changeText}>点我修改</button>
+      </div>
+    );
+  }
+}
+```
+
+- 函数组件
+
+```js
+function DemoFunction(props) {
+  const { text } = props;
+  return (
+    <div className="demoFunction">
+      <p>{`function 组件所接收到的来⾃外界的⽂本内容是：[${text}]`}</p>
+    </div>
+  );
+}
+```
 
 - 基本区别
   - 类组件可以访问生命周期，函数组件不能
@@ -201,6 +244,18 @@ const action = {
 // 使⽤ dispatch 派发 action，action 会进⼊到 reducer ⾥触发对应的更新
 store.dispatch(action);
 ```
+
+## React 虚拟 DOM(Virtual DOM)
+
+- 虚拟 DOM 工作流：新旧虚拟 DOM 树进行 diff，然后找出需要更新的内容，最后 patch 到真实 DOM 上。
+  ![](./img/react-dom-1.png)
+- 【What】虚拟 DOM 是什么：虚拟 DOM 是 JS 对象，是对真实 DOM 的描述，不依赖具体框架。
+- 【How】React 中的虚拟 DOM
+  - 挂载阶段：结合 JSX 的描述，构建出虚拟 DOM 树，通过 ReactDOM.render 实现虚拟 DOM 到真实 DOM 的映射（触发渲染流水线）
+  - 更新阶段：虚拟 DOM 在 JS 层借助 diff 算法找出哪些需要被改变，再讲这些改变作用于真实 DOM
+- 【Why】虚拟 DOM 的价值
+  - 更好的研发体验和效率：数据驱动视图，函数式 UI 编程，同时性能还不错
+  - 跨平台：多出中间一层描述性的虚拟 DOM，可以对接不同平台的渲染逻辑，实现多端运行。
 
 ## React 性能优化
 

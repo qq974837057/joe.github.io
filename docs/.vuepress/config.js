@@ -46,6 +46,7 @@ module.exports = {
             ["css.md", "CSS"],
             ["js.md", "JS"],
             ["ts.md", "TS"],
+            ["frame-common.md", "框架通识"],
             ["frame.md", "框架-Vue"],
             ["react.md", "框架-React"],
             ["browser.md", "HTTP与浏览器"],
