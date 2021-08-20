@@ -50,7 +50,7 @@ module.exports = {
             ["frame.md", "框架-Vue"],
             ["react.md", "框架-React"],
             ["browser.md", "HTTP与浏览器"],
-            ["webpack.md", "Webpack与工程化"],
+            ["webpack.md", "工程化与协作"],
             ["performance.md", "性能优化"],
           ],
         },

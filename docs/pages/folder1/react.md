@@ -389,3 +389,12 @@ function batchedEventUpdates$1(fn, a) {
 - 注意
   - componentWillUpdate componentDidUpdate 这两个生命周期中不能调用 setState，会造成死循环，导致程序崩溃。
   - 在同个函数中对同个属性多次 setState，只会保留最后一次的更新。
+
+## React 事件系统
+
+- 大部分事件是统一绑定在页面的 document（ react@17 有所改变，绑定事件到 render 时指定的 DOM 元素），document 上 React 的统一事件处理程序会将事件分发到具体的组件实例中。
+
+### React 合成事件
+
+- 它是 React 自定义的事件对象，底层抹平了不同浏览器的差异，上层提供与原生事件相同的接口。
+- 它保存了原生 DOM 事件的引用，通过`e.nativeEvent` 属性可以获取
