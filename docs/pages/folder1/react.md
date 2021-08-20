@@ -245,7 +245,9 @@ const action = {
 store.dispatch(action);
 ```
 
-## React 虚拟 DOM(Virtual DOM)
+## React 虚拟 DOM(Virtual DOM)和 diff 算法
+
+### 虚拟 DOM
 
 - 虚拟 DOM 工作流：新旧虚拟 DOM 树进行 diff，然后找出需要更新的内容，最后 patch 到真实 DOM 上。
   ![](./img/react-dom-1.png)
@@ -257,6 +259,133 @@ store.dispatch(action);
   - 更好的研发体验和效率：数据驱动视图，函数式 UI 编程，同时性能还不错
   - 跨平台：多出中间一层描述性的虚拟 DOM，可以对接不同平台的渲染逻辑，实现多端运行。
 
+### Diff 算法
+
+- 调和指的是让虚拟 DOM 映射到真实 DOM 上，分别有 React 15 栈调和、React16 的 Fiber 调和
+- Diff 算法属于调和 Reconciler 里的一个环节：更新过程调用 Diff 算法
+- Diff 的要点
+  - 两个虚拟 DOM 树的分层递归对比：降低 diff 算法时间复杂度，O(n^3)->O(n)
+  - 类型一致的节点才 Diff：不同组件类型直接替换，不进行 diff，减少冗余递归操作
+  - 节点 key 属性的设置：使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
+
 ## React 性能优化
 
 ## React 错误处理
+
+## setState
+
+### setState 之后发生什么
+
+- 【数据合并】多个 setState 会进行数据合拼，准备批量更新
+- 【生成虚拟 DOM】生成新的 虚拟 DOM 树
+- 【diff，更新 UI】比较使用 diff 算法，比较新旧 虚拟 DOM 树，进行 patch，渲染 UI
+- 【执行回调函数】setState 第二个参数
+
+### setState 是同步还是异步的
+
+- setState 并不是单纯同步/异步的，本质上是同步的，setTimeout 之类的函数 “逃脱”了 React 对它的管控，不过只要是在 React 管控下的 setState，看起来⼀定是异步的。
+
+  - 异步：在 React 钩⼦函数(生命周期)、合成事件中
+
+    - 避免频繁的 re-render，类似 vue 的 nextTick 和浏览器 EventLoop，将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算，再拿最新的 state 值进行一次更新，也叫批量更新。
+
+    ```js
+    // 正常的操作
+    handleClick = () => {
+      const fans = Math.floor(Math.random() * 10);
+      console.log("开始运行");
+      this.setState(
+        {
+          count: this.state.count + fans,
+        },
+        () => {
+          console.log("新增粉丝数:", fans);
+        }
+      );
+      console.log("结束运行");
+    };
+
+    // 开始运行
+    // 结束运行
+    // 新增粉丝数:xx
+    ```
+
+- 同步：在 setTimeout、setInterval 等函数中、 DOM 原⽣事件中
+
+  - 异步函数如 setTimeout 帮助我们跳出 React 的事件流或者生命周期，用 setState 立即更新和渲染，就能拿到最新的 state 值，类似同步的效果。
+
+  ```js
+  // 脱离 React 控制的操作
+  handleClick = () => {
+    setTimeout(() => {
+      const fans = Math.floor(Math.random() * 10);
+      console.log("开始运行");
+      this.setState(
+        {
+          count: this.state.count + fans,
+        },
+        () => {
+          console.log("新增粉丝数:", fans);
+        }
+      );
+      console.log("结束运行");
+    });
+  };
+  // 开始运行
+  // 新增粉丝数:xx
+  // 结束运行
+  ```
+
+- 示意代码
+  ![](./img/react-setstate-1.png)
+  - `flushSyncCallbackQueue` 方法，用来更新 state 并重新进行 render。
+  - React 在绑定事件时，会对事件进行合成，统一绑定到 document 上（ react@17 有所改变，变成了绑定事件到 render 时指定的那个 DOM 元素），最后由 React 来派发，事件在触发的时候，都会先调用 batchedEventUpdates$1 这个方法，在这里就会修改 executionContext 的值，React 就知道此时的 setState 在自己的掌控中。
+
+```js
+function scheduleUpdateOnFiber(fiber, lane, eventTime) {
+  if (lane === SyncLane) {
+    // 同步操作
+    ensureRootIsScheduled(root, eventTime);
+    // 判断当前是否还在 React 事件流中
+    // 如果不在，直接调用 flushSyncCallbackQueue 更新，如果在，则等事件方法执行完再执行setState
+    if (executionContext === NoContext) {
+      flushSyncCallbackQueue();
+    }
+  } else {
+    // 异步操作
+  }
+}
+
+// executionContext 的默认状态
+var executionContext = NoContext;
+function batchedEventUpdates$1(fn, a) {
+  var prevExecutionContext = executionContext;
+  executionContext |= EventContext; // 修改状态
+  try {
+    return fn(a);
+  } finally {
+    executionContext = prevExecutionContext;
+    // 调用结束后，调用 flushSyncCallbackQueue
+    if (executionContext === NoContext) {
+      flushSyncCallbackQueue();
+    }
+  }
+}
+```
+
+- 推荐使用方式
+
+  - 在调用 setState 时使用函数`(preState,preProps)=>({})`传递 state 值和 props 值
+  - 在回调函数中获取最新更新后的 state
+
+  ```js
+  componentDidMount() {
+      this.setState(preState => ({ index: preState.index + 1 }), () => {
+        console.log(this.state.index);
+      })
+    }
+  ```
+
+- 注意
+  - componentWillUpdate componentDidUpdate 这两个生命周期中不能调用 setState，会造成死循环，导致程序崩溃。
+  - 在同个函数中对同个属性多次 setState，只会保留最后一次的更新。
