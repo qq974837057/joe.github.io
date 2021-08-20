@@ -73,7 +73,11 @@ module.exports = {
           title: "工程化和协作",
           collapsable: false,
           sidebarDepth: 2,
-          children: [["webpack.md", "工程化与协作"]],
+          children: [
+            ["webpack.md", "工程化与协作"],
+            ["normalize.md", "代码规范"],
+            ["git.md", "Git"],
+          ],
         },
         {
           title: "算法与编程",
