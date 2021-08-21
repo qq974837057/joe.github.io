@@ -53,8 +53,10 @@ module.exports = {
           title: "前端进阶",
           collapsable: false,
           children: [
-            ["design-pattern.md", "设计模式和架构"],
+            ["security.md", "前端安全"],
+            ["monitor.md", "监控体系"],
             ["performance.md", "性能优化"],
+            ["design-pattern.md", "设计模式和架构"],
             ["refactor.md", "代码重构之道"],
             ["nodejs.md", "前沿与其他"],
           ],
@@ -66,7 +68,8 @@ module.exports = {
           children: [
             ["frame-common.md", "框架通识"],
             ["frame.md", "框架-Vue"],
-            ["react.md", "框架-React"],
+            ["reaact.md", "框架-React"],
+            ["angular.md", "框架-Angular"],
           ],
         },
         {
@@ -75,7 +78,7 @@ module.exports = {
           sidebarDepth: 2,
           children: [
             ["webpack.md", "工程化与协作"],
-            ["normalize.md", "代码规范"],
+            ["normalize.md", "前端规范"],
             ["git.md", "Git"],
           ],
         },
