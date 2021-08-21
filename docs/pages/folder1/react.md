@@ -287,7 +287,7 @@ store.dispatch(action);
 
   - 异步：在 React 钩⼦函数(生命周期)、合成事件中
 
-    - 避免频繁的 re-render，类似 vue 的 nextTick 和浏览器 EventLoop，将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算，再拿最新的 state 值进行一次更新，也叫批量更新。
+    - **避免频繁的 re-render**，类似 vue 的 nextTick 和浏览器 EventLoop，将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算，再拿最新的 state 值进行一次更新，也叫批量更新。
 
     ```js
     // 正常的操作
@@ -375,8 +375,8 @@ function batchedEventUpdates$1(fn, a) {
 
 - 推荐使用方式
 
-  - 在调用 setState 时使用函数`(preState,preProps)=>({})`传递 state 值和 props 值
-  - 在回调函数中获取最新更新后的 state
+  - 在调用 setState 时使用函数`(preState, preProps)=>({})`传递 state 值和 props 值，且构建新对象，而不是直接改写它们。
+  - 在回调函数中获取最新更新后的 state，也建议使用 componentDidUpdate() 来代替此方式。
 
   ```js
   componentDidMount() {
@@ -388,7 +388,51 @@ function batchedEventUpdates$1(fn, a) {
 
 - 注意
   - componentWillUpdate componentDidUpdate 这两个生命周期中不能调用 setState，会造成死循环，导致程序崩溃。
-  - 在同个函数中对同个属性多次 setState，只会保留最后一次的更新。
+
+### 给 setState 传递一个对象与传递一个函数的区别是什么？
+
+- 给 setState 传递一个函数，而不是一个对象，可以确保每次的调用都是读取的就是当前的 state 值，而不是 this.state，**因为 React 不会更新 `this.state.count`，直到该组件被重新渲染才会更新**。
+- 例子：传递对象，导致只更新一次，后调用的 setState() 将覆盖同一周期内先调用 setState 的值，因此商品数仅增加一次。
+
+```js
+incrementCount() {
+  // 注意：这样 *不会* 像预期的那样工作。
+  this.setState({count: this.state.count + 1});
+}
+
+handleSomething() {
+  // 假设 `this.state.count` 从 0 开始。
+  this.incrementCount();
+  this.incrementCount();
+  this.incrementCount();
+  // 当 React 重新渲染该组件时，`this.state.count` 会变为 1，而不是你期望的 3。
+
+  // 这是因为上面的 `incrementCount()` 函数是从 `this.state.count` 中读取数据的，
+  // 但是 React 不会更新 `this.state.count`，直到该组件被重新渲染。
+  // 所以最终 `incrementCount()` 每次读取 `this.state.count` 的值都是 0，并将它设为 1。
+}
+```
+
+- 例子：传递函数，可以获取到最新的值，最后更新三次
+
+```js
+incrementCount() {
+  this.setState((state) => {
+    // 重要：在更新的时候读取 `state`，而不是 `this.state`。
+    return {count: state.count + 1}
+  });
+}
+
+handleSomething() {
+  // 假设 `this.state.count` 从 0 开始。
+  this.incrementCount();
+  this.incrementCount();
+  this.incrementCount();
+
+  // 如果你现在在这里读取 `this.state.count`，它还是会为 0。
+  // 但是，当 React 重新渲染该组件时，它会变为 3。
+}
+```
 
 ## React 事件系统
 
