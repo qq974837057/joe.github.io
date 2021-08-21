@@ -68,7 +68,7 @@ module.exports = {
           children: [
             ["frame-common.md", "框架通识"],
             ["frame.md", "框架-Vue"],
-            ["reaact.md", "框架-React"],
+            ["react.md", "框架-React"],
             ["angular.md", "框架-Angular"],
           ],
         },

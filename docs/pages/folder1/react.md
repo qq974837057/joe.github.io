@@ -132,6 +132,19 @@ function DemoFunction(props) {
   - 不能完全补齐类组件的生命周期，如 getSnapshotBeforeUpdate、 componentDidCatch
   - 使用层面有限制，比如说不能在嵌套、循环、判断中写 Hook
 
+### 主要 Hook 一览
+
+- 基础 Hook
+  - useState : 状态钩子，为函数组件提供内部状态
+  - useEffect ：副作用钩子，提供了类似于 componentDidMount 等生命周期钩子的功能
+  - useContext ：共享钩子，在组件之间共享状态，可以解决 react 逐层通过 props 传递数据
+- 额外的 Hook
+  - useReducer: action 钩子，提供了状态管理，其基本原理是通过用户在页面上发起的 action，从而通过 reduce 方法来改变 state，从而实现页面和状- 态的通信，使用很像 redux
+  - useCallBack：把内联回调函数及依赖项数组作为参数传入 useCallback，它将返回该回调函数的 memoized 版本，该回调函数仅在某个依赖项改变时- 才会更新
+  - useMemo：把"创建"函数和依赖项数组作为参数传入 useMemo，它仅会在某个依赖项改变时重新计算， 可以作为性能优化的手段
+  - useRef：获取组件的实例，返回一个可变的 ref 对象，返回的 ref 对象在组件的整个生命周期内保持不变
+  - useLayoutEffect： 它会在所有 DOM 变更后同步调用 effect
+
 ### 核心 Hook
 
 - useState()
@@ -271,6 +284,64 @@ store.dispatch(action);
 ## React 性能优化
 
 ## React 错误处理
+
+React 异常捕获：使用错误边界组件包裹
+
+> 错误边界是一种 React 组件，这种组件可以捕获并打印发生在其子组件树任何位置的 JavaScript 错误，并且，它会渲染出备用 UI，而不是渲染那些崩溃了的子组件树。错误边界在渲染期间、生命周期方法和整个组件树的构造函数中捕获错误。
+
+- 如何编写组件
+
+  - 使用 componentDidCatch() 变成一个错误边界，可以用它**打印错误信息**
+  - 使用 static getDerivedStateFromError() **改变 state，渲染备用 UI**
+
+    ```js
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+      }
+
+      static getDerivedStateFromError(error) {
+        // 更新 state 使下一次渲染能够显示降级后的 UI
+        return { hasError: true };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        // 你同样可以将错误日志上报给服务器
+        logErrorToMyService(error, errorInfo);
+      }
+
+      render() {
+        if (this.state.hasError) {
+          // 你可以自定义降级后的 UI 并渲染
+          return <h1>Something went wrong.</h1>;
+        }
+
+        return this.props.children;
+      }
+    }
+    ```
+
+- 如何使用
+
+  - 错误边界的粒度自我把控，可以包装在最顶层，也可以包装在单独页面组件。
+
+    ```js
+    <ErrorBoundary>
+      <MyWidget />
+    </ErrorBoundary>
+    ```
+
+- 错误边界无法捕获的错误
+
+  - 事件处理：使用普通的 JavaScript try / catch 语句处理
+  - 异步代码：例如 setTimeout 或 requestAnimationFrame 回调函数
+  - 自身的错误：错误边界仅可以捕获其子组件的错误，无法捕获自身的错误
+  - 服务端渲染
+
+- 注意
+  - 错误边界只针对 React 组件
+  - 只有 class 组件才可以成为错误边界组件
 
 ## setState
 
