@@ -436,9 +436,41 @@ handleSomething() {
 
 ## React 事件系统
 
-- 大部分事件是统一绑定在页面的 document（ react@17 有所改变，绑定事件到 render 时指定的 DOM 元素），document 上 React 的统一事件处理程序会将事件分发到具体的组件实例中。
+- 大部分事件采用事件委托，是统一绑定在页面的 document（ react@17 有所改变，绑定事件到 render 时指定的 DOM 元素），document 上 React 的统一事件处理程序会将事件分发到具体的组件实例中，模拟事件冒泡和捕获过程。
 
 ### React 合成事件
 
-- 它是 React 自定义的事件对象，底层抹平了不同浏览器的差异，上层提供与原生事件相同的接口。
-- 它保存了原生 DOM 事件的引用，通过`e.nativeEvent` 属性可以获取
+- 简介：它是 React 自定义的事件对象，底层抹平了不同浏览器的差异，上层提供与原生事件相同的接口，它保存了原生 DOM 事件的引用，通过`e.nativeEvent` 属性可以获取。
+- 优点
+  - 开发者可以专注逻辑开发，不必关注兼容问题
+  - 帮助 React 实现了对所有事件的中⼼化管控
+
+### React 事件系统工作流原理
+
+- 事件的注册
+  - 在 document 上检查是否已经对该事件类型（如 click）进行了监听，如果已经注册过，那么就跳过
+  - 源码上使用原生 JS 的 `addEventListener(eventType,listener)`来进行监听
+    - eventType 表示事件类型如 click
+    - listener 是注册到 document 的统一事件分发函数，里面调用原生 JS 的 `dispatchEvent`
+- 事件的触发
+  - 【冒泡】事件触发，冒泡到 document->执行 dispatchEvent->创建事件对应的合成对象
+  - 【收集 DOM 节点】获取是 DOM 元素的 Fiber 节点，收集到一个节点数组里
+  - 【模拟捕获】倒序遍历节点数组：收集捕获的回调函数和节点实例
+  - 【模拟冒泡】正序遍历节点数组：收集冒泡阶段的回调函数和节点实例
+  - 合成事件就有了两个属性`_dispatchListeners` 和`_dispatchInstances`，分别存放捕获-目标-冒泡这个三个阶段所涉及的回调集合和节点实例集合，按顺序执行即可。
+
+![](./img/react-event-1.png)
+
+### React 事件和原生事件的区别
+
+- 【事件名小驼峰】react 事件命令采用**小驼峰式**，而不是纯小写
+- 【事件方法函数】使用 JSX 语法时，需要**传入一个函数**作为事件处理函数，而不是一个字符串
+- 【阻止默认行为】不能通过返回 false 来阻止默认行为。必须明确调用 preventDefault()。
+
+### React 事件和原生事件的触发顺序
+
+- react 的所有事件都挂载在 document 中，当真实 dom 触发后冒泡到 document 后才会对 react 事件进行处理
+
+1. **原生的事件会先执行**
+2. **执行 react 合成事件**
+3. 最后**执行真正在 document 上挂载的事件**
