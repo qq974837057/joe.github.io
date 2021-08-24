@@ -41,7 +41,7 @@
   - 与 React 15 保持一致
 
 React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ commit 阶段⼜被细分为
-了 pre-commit 和 commit。render 阶段在执⾏过程中允许被打断（Fiber 的作用），⽽ commit 阶段则总是同步执⾏的。
+了 pre-commit 和 commit。**render 阶段在执⾏过程中允许被打断（Fiber 的作用）**，⽽ commit 阶段则总是同步执⾏的。
 
 - render 阶段：纯净且没有副作⽤，可能会被 React 暂停、终⽌或重新启动。
 - pre-commit 阶段：可以读取 DOM。
@@ -192,13 +192,6 @@ function DemoFunction(props) {
   - hook 相关的信息（memoizedState、baseState、next 等）放在一个 hook 对象里，hook 对象之间用单向链表串联起来。所以 hooks 的渲染是通过“依次遍历”来定位每个 hooks 内容的。
   - 如果前后两次读到的链表在顺序上不一致，可能会取错值，那么渲染的结果⾃然是不可控的。
 
-## React Fiber
-
-- 初识
-  - Fiber 会使原本同步的渲染过程变成异步的。
-  - 特性：任务可拆解，过程可打断，重启后是“重新执行一遍整个任务，而不是接着上次那行代码”
-  - Fiber 会将⼀个⼤的更新任务拆解为许多个⼩任务。每当执⾏完⼀个⼩任务时，渲染线程都会把主线程交回去，看看有没有优先级更⾼的⼯作要处理，确保不会出现其他任务被“饿死”的情况，进⽽避免同步渲染带来的卡顿。在这个过程中，渲染线程不再“⼀去不回头”，⽽是可以被打断的，这就是所谓的“异步渲染”。
-
 ## React 组件通信
 
 React 的数据流是单向的
@@ -257,91 +250,6 @@ const action = {
 // 使⽤ dispatch 派发 action，action 会进⼊到 reducer ⾥触发对应的更新
 store.dispatch(action);
 ```
-
-## React 虚拟 DOM(Virtual DOM)和 diff 算法
-
-### 虚拟 DOM
-
-- 虚拟 DOM 工作流：新旧虚拟 DOM 树进行 diff，然后找出需要更新的内容，最后 patch 到真实 DOM 上。
-  ![](./img/react-dom-1.png)
-- 【What】虚拟 DOM 是什么：虚拟 DOM 是 JS 对象，是对真实 DOM 的描述，不依赖具体框架。
-- 【How】React 中的虚拟 DOM
-  - 挂载阶段：结合 JSX 的描述，构建出虚拟 DOM 树，通过 ReactDOM.render 实现虚拟 DOM 到真实 DOM 的映射（触发渲染流水线）
-  - 更新阶段：虚拟 DOM 在 JS 层借助 diff 算法找出哪些需要被改变，再讲这些改变作用于真实 DOM
-- 【Why】虚拟 DOM 的价值
-  - 更好的研发体验和效率：数据驱动视图，函数式 UI 编程，同时性能还不错
-  - 跨平台：多出中间一层描述性的虚拟 DOM，可以对接不同平台的渲染逻辑，实现多端运行。
-
-### Diff 算法
-
-- 调和指的是让虚拟 DOM 映射到真实 DOM 上，分别有 React 15 栈调和、React16 的 Fiber 调和
-- Diff 算法属于调和 Reconciler 里的一个环节：更新过程调用 Diff 算法
-- Diff 的要点
-  - 两个虚拟 DOM 树的分层递归对比：降低 diff 算法时间复杂度，O(n^3)->O(n)
-  - 类型一致的节点才 Diff：不同组件类型直接替换，不进行 diff，减少冗余递归操作
-  - 节点 key 属性的设置：使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
-
-## React 性能优化
-
-## React 错误处理
-
-React 异常捕获：使用错误边界组件包裹
-
-> 错误边界是一种 React 组件，这种组件可以捕获并打印发生在其子组件树任何位置的 JavaScript 错误，并且，它会渲染出备用 UI，而不是渲染那些崩溃了的子组件树。错误边界在渲染期间、生命周期方法和整个组件树的构造函数中捕获错误。
-
-- 如何编写组件
-
-  - 使用 componentDidCatch() 变成一个错误边界，可以用它**打印错误信息**
-  - 使用 static getDerivedStateFromError() **改变 state，渲染备用 UI**
-
-    ```js
-    class ErrorBoundary extends React.Component {
-      constructor(props) {
-        super(props);
-        this.state = { hasError: false };
-      }
-
-      static getDerivedStateFromError(error) {
-        // 更新 state 使下一次渲染能够显示降级后的 UI
-        return { hasError: true };
-      }
-
-      componentDidCatch(error, errorInfo) {
-        // 你同样可以将错误日志上报给服务器
-        logErrorToMyService(error, errorInfo);
-      }
-
-      render() {
-        if (this.state.hasError) {
-          // 你可以自定义降级后的 UI 并渲染
-          return <h1>Something went wrong.</h1>;
-        }
-
-        return this.props.children;
-      }
-    }
-    ```
-
-- 如何使用
-
-  - 错误边界的粒度自我把控，可以包装在最顶层，也可以包装在单独页面组件。
-
-    ```js
-    <ErrorBoundary>
-      <MyWidget />
-    </ErrorBoundary>
-    ```
-
-- 错误边界无法捕获的错误
-
-  - 事件处理：使用普通的 JavaScript try / catch 语句处理
-  - 异步代码：例如 setTimeout 或 requestAnimationFrame 回调函数
-  - 自身的错误：错误边界仅可以捕获其子组件的错误，无法捕获自身的错误
-  - 服务端渲染
-
-- 注意
-  - 错误边界只针对 React 组件
-  - 只有 class 组件才可以成为错误边界组件
 
 ## setState
 
@@ -505,6 +413,50 @@ handleSomething() {
 }
 ```
 
+## React 虚拟 DOM(Virtual DOM)和 diff 算法
+
+### 虚拟 DOM
+
+- 虚拟 DOM 工作流：新旧虚拟 DOM 树进行 diff，然后找出需要更新的内容，最后 patch 到真实 DOM 上。
+  ![](./img/react-dom-1.png)
+- 【What】虚拟 DOM 是什么：虚拟 DOM 是 JS 对象，是对真实 DOM 的描述，不依赖具体框架。
+- 【How】React 中的虚拟 DOM
+  - 挂载阶段：结合 JSX 的描述，构建出虚拟 DOM 树，通过 ReactDOM.render 实现虚拟 DOM 到真实 DOM 的映射（触发渲染流水线）
+  - 更新阶段：虚拟 DOM 在 JS 层借助 diff 算法找出哪些需要被改变，再讲这些改变作用于真实 DOM
+- 【Why】虚拟 DOM 的价值
+  - 更好的研发体验和效率：数据驱动视图，函数式 UI 编程，同时性能还不错
+  - 跨平台：多出中间一层描述性的虚拟 DOM，可以对接不同平台的渲染逻辑，实现多端运行。
+
+### Diff 算法
+
+- 调和指的是让虚拟 DOM 映射到真实 DOM 上，分别有 React 15 栈调和、React16 的 Fiber 调和
+- Diff 算法属于调和 Reconciler 里的一个环节：更新过程调用 Diff 算法
+- Diff 的要点
+  - 两个虚拟 DOM 树的分层递归对比：降低 diff 算法时间复杂度，O(n^3)->O(n)
+  - 类型一致的节点才 Diff：不同组件类型直接替换，不进行 diff，减少冗余递归操作
+  - 节点 key 属性的设置：使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
+
+## React Fiber
+
+- 初识
+
+  - Fiber 会使原本同步的渲染过程变成异步的，进行增量渲染。
+  - 特性：任务可拆解，过程可打断，可恢复，恢复后是“重新执行一遍任务，而不是接着上次那行代码”
+  - Fiber 会将⼀个⼤的更新任务拆解为许多个⼩任务。每当执⾏完⼀个⼩任务时，渲染任务会交出主线程，看看有没有优先级更⾼的⼯作要处理，避免同步渲染带来的卡顿。在 React15 之前，**虚拟 DOM 进行的深度优先遍历 Diff 会进行同步递归**，长时间占据主线程，会导致卡顿/假死。
+
+- Fiber 的含义
+  - React 内部的数据结构，构成 Fiber 树的节点（虚拟 DOM）
+  - 对 React 核心算法（调和）的重写
+- Fiber 核心：可中断、可恢复、优先级
+- React 架构
+  - React16 之前：Reconciler 找不同->Renderer 渲染不同->
+  - React16 之后：Scheduler (调度器)优先级->Reconciler 找不同->Renderer 渲染不同
+- 联系上下文 React15 和 16 的生命周期改动
+  - 因为调度器会将整个更新任务拆分为多个小的任务，并给它们分配了优先级，然后根据优先级来进行打断任务和恢复任务
+  - render 阶段的打断和恢复会重复执行一些 WillMount 的生命周期钩子，为了避免，React16 废弃了这些钩子
+
+## React 性能优化
+
 ## React 事件系统
 
 - 大部分事件采用事件委托，是统一绑定在页面的 document（ react@17 有所改变，绑定事件到 render 时指定的 DOM 元素），document 上 React 的统一事件处理程序会将事件分发到具体的组件实例中，模拟事件冒泡和捕获过程。
@@ -545,3 +497,63 @@ handleSomething() {
 1. **原生的事件会先执行**
 2. **执行 react 合成事件**
 3. 最后**执行真正在 document 上挂载的事件**
+
+## React 错误处理
+
+React 异常捕获：使用错误边界组件包裹
+
+> 错误边界是一种 React 组件，这种组件可以捕获并打印发生在其子组件树任何位置的 JavaScript 错误，并且，它会渲染出备用 UI，而不是渲染那些崩溃了的子组件树。错误边界在渲染期间、生命周期方法和整个组件树的构造函数中捕获错误。
+
+- 如何编写组件
+
+  - 使用 componentDidCatch() 变成一个错误边界，可以用它**打印错误信息**
+  - 使用 static getDerivedStateFromError() **改变 state，渲染备用 UI**
+
+    ```js
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+      }
+
+      static getDerivedStateFromError(error) {
+        // 更新 state 使下一次渲染能够显示降级后的 UI
+        return { hasError: true };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        // 你同样可以将错误日志上报给服务器
+        logErrorToMyService(error, errorInfo);
+      }
+
+      render() {
+        if (this.state.hasError) {
+          // 你可以自定义降级后的 UI 并渲染
+          return <h1>Something went wrong.</h1>;
+        }
+
+        return this.props.children;
+      }
+    }
+    ```
+
+- 如何使用
+
+  - 错误边界的粒度自我把控，可以包装在最顶层，也可以包装在单独页面组件。
+
+    ```js
+    <ErrorBoundary>
+      <MyWidget />
+    </ErrorBoundary>
+    ```
+
+- 错误边界无法捕获的错误
+
+  - 事件处理：使用普通的 JavaScript try / catch 语句处理
+  - 异步代码：例如 setTimeout 或 requestAnimationFrame 回调函数
+  - 自身的错误：错误边界仅可以捕获其子组件的错误，无法捕获自身的错误
+  - 服务端渲染
+
+- 注意
+  - 错误边界只针对 React 组件
+  - 只有 class 组件才可以成为错误边界组件
