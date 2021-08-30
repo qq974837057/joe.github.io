@@ -1360,24 +1360,6 @@ new Profile().$mount("#mount-point");
 - 原生 Proxy 只会代理对象的第一层，Vue3.0 为了实现了深度观测 reactive 实现深度响应式化对象属性，判断当前 Reflect.get 的返回值是否为 Object，如果是则再通过 reactive 方法继续做代理。
 - 监测数组的时候可能触发多次 get/set，为了防止触发多次，判断 key 是否为当前被代理对象 target 自身属性，也可以判断旧值与新值是否相等，只有满足以上两个条件之一时，才有可能执行 trigger。
 
-## MVVM 与 MVC
-
-![MVVM](./img/MVVM.png)
-
-- 全称 MVVM：Model–View–ViewModel；全称 MVC：Model–View–Controller（MVC）
-- 核心是 ViewModel 层：向上与视图层进行双向数据绑定，向下与 Model 层请求接口如 Ajax 进行数据交互。
-- 层级介绍：
-  - View 是视图层，也就是用户界面。前端主要由 HTML 和 CSS 来构建布局和结构 。
-  - Model 是指数据模型，泛指后端进行的各种业务逻辑处理和数据操控对于前端来说就是后端提供的 api 接口。
-  - ViewModel 是由前端开发人员组织生成和维护的视图数据层，对于 Model 数据进行处理和封装，生成符合 View 层使用。
-- 优点：
-  - 自动更新 DOM：ViewModel 的内容实时展示在 View 层，不需要操作 DOM 更新视图。
-  - 降低耦合：ViewModel 解耦 View 层和 Model 层，前后端分离的基础。
-- 缺点：
-  - Bug 很难被调试：界面异常有可能是 View 有 Bug，或者是 Model 代码有问题。不容易定位。
-  - 大型图形应用维护成本高：视图状态较多，ViewModel 的构建和维护的成本都会比较高
-- Vue、Angular、React 都是 MVVM 框架
-
 ## Vue 的插槽理解
 
 - [来自掘金](https://juejin.im/post/5ef6d1325188252e75366ab5#heading-1)

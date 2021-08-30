@@ -203,3 +203,34 @@
 - SEO 优化
   - 网站设计优化：关键词、布局、代码拼写
   - 网站内容优化：栏目关键词、分析用户需求的内容
+    .
+
+## MVVM 与 MVC
+
+### MVC
+
+- 全称 MVC：Model–View–Controller（MVC）
+- 层级介绍
+  - Model 是**数据模型**
+  - View 是**视图**，或者说就是我们的软件界面需要去展示的东西
+  - Controller 是**逻辑控制器**，用来控制 Model 的读取、存储，以及如何在 View 上 展示数据，更新数据。
+- 缺点
+  - 常见的 Controller（下称 VC ）中会包含 Model 的读取、存储等功能，除此之外还会有一些控件的事件绑定和响应，甚至还有网络请求等等。一个 VC 在包含了大量的业务逻辑后，代码就会变得特别的臃肿、不易阅读和修改。于是后来就慢慢延伸出了 MVVM 模式
+
+### MVVM
+
+![MVVM](./img/MVVM.png)
+
+- 全称 MVVM：Model–View–ViewModel
+- 核心是 ViewModel 层：向上与视图层进行双向数据绑定，向下与 Model 层请求接口如 Ajax 进行数据交互。
+- 层级介绍
+  - View 是**视图层**，也就是用户界面。前端主要由 HTML 和 CSS 来构建布局和结构
+  - Model 是指**数据模型**，泛指后端进行的各种业务逻辑处理和数据操控对于前端来说就是后端提供的 api 接口
+  - ViewModel 是由前端开发人员组织生成和维护的**视图数据层**，对于 Model 数据进行处理和封装，生成符合 View 层使用
+- 优点
+  - 自动更新 DOM：ViewModel 的内容实时展示在 View 层，不需要操作 DOM 更新视图
+  - 降低耦合：ViewModel 解耦 View 层和 Model 层，前后端分离的基础
+- 缺点
+  - Bug 很难被调试：界面异常有可能是 View 有 Bug，或者是 Model 代码有问题。不容易定位
+  - 大型图形应用维护成本高：视图状态较多，ViewModel 的构建和维护的成本都会比较高
+- Vue、Angular、React 都是 MVVM 框架
