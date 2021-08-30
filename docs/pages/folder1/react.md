@@ -557,3 +557,15 @@ React 异常捕获：使用错误边界组件包裹
 - 注意
   - 错误边界只针对 React 组件
   - 只有 class 组件才可以成为错误边界组件
+
+## React-router
+
+- 设置重定向，使用 RedirectAPI 放最后，且搭配 Switch 包裹
+  ![](./img/react-router-1.png)
+
+- 源码
+  - react-router 库：⽀持使⽤ hash（对应 HashRouter）和 browser（对应 BrowserRouter） 两种路由规则。
+  - history 库 ：提供核心的 API，HashRouter 调 ⽤ 了 createHashHistory ， BrowserRouter 调 ⽤ 了 createBrowserHistory，这两个 history 的实例化⽅法均来源于 history 这个独⽴的代码库
+  - react-router-dom 库：在 react-router 的核心基础上，添加了用于跳转的 Link 组件，和 histoy 模式下的 BrowserRouter 和 hash 模式下的 HashRouter 组件等
+- 流程图
+  ![](./img/react-router-2.png)
