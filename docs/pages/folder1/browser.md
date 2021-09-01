@@ -724,6 +724,30 @@ xhr.onprogress = function (event) {
 
     ![源码流程](./img/axios-1.png)
 
+## fetch
+
+- 它是一个原生 API，提供基于 promise 的 ajax 请求
+- 收到响应会将 Promise 设为 resolve（包括响应码是 500 之类的），在网络故障时或请求被阻止时，返回 reject
+- 可以发送跨域 cookie，默认不会发送，需要设置`credentials` 为 `include` 或 `same-origin`（表示同源 cookie），`omit` 表示不含 cookie
+  ```js
+  fetch("https://example.com", {
+    credentials: "include",
+  });
+  ```
+- 使用方式
+
+  ```js
+  fetch("http://example.com/movies.json")
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (myJson) {
+      console.log(myJson);
+    });
+  ```
+
+- 对比 axios，它是原生支持的，但 axios 封装东西更多。
+
 ## 域名
 
 - 一个完整的域名由二个或二个以上部分组成，各部分之间用英文的句号"."来分隔。
