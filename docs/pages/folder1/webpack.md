@@ -3,7 +3,7 @@
 ### 构建流程 ✨
 
 - 1、初始化参数：拷贝配置文件 webpack.config.js 合并参数，并实例化插件，得到最终 options 对象。
-- 2、开始编译：初始化 Compiler 编译对象，传入插件的 apply 方法，为事件挂载对应的回调，执行 Compiler 的 run 方法开始编译，以下是一些关键事件点。
+- 2、开始编译：初始化 Compiler 编译对象，传入各插件的 apply 方法，为事件挂载对应的回调，**执行 Compiler 的 run 方法开始编译**，以下是一些关键事件点。
 
 ```js
 function webpack(options) {
@@ -15,12 +15,13 @@ function webpack(options) {
 ```
 
 - 3、确定入口：根据 entry 找到入口文件
-- 4、编译模块：用 loader 进行转换后，找出对应依赖模块，
+- 4、编译模块：用 **loader 进行转换**后，找出对应依赖模块
 - 5、完成编译：确定了转换好的内容和依赖关系
-- 6、输出准备：根据入口和模块的依赖关系，组装成包含多个模块的 chunk，每个 chunk 转成一个文件并生成 hash，加载到输出列表【代码优化和功能添加的关键环节】。
+- 6、输出准备：根据入口和模块 module 的依赖关系，组装成包含多个 module 的 chunk，每个 chunk 转成一个文件并生成 hash，加载到 bundle 输出列表【代码优化和功能添加的关键环节】。
 - 7、执行输出：根据 output 路径和文件名，写入文件系统。
-- 执行 run 开始编译：过程中触发一些钩子 beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出 dist 目录），每个节点会触发对应的 webpack 事件。
-- 【编写插件 plugin 的时候，在 apply 中执行`compilation.plugin('xxx', callback)`绑定对应的监听事件，监听到就会执行特定的逻辑】
+- 【事件钩子】执行 run 开始编译：过程中触发一些钩子 beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出 dist 目录），每个节点会触发对应的 webpack 事件，**plugin 插件监听事件**进行对应的处理。
+- 【监听事件】编写插件 plugin 的时候，在 apply 中执行`compilation.plugin('xxx', callback)`绑定对应的监听事件，监听到就会执行特定的逻辑
+- 【获取构建文件】`compiler.hooks.emit.tap('xxx',(compilation)=>{})` 这个钩子可以获取到 emit 阶段的 compilation 对象，compilation.assets 有所有构建好的资源文件，可以方便我们处理
 
 ### webpack.config.js 配置
 
@@ -121,17 +122,17 @@ module.exports = {
   - node-sass: sass-loader 依赖需要
   - babel-loader:把 ES6+ 转换成 ES5
   - eslint-loader： ESLint 检查 JavaScript 代码
-- 自己实现 loader
+- 自己实现一个 loader
 
-  - 写一个 js 文件，导出一个函数，这个函数接收 content 匹配到的文件内容，对这些传入的字符串进行处理，然后返回，在 webpack.config.js 的 module.rules 数组里加上一个对象，描述匹配的文件和导入 js 文件和写 options 配置。
+  - 导出一个函数，这个函数接收 content 匹配到的文件内容，对这些传入的字符串进行处理，然后返回，在 webpack.config.js 的 module.rules 数组里加上一个对象，描述匹配的文件和导入 js 文件和写 options 配置。
   - 获取 options 配置：loader-utils 库`loaderUtils.getOptions(this)`
   - 返回形式推荐写法：`this.callback(null, "{};" + content)`两个参数，error + 编译完的 content。
-  - 异步 loader：使用 async-await
+  - 异步 loader：使用 async/await
 
 - Plugin(插件)
-  - 用于扩展 webpack 的功能（如打包优化、压缩、定义变量）
-  - 构建过程调用原理：Webpack 会在构建过程中对应的钩子中广播出特定的事件，插件在监听到感兴趣的事件后会执行特定的逻辑，并且插件可以调用 Webpack 提供的 API 改变 Webpack 的运行结果
-  - 钩子：beforeRun -> run -> beforeCompile -> compile（开始编译）-> make（入口分析依赖）-> seal（构建封装，不可更改）-> afterCompile（完成构建，缓存数据）-> emit （输出 dist 目录）
+  - 用于扩展 webpack 的功能（如代码分割、压缩、定义变量、替换静态资源引用路径）
+  - 构建过程调用原理：Webpack 会在构建过程中对应的钩子中广播出特定的事件，插件在监听到感兴趣的事件后会执行特定的逻辑，并且插件可以调用 Webpack 提供的 API 改变 Webpack 的输出结果
+  - 钩子：beforeRun -> run -> beforeCompile -> compile（开始编译）-> make（入口分析依赖）-> seal（构建封装，不可更改）-> afterCompile（完成构建，缓存数据）-> emit （发射 stream，输出 dist 目录）
   - 用法：plugins 中单独配置，数组里每项都是一个 plugin 实例，参数由构造函数传入。
     ```js
     plugins: [
@@ -145,6 +146,7 @@ module.exports = {
     ```
 - 常见 Plugin
 
+  - TerserWebpackPlugin：webpack4 默认的代码压缩插件，默认开启多进程和缓存
   - split-chunks-plugin: 代码分割 （Webpack 4 满足条件会自动拆分 chunk，如默认大于 30kb 的文件、可复用...）
   - define-plugin：定义环境变量（开发环境和生产环境的域名或 API，或全局版本号：通过日期时间计算拼接，代码中直接使用）
 
@@ -164,7 +166,7 @@ module.exports = {
   ```
 
   - html-webpack-plugin：生成 html 文件，里面添加了 JS 文件的 script 标签，还可以设置 loading
-  - TerserWebpackPlugin：webpack4 默认的代码压缩插件，默认开启多进程和缓存
+  - webpack-bundle-analyzer: 可视化 webpack 输出文件的体积
   - uglifyjs-webpack-plugin：通过 UglifyES 压缩 ES6 代码
 
   ```js
@@ -182,10 +184,11 @@ module.exports = {
   ```
 
   - webpack-parallel-uglify-plugin: 多核压缩,提高压缩速度
-  - webpack-bundle-analyzer: 可视化 webpack 输出文件的体积
 
-- 自己实现 plugin
-  - 本质是一个带 apply 方法的 class 类，可以新建 plugin 实例，传入的参数，就是 plugin 的配置 options。事件流开始的时候，实例化所有插件，执行 apply 方法，在事件流上挂载回调的方法，构建过程中钩子广播出事件，然后调用 API，改变输出结果。
+- 自己实现一个 plugin
+  - 写一个带 apply(compiler) 方法的 class 类，暴露出去，可以给外部新建 plugin 实例
+  - 事件流开始的时候，实例化所有插件，执行插件的 apply 方法，在事件流上挂载回调的方法
+  - 构建过程中钩子广播出事件，然后执行对应回调，改变输出结果
 
 ### HMR 热更新原理（hot module replacement）✨
 

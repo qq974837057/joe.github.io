@@ -215,7 +215,7 @@ git rebase master
 - merge 会保留两个分支的 commit 信息，而且是交叉着的，即使是 ff 模式，两个分支的 commit 信息会混合在一起（按真实提交时间排序），多用于自己 dev 合并进 master。
 - rebase 意思是变基，改变分支的起始位置，在 dev 上`git rebase master`，将 dev 的多次 commit 一起拉到要 master 最新提交的后面(时间最新)，变成一条线，多用于整理自己的 dev 提交历史，然后把 master 最新代码合进来。
 - 使用 rebase 还是 merge 更多的是管理风格的问题，有个较好实践：
-  - 就是 dev 在 merge 进主分支（如 master）之前，最好将自己的 dev 分支给 rebase 到最新的主分支（如 master）上，然后用 pull request 创建普通 merge 请求。
+  - 就是 dev 在 merge 进主分支（如 master）之前，最好在自己的 dev 分支上，执行 rebase master 主分支，然后用 pull request 或 MR 创建普通 merge 请求。
   - 用 rebase 整理成重写 commit 历史，所有修改拉到 master 的最新修改前面，保证 dev 运行在当前最新的主 branch 的代码。避免了 git 历史提交里无意义的交织。
 - 假设场景：从 dev 拉出分支 feature-a。
   - 那么当 dev 要合并 feature-a 的内容时，使用 `git merge feature-a`
