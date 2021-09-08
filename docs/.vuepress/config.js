@@ -80,6 +80,7 @@ module.exports = {
             ["webpack.md", "工程化与协作"],
             ["normalize.md", "前端规范"],
             ["git.md", "Git"],
+            ["build.md", "构建"],
           ],
         },
         {
