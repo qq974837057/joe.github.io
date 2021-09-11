@@ -225,14 +225,36 @@ module.exports = {
   add(2, 3); //minus不会参与构建
   ```
 
-  - 原理：
-
+  - 原理
     - 基于 ES6 modules 的静态检测也就是 import 语法（确保引用的模块都是 ES6 规范）
-    - 来清除未使用的代码（比如引入但没有该变量的引用）
+    - ESM 下模块之间的依赖关系是高度确定的，与运行状态无关，编译工具只需要对 ESM 模块做静态分析，就可以从代码字面量中推断出哪些模块值未曾被其它模块使用。
+    - 其他模块方式是动态的，很难预测，如：CommonJS 模块是运行时加载，ES6 模块是编译时输出接口，CommonJs 是动态语法可以写在判断里，ES6 Module 静态语法只能写在顶层。
+  - 实现：先标记模块导出值哪些没被使用，使用 Terser 删掉这些没用的语句。
 
-  - modules: false
+    - Make 阶段，收集模块导出变量并记录到模块依赖关系图 ModuleGraph 变量中
+    - Seal 阶段，遍历 ModuleGraph 标记模块导出变量有没有被使用
+    - 生成产物时，若变量没有被其它模块使用则删除对应的导出语句
 
-    - 失效原因：**使用 babel 插件 babel-preset-env，将 es6 模块转成 commonjs 了，无法检测**
+  - 避免无意义的赋值
+    - 也就是导入值赋值之后给一个变量后，没有使用
+    - 而静态分析只是看代码中有没有出现这个变量和有没有被其他模块引用
+    - 从而导致没有 Tree Shaking 。
+  - 导出值的粒度控制
+
+    - 只用到`export default {}` 导出值的其中一个属性，整个 default 对象依然会被完整保留。
+    - 优化：保持原子性
+
+      ```js
+      const bar = "bar";
+      const foo = "foo";
+
+      export { bar, foo };
+      ```
+
+  - 防止 Tree Shaking 失效
+
+    - 禁止 Babel 转译模块导入导出语句：modules: false
+    - 失效原因：**使用 babel-loader，将 es6 模块转成 commonjs 了，无法检测**
     - 解决：.babelrc 或 webpack.config.js 里设置 `modules: false` ，避免 module 被转换 commonjs
 
       ```js

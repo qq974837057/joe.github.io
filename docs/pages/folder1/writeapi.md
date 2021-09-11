@@ -829,7 +829,7 @@ function resolvePromise(x, resolve, reject) {
 - 思路
   - 首先返回个 new Promise
   - 设置一个结果数组 result 和一个计数 count
-  - `for(let [key, val] of promises)` 遍历 promsies 数组，使用`Promise.resolve(p)`转为 promise 对象
+  - `for(let [key, val] of promises.entries())` 遍历 promsies 数组，使用`Promise.resolve(p)`转为 promise 对象
   - then 成功回调将 res 保存到 result 中，判断 count 是否执行完所有 promsie，是的话`resolve(result)`
   - then 失败回调将 err 抛出，`reject(err)`
 
@@ -838,7 +838,7 @@ function all(promises) {
   return new Promise((resolve, reject) => {
     let result = [];
     let count = 0;
-    for (let [i, p] of promises) {
+    for (let [i, p] of promises.entries()) {
       Promise.resolve(p).then(
         (res) => {
           count++;
@@ -1111,6 +1111,12 @@ var newAjax = function (url, data) {
     };
   });
 };
+```
+
+## 发布-订阅模式
+
+```js
+
 ```
 
 ## 模拟一个字符串的 trim 函数

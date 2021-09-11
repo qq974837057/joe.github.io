@@ -646,22 +646,22 @@ let difference = arr1.filter((v) => {
   - 需要维护【下标 i 和边界 length】
 - forEach
   - 【缺点：无法中止循环】数组太大时，无法在特定条件下`break/continue/return`退出遍历，造成资源浪费。
-- for in 【读取键名，包括继承】
+- for...in 【读取键名，包括继承】
   - 普遍使用，兼容性好，支持`break/continue/return`
   - 遍历对象【自身+继承】的可枚举(enumerable:true)的属性（不含 Symbol 属性）。
   - 若不想获取继承的属性，可多加判断`if(obj.hasOwnProperty(key)) {...}`，不想某些原型属性被遍历，可在原型属性设置(enumerable:false)
-- for of(推荐)【默认读取键值】
+- for...of(推荐)【默认读取键值】【对于 Map 结构默认为 entries()，包括键名和键值】
 
-  - 简洁，支持`break/continue/return`，需要 ES6 以上，兼容性一般
+  - 简洁，支持`break/continue/return`退出循环，需要 ES6 以上
   - 依赖对象遍历器 Iterator 的遍历，每次执行遍历器的 next 方法
   - 大多数 JavaScript 的内置对象都支持迭代，例如：Array、Set、Map、String、函数的 arguments 、NodeList 等
-  - 普通对象(自己创建对象)不能直接使用`for...of`，需要配合`Object.keys()`
   - entries()返回一个遍历器对象，用来遍历[键名, 键值]组成的数组。对于数组，键名就是索引值；对于 Set，键名与键值相同。
   - keys() 返回一个遍历器对象，用来遍历所有的键名。
   - values() 返回一个遍历器对象，用来遍历所有的键值。
+  - 普通对象(自己创建对象)不能直接使用`for...of`，需要配合`Object.keys()`
 
   ```js
-  // for...in循环读取键名，for...of循环默认读取键值(对于Map结构默认为entries())。
+  // for...in循环读取键名。
   let arr = ["a", "b", "c"];
   for (let item in arr) {
     console.log(item);
@@ -670,12 +670,26 @@ let difference = arr1.filter((v) => {
   // '1'
   // '2'
 
+  // for...of循环默认读取键值
   for (let item of arr) {
     console.log(item);
   }
   // 'a'
   // 'b'
   // 'c'
+
+  // 对于Map结构默认为entries()
+  let iterable = new Map([
+    ["a", 1],
+    ["b", 2],
+    ["c", 3],
+  ]);
+  for (let entry of iterable) {
+    console.log(entry);
+  }
+  // ["a", 1]
+  // ["b", 2]
+  // ["c", 3]
 
   // 使用entries()返回遍历对象
   let arr = ["a", "b", "c"];
@@ -1313,14 +1327,47 @@ let { firstName: fName, position = "默认" } = employee;
   - 总的来说：宿主环境提供的方法是宏任务，比如 setTimeout、setInterval、requestAnimationFrame、ajax 中的回调函数。JS 引擎自身提供的是微任务，例如 Promise。
   - setTimeout：经过指定时间，将回调函数置入 Event Queue，等待主线程空闲时来执行。`setTimeout(fn, 0)`表示立即加入宏任务队列，当主线程同步任务执行完后，执行完微任务队列，立即执行。即使主线程啥也没有，规范也是最低 4 毫秒。（多个宏任务 setTimeout 记得看时间长短排序）
   - setInterval：每隔指定的时间将注册的函数置入 Event Queue。比如使用定时器每隔 300ms 循环执行一个 promise 请求，如果 promise 有响应，就关闭定时器，如果 promise 响应时间太长，定时器不断将请求加入任务队列，等到 promise.then 返回数据，就会清除计时器，不再往队列里添加，但此时任务队列的多个请求会依次执行完。
-  - promise：new Promise 立即执行，then 的回调函数分发到微任务 Event Queue。
-  - 遇到 resolve 后，不管嵌套多少 then，将最近的 then 加入微任务，然后继续执行其他同步代码
-  - async/await 基于 promise，await 前面类似 new promise ，后面类似 promise.then
+  - promise：new Promise 立即执行，then 的回调函数遇到 resolve 后分发到微任务 Event Queue。
+  - 遇到 resolve 关键字 后，不管嵌套多少 then，将最近的 then 加入微任务，然后继续执行其他同步代码
+  - async/await 基于 promise，await 前面直接执行 ，await 后面只有调用 resolve 后，才会将 promise.then 加入微任务队列
 
 - 优先级
 
   - 对于微任务 micro-task：process.nextTick(node)(微任务优先级最高) > Promise.then
   - 对于宏任务 macro-task：setTimeout > setImmediate(node)(宏任务优先级最低)
+
+- 输出结果：247536 async2 的结果 1
+
+  ```js
+  setTimeout(function () {
+    console.log("1");
+  }, 0);
+  async function async1() {
+    console.log("2");
+    const data = await async2();
+    console.log("3");
+    return data;
+  }
+  async function async2() {
+    return new Promise((resolve) => {
+      console.log("4");
+      resolve("async2的结果");
+    }).then((data) => {
+      console.log("5");
+      return data;
+    });
+  }
+  async1().then((data) => {
+    console.log("6");
+    console.log(data);
+  });
+  new Promise(function (resolve) {
+    console.log("7");
+    //   resolve()
+  }).then(function () {
+    console.log("8");
+  });
+  ```
 
 - setTimeout 和 requestAnimationFrame(rAF)的区别
   - setTimeout 根据我们设定延时决定函数执行时机，由于事件队列的原因，实际执行时间不一致，或者与屏幕刷新间隔不同，容易出现丢帧。
