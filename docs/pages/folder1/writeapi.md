@@ -1115,8 +1115,82 @@ var newAjax = function (url, data) {
 
 ## 发布-订阅模式
 
-```js
+- 用一个事件对象 events 保存对应的回调函数数组
+- on 方法：推入回调函数
+- off 方法：过滤出回调函数
+- emit 方法：遍历执行该事件的所有回调函数
+- once 方法：包裹回调，执行一次后，调用 off 方法删除
 
+```js
+// 简单实现：订阅事件中心
+const EventEmit = function () {
+  this.events = {};
+  // 添加订阅：往events内推入回调函数
+  this.on = function (name, cb) {
+    if (this.events[name]) {
+      this.events[name].push(cb);
+    } else {
+      this.events[name] = [cb];
+    }
+  };
+  // 删除订阅：过滤出不含对应callback的回调数组
+  this.off = function (name, cb) {
+    if (!this.events[name]) return;
+    this.events[name] = this.events[name].filter((item) => {
+      return item !== cb;
+    });
+  };
+  // 触发事件：遍历执行事件中的回调函数
+  this.emit = function (name, ...arg) {
+    if (this.events[name]) {
+      this.events[name].forEach((fn) => {
+        fn(...arg);
+      });
+    }
+  };
+  // 只执行一次订阅事件：包裹一下，先执行一次，后删除订阅
+  this.once = function (name, cb) {
+    function fn() {
+      cb();
+      this.off(name, fn);
+    }
+    this.off(name, fn);
+  };
+};
+// 业务代码
+const event = new EventEmit();
+// 回调函数
+const handle = (msg) => {
+  console.log(msg);
+};
+const msg = () => {
+  event.on("success", handle);
+};
+const order = () => {
+  event.on("success", () => {
+    console.log("更新订单信息");
+  });
+};
+const checker = () => {
+  event.on("success", () => {
+    console.log("通知管理员");
+  });
+};
+// 取消订阅
+const cancelMsg = () => {
+  event.off("success", handle);
+};
+
+msg();
+order();
+checker();
+event.emit("success", "消息参数");
+// 消息参数
+// 更新订单信息
+// 通知管理员
+cancelMsg();
+// 更新订单信息
+// 通知管理员
 ```
 
 ## 模拟一个字符串的 trim 函数
