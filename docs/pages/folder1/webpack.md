@@ -253,7 +253,7 @@ module.exports = {
 
   - 防止 Tree Shaking 失效
 
-    - 禁止 Babel 转译模块导入导出语句：modules: false
+    - 禁止 Babel 转译模块导入导出语句：modules: false， webpack 2.0 开始原生支持 ES Module，也就是说不需要 babel 把 ES Module 转换成曾经的 commonjs 模块
     - 失效原因：**使用 babel-loader，将 es6 模块转成 commonjs 了，无法检测**
     - 解决：.babelrc 或 webpack.config.js 里设置 `modules: false` ，避免 module 被转换 commonjs
 

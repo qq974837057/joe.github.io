@@ -2490,7 +2490,9 @@ function add() {
     - 一段时间后，点击对话框的 stop 按钮，面板上就会显示这段时间的内存占用情况。
     - 关注 **JS Heap**，看到起点不断增高而且没有降低(执行 GC 垃圾回收)释放内存，可能出现异常，点击预览图蓝色线增高点，看看执行了什么操作。去对应的函数中排查问题代码。
 
-      ![JS-heap-check](./img/JS-heap-check-2.png)
+      > 垃圾回收，内存下降
+
+      > ![JS-heap-check](./img/JS-heap-check-2.png)
 
   - Chrome 中的 Memory 面板，可查看活动的 Javascript 对象（以及 DOM 节点）在内存中的分布
     ![JS-heap-2](./img/JS-heap-2.png)

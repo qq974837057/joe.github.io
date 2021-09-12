@@ -21,7 +21,7 @@
   - FPS(每秒帧率) - 每秒钟画面更新次数，大部分屏幕为 60 次/秒
 
 - 统计方式
-  - 整体：
+  - 整体
     - 通过 Performance 工具可以用来录制一段时间的 CPU 占用、内存占用、FPS 等运行时性能问题，如 Bottom Up 看出一段时间较耗时的操作。
     - 通过 Network 工具或者代码统计页面的加载时间来分析加载性能问题。
   - 手动查看分析：**Chrome DevTools - Performance** 面板
@@ -37,6 +37,7 @@
     - Main：倒置火焰图，横坐标表示消耗时间，纵坐标为函数调用栈，最上层是父级函数，最下方是调用栈最顶端的函数，可关注哪个函数占据宽度最大，平顶可能表示函数有性能问题。除了函数的耗时，还有 Recalculate Style：样式计算。Layout：布局位置。
     - Frames:FPS 帧率，水平线越低且持续时间长，同时上方会出现红色线条，代表画面卡顿。
     - Rendering：勾选 FPS，可查看帧率和 GPU 内存使用情况
+      ![](./img/chrome-devtools-1.png)
   - 代码：使用 API[window.performance.timing](https://developer.mozilla.org/zh-CN/docs/Web/API/PerformanceTiming)，时间戳单位都是毫秒。
     ![timing API1](./img/Per-timingAPI-1.jpg)
     ![timing API2](./img/Per-API.jpg)
@@ -708,6 +709,13 @@
   - 卸载组件，事件监听未取消
   - 卸载组件，定时任务未清除
   - console.log 打印错误，保持了对 DOM 的引用
+
+### 减少长时间任务
+
+![](./img/chrome-devtools-2.png)
+
+- 看看有没有 long task，这上面带红色三角的就是 chrome 认为过长的任务，会在主线程阻塞渲染，先看看为什么长，看一下 js 的堆栈信息，如果有代码运算大的情况先考虑是否有不合理的地方可以优化
+- 再者就是切分任务了，把一个过长的任务切分成多个，解决主线程耗时过长的问题。
 
 ### 节流防抖【参考 JS 章节】
 
