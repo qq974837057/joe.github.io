@@ -404,6 +404,70 @@ display: inline-block;
   - 上部分：横向固定信息栏`position:fixed`，top 和 right 都为 0
   - 下部分：主视区域，存放显示的路由子页面内容`<router-view :key="key"></router-view>`
 
+## 移动端适配
+
+- 设备独立像素：等于 CSS 像素
+- 设备像素：等于物理像素
+- DPR = 物理像素 / CSS 像素
+  - 如 iphone7 的 DPR 为 750 / 375 = 2（视网膜（Retina）dpr>1）
+  - iPhone XS Max dpr 为 3
+- 百分比方案：各自有自己的参照，有些不支持百分比。
+- **rem 适配方案：阿里 Flexible+动态 rem**
+
+  - 引入 lib-flexible，添加 meta 标签，实现动态改 viewport 缩放 scale 为 1/dpr。
+  - 根据 document.documentElement.clientWidth 动态修改 <html> 的 font-size 为 clientWidth 的 1/10 ，页面其他元素使用 rem，实现页面的等比缩放。本质是 Hack 模拟 vw/vh
+  - 缺点：高倍屏安卓手机一律按 dpr=1 处理
+  - 工具：postcss-px2rem
+  - Sass 换算：设计稿元素/font-size **rem**
+
+    ```
+    $baseFontSize: 37.5;
+
+    @function px2rem($px) {
+        @return $px / $baseFontSize * 1rem;
+    }
+    ```
+
+- **VW 单位**
+
+  - 因为 iOS 8+和 Android 4.4+以上支持 vw，1vw 就等于屏幕宽度 window.innerWidth 的 1%
+  - 缺点：px 转换成 vw 不一定能完全整除，因此有一定的像素差。同时存在 1px 像素问题，需要另外解决。
+  - 可使用 vw：容器大小、内外边距，文字，圆角，边框等
+  - 工具：postcss-px-to-viewport
+  - Sass 换算：设计稿元素/设计稿宽度 \*100 **vw**
+
+    ```
+
+    // 假设设计稿的宽度是 375px
+    @function px2rem($px) {
+        @return $px / 375 * 100vw;
+    }
+    ```
+
+  - iphone6：1vw=375/100=3.75px;
+  - iphone6Plus：1vw=414/100=4.14px;
+
+- 较好方案
+  - 以 flexible 和 flex 布局为主
+  - 辅助 vw/vh 使用
+- 适配 iphoneX
+  - 圆角（corners）、刘海（sensor housing）和小黑条（Home Indicator）
+  - 安全区域：就是一个不受上面三个效果的可视窗口范围。
+  - 第一步 ： viewport-fit
+    ```
+    <meta name="viewport" content="viewport-fit=cover">
+    contain: 可视窗口完全包含网页内容
+    cover：网页内容完全覆盖可视窗口
+    默认情况下或者设置为auto和contain效果相同。
+    ```
+  - 第二步： CSS 函数：设置底部导航栏或者内容距离底部的距离
+    ```
+    body {
+      padding-bottom: constant(safe-area-inset-bottom); //iOS < 11.2
+      padding-bottom: env(safe-area-inset-bottom);//iOS >= 11.2
+    }
+    ```
+
 ## 方案&图标集合
 
 - 画 0.5px 线（0.5px 相当于高清屏物理像素的 1px）
