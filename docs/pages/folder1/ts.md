@@ -417,8 +417,8 @@
     getData<string>("1214231");
 
     // 泛型接口
-    interface ConfigFn<T> {
-      (value: T): T;
+    interface ConfigFn {
+      <T>(value: T): T;
     }
     var getData: ConfigFn = function <T>(value: T): T {
       return value;
