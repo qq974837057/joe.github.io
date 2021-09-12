@@ -1,3 +1,43 @@
+## babel 原理
+
+- 它的功能：是个编译器，将源代码字符串传入，返回一段新的代码字符串，即不运行代码，也不组合打包代码，比如输入 ES6+的代码，编译为 ES5。
+- 示例是一个简单的声明赋值语句，经过 AST 转化后各部分内容的含义就更为清晰明了
+  ![webpack-babel](./img/webpack-babel.png)
+- 有三个步骤：
+  - 第一步解析：将代码字符串解析成 AST 抽象语法树，字符串变为对象结构【细分为：分词 + 语义分析】
+  - 第二步变换：遍历 AST 抽象语法树进行修改，变换成另一个 AST 树【.babelrc 里配置的 presets 和 plugins 在此处工作】
+  - 第三步再建：遍历变换后的 AST 抽象语法树再生成代码字符串
+
+```js
+// webpack.base.conf.js
+module.exports = {
+    module: {
+        rules: [
+        {
+            test: /\.js$/,
+            loader: 'babel-loader',
+            include: [resolve('src'), resolve('test'), resolve('node_modules/webpack-dev-server/client')]
+        },
+        ]
+    }
+}
+
+// .babelrc配置文件
+{
+  "presets": ["es2015", "stage-0"],           // 一组插件集合
+  "plugins": ["transform-object-rest-spread", // 单独的每个插件
+    [
+      "transform-runtime", // 对于ES6+新特性，会自动引用模块babel-runtime中的polyfill(helper)
+      {
+        "helpers": false,
+        "polyfill": false, //是否切换（Promise，Set，Map等）为使用非全局污染的 polyfill。
+        "regenerator": true,
+        "moduleName": "babel-runtime" //引入 helper要使用的模块的名称/路径
+      }
+    ]]
+}
+```
+
 ## CI/CD
 
 ### CI/CD 三部分
