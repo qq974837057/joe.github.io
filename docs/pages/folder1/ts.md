@@ -404,8 +404,9 @@
 
 - 泛型`<T>`
 
-  - T 表示泛型，具体什么类型是调用这个方法的时候决定的
+  - T 表示泛型，具体什么类型是调用这个方法的时候决定的， <T> 内部的 T 被称为类型变量，可以看做是参数，它是我们希望传递给函数的类型占位符，会填充到内部占位的地方。
   - 可以为泛型中的类型参数指定默认类型。当使用泛型时没有在代码中直接指定类型参数，从实际值参数中也无法推测出时，这个默认类型就会起作用。
+    ![](./img/ts-T.png)
 
     ```ts
     // 表示入参和返回值都是T类型，根据调用时的类型决定
@@ -415,16 +416,27 @@
     getData<number>(123);
     getData<string>("1214231");
 
-    // 接口定义泛型
-    // 定义接口
-    interface ConfigFn {
-      <T>(value: T): T;
+    // 泛型接口
+    interface ConfigFn<T> {
+      (value: T): T;
     }
     var getData: ConfigFn = function <T>(value: T): T {
       return value;
     };
     getData<string>("张三");
     getData<string>(1243); //错误
+
+    // 泛型类
+    class GenericNumber<T> {
+      zeroValue: T;
+      add: (x: T, y: T) => T;
+    }
+
+    let myGenericNumber = new GenericNumber<number>();
+    myGenericNumber.zeroValue = 0;
+    myGenericNumber.add = function (x, y) {
+      return x + y;
+    };
 
     // 泛型的默认类型
     function createArray<T = string>(length: number, value: T): Array<T> {
@@ -435,6 +447,28 @@
       return result;
     }
     ```
+
+    - 泛型工具类型 Partial
+
+      - Partial<T> 的作用就是将某个类型里的属性全部变为可选项 ?。常用于请求参数
+      - 源码实现用到了泛型:首先通过 keyof T 拿到 T 的所有属性名，然后使用 in 进行遍历，将值赋给 P，最后通过 T[P] 取得相应的属性值。中间的 ? 号，用于将所有属性变为可选。
+
+      ```js
+      type Partial<T> = {
+        [P in keyof T]?: T[P];
+      };
+
+      interface Todo {
+        title: string;
+        description: string;
+      }
+
+      // test:Partial<Todo>
+      {
+        title?: string | undefined;
+        description?: string | undefined;
+      }
+      ```
 
 - TypeScript 中类的用法
 
