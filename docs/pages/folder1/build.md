@@ -9,6 +9,9 @@
   - UglifyJS 代码压缩、混淆
   - CSS 预处理器
   - ...
+  - 根据注释生成可交互文档
+  - 代码批量转换
+  - ...
 - 工具：[AST Explorer](https://astexplorer.net/)
   - 可以看代码转为 AST 结构
   - 可以通过 babel 和 jscodeshift 的自定义规则进行代码转换
