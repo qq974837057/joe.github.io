@@ -77,7 +77,7 @@ module.exports = {
           collapsable: false,
           sidebarDepth: 2,
           children: [
-            ["webpack.md", "工程化与协作"],
+            ["webpack.md", "Webpack"],
             ["normalize.md", "前端规范"],
             ["git.md", "Git"],
             ["build.md", "构建"],

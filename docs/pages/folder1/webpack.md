@@ -1,7 +1,9 @@
-## webpack
+## 构建流程 ✨
 
-### 构建流程 ✨
-
+- 简单说
+  - 初始化：启动构建，读取与合并配置参数，加载 Plugin，实例化 Compiler
+  - 编译：从 Entry 出发，针对每个 Module 串行调用对应的 Loader 去翻译文件的内容，再找到该 Module 依赖的 Module，递归地进行编译处理
+  - 输出：将编译后的 Module 组合成 Chunk，将 Chunk 转换成文件，输出到文件系统中
 - 1、初始化参数：拷贝配置文件 webpack.config.js 合并参数，并实例化插件，得到最终 options 对象。
 - 2、开始编译：初始化 Compiler 编译对象，传入各插件的 apply 方法，为事件挂载对应的回调，**执行 Compiler 的 run 方法开始编译**，以下是一些关键事件点。
 
@@ -15,15 +17,15 @@ function webpack(options) {
 ```
 
 - 3、确定入口：根据 entry 找到入口文件
-- 4、编译模块：用 **loader 进行转换**后，找出对应依赖模块
-- 5、完成编译：确定了转换好的内容和依赖关系
-- 6、输出准备：根据入口和模块 module 的依赖关系，组装成包含多个 module 的 chunk，每个 chunk 转成一个文件并生成 hash，加载到 bundle 输出列表【代码优化和功能添加的关键环节】。
+- 4、编译模块：用 **Loader 进行转换**后，再找出对应依赖模块
+- 5、完成编译：确定了转换好的内容和它们之间的依赖关系
+- 6、输出资源：根据入口和模块 module 的依赖关系，组装成包含多个 module 的 chunk，每个 chunk 转成一个文件并生成 hash，加载到 输出列表【代码优化和功能添加的关键环节】。
 - 7、执行输出：根据 output 路径和文件名，写入文件系统。
 - 【事件钩子】执行 run 开始编译：过程中触发一些钩子 beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出 dist 目录），每个节点会触发对应的 webpack 事件，**plugin 插件监听事件**进行对应的处理。
 - 【监听事件】编写插件 plugin 的时候，在 apply 中执行`compilation.plugin('xxx', callback)`绑定对应的监听事件，监听到就会执行特定的逻辑
 - 【获取构建文件】`compiler.hooks.emit.tap('xxx',(compilation)=>{})` 这个钩子可以获取到 emit 阶段的 compilation 对象，compilation.assets 有所有构建好的资源文件，可以方便我们处理
 
-### webpack.config.js 配置
+## webpack.config.js 配置
 
 - 配置合并：
   - 在加载插件之前，webpack 将 webpack.config.js 中的各个配置项拷贝到 options 对象中。
@@ -82,17 +84,18 @@ module.exports = {
 };
 ```
 
-### bundle，chunk，module 分别指什么
+## bundle，chunk，module 分别指什么
 
 - Entry：作为构建依赖图的入口文件
-- Output：输出创建的 bundle 到指定文件夹
+- Output：输出创建的 bundles 到指定文件夹，默认值为 ./dist。
 - bundle（包）：webpack 打包出来的文件
-- chunk（代码块）：代码分割的产物（如 webpack4 的 SplitChunksPlugin），也就是按需加载的分块。将一些代码单独打包为一个 Chunk ，由多个模块 module 组合而成，用于按需加载或缓存。
+- chunk（代码块）：由多个模块 module 组合而成，代码分割的产物（如 webpack4 的 SplitChunksPlugin），也就是按需加载的分块。将一些代码单独打包为一个 Chunk ，用于按需加载或缓存。
 - module（模块）：Webpack 里一切皆模块（图片、ES6 模块）、一个模块对应一个文件。Webpack 会从配置的 Entry 开始递归找出所有依赖的模块。
 - module 和 chunk 的图解
+
   ![module和chunk](./img/webpack-chunk.jpg)
 
-### Loader 和 Plugin 的区别 ✨
+## Loader 和 Plugin 的区别 ✨
 
 - Loader(加载器)
   - 用于文件转换，单一原则，每个 Loader 只做一种"转义"工作。webpack 链式调用每个 loader，从后往前，可以理解为出栈过程。
@@ -146,7 +149,7 @@ module.exports = {
     ```
 - 常见 Plugin
 
-  - TerserWebpackPlugin：webpack4 默认的代码压缩插件，默认开启多进程和缓存
+  - terser-webpack-plugin：webpack4 默认的代码压缩插件，默认开启多进程和缓存
   - split-chunks-plugin: 代码分割 （Webpack 4 满足条件会自动拆分 chunk，如默认大于 30kb 的文件、可复用...）
   - define-plugin：定义环境变量（开发环境和生产环境的域名或 API，或全局版本号：通过日期时间计算拼接，代码中直接使用）
 
@@ -166,8 +169,7 @@ module.exports = {
   ```
 
   - html-webpack-plugin：生成 html 文件，里面添加了 JS 文件的 script 标签，还可以设置 loading
-  - webpack-bundle-analyzer: 可视化 webpack 输出文件的体积
-  - uglifyjs-webpack-plugin：通过 UglifyES 压缩 ES6 代码
+  - webpack-bundle-analyzer: 可视化 webpack 输出文件的体积(业务组件、依赖第三方模块)
 
   ```js
   const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
@@ -190,7 +192,7 @@ module.exports = {
   - 事件流开始的时候，实例化所有插件，执行插件的 apply 方法，在事件流上挂载回调的方法
   - 构建过程中钩子广播出事件，然后执行对应回调，改变输出结果
 
-### HMR 热更新原理（hot module replacement）✨
+## HMR 热更新原理（hot module replacement）✨
 
 > 当你对代码进行修改并保存后，webpack 将对代码重新打包，并将新的模块发送到浏览器端，浏览器通过新的模块替换老的模块，这样在不刷新浏览器的前提下就能够对应用进行更新。
 
@@ -207,7 +209,7 @@ module.exports = {
   - dev-server/client 只负责消息传递、不负责新模块的获取
   - HMR runtime 才应该是获取新代码的地方。
 
-### webpack 打包体积优化(Tree-shaking)
+## webpack 打包体积优化(Tree-shaking)
 
 - 分析打包后的模块文件大小
   - webpack-bundle-analyzer
@@ -314,8 +316,95 @@ module.exports = {
       }
       ```
 
-### webpack 打包加速优化(缓存 + 多核 + 抽离) ✨
+- SplitChunksPlugin 拆包配置，配置 cacheGroups
 
+  - 字段
+    - chunks：initial 是将异步和非异步的文件分离，分离页面首次需要加载的包。
+    - minSize：文件最小打包体积
+    - test：匹配正则打包规则
+    - priority：打包优先级，数字越大越优先
+    - minChunks： 最少引入次数
+  - 方案
+    - vendors：项目基本框架 react 之类单独打包，首页必须用到的
+    - echartsVenodr：体积较大的第三方异步加载包，单独拆出来
+    - async-commons：体积一般可以合并的第三方异步加载包，合并为一个
+    - commons：同步加载包，引入两次就打包进去
+  - 建议：最大的包保持在 100k 左右，当然也不建议拆的特别小，因为浏览器 http1 一次性支持 6 次下载文件，太多可能会适得其反
+
+  ```js
+  module.exports = {
+    optimization: {
+      concatenateModules: false,
+      splitChunks: {
+        //分割代码块
+        maxInitialRequests: 6, //默认是5
+        cacheGroups: {
+          vendors: {
+            // 基本框架
+            chunks: "all",
+            test: /(react|react-dom|react-dom-router|babel-polyfill|mobx)/,
+            priority: 100,
+            name: "vendors",
+          },
+          echartsVenodr: {
+            // 异步加载体积较大的echarts包，指定页面需要的时候再异步加载
+            test: /(echarts|zrender)/,
+            priority: 100, // 设置高于async-commons，避免打包到async-common中
+            name: "echartsVenodr",
+            chunks: "async",
+          },
+          "async-commons": {
+            // 其余异步加载包
+            chunks: "async",
+            minChunks: 2,
+            name: "async-commons",
+            priority: 90,
+          },
+          commons: {
+            // 其余同步加载包
+            chunks: "all",
+            minChunks: 2,
+            name: "commons",
+            priority: 80,
+          },
+        },
+      },
+    },
+  };
+  ```
+
+- 配置 Externals（推荐）：外部引入，将不需要打包的库或静态资源从构建逻辑中剔除，使用 **CDN** 的方式去引用。
+  - 步骤：在 externals 中配置 key[包名]+value[CDN 全局变量名]，然后在 HTML 中引入 CDN 的 script 标签。就能实现 import 引入了。
+  ```js
+  // index.html
+  <script
+    src="https://code.jquery.com/jquery-3.1.0.js"
+    integrity="sha256-slogkvB1K3VOkzAI8QITxV3VzpOnkeNVsKvtkYLMjfk="
+    crossorigin="anonymous"
+  ></script>;
+  //webpack.config.js
+  module.exports = {
+    //...
+    externals: {
+      //jquery通过script引入之后，全局中即有了 jQuery 变量
+      jquery: "jQuery",
+    },
+  };
+  ```
+  - 常见 CDN 链接由 host 域名+包名+版本号+路径
+  ```js
+  <script src="https://cdn.bootcss.com/react/16.9.0/umd/react.production.min.js"></script>
+  ```
+  - 有些 CDN 服务不稳定，尽量选择成熟的 CDN 服务。
+
+## webpack 打包加速优化(缓存 + 多进程 + 提取资源 + DLL 分包) ✨
+
+- 总结
+  - 提高版本：升级 Webpack 和 Node.js 和机器
+  - 利用缓存：cache-loader、loader/plugin 开启 自身的 cache 配置（如 babel-loader/terser-webpack-plugin ）
+  - 多进程：thread-loader、TerserWebpackPlugin 开启 parallel 参数
+  - 提取公共资源：SplitChunksPlugin 拆包配置、Externals 基础包用 CDN 引入
+  - DLL 预编译：不常变更的第三方库，避免反复编译
 - 提高热更新速度：
   - 提高热更新速度，上百页 2000ms 内搞定，10 几页面区别不大
   ```js
@@ -353,7 +442,7 @@ module.exports = {
 - 较耗时：代码的编译或压缩（转化 AST 树 -> 遍历 AST 树 -> 转回 JS 代码）
   - 编译 JS、CSS 的 Loader
   - 压缩 JS、CSS 的 Plugin
-- 缓存：让二次构建时，不需要再去做重复的工作[没有变化的直接使用缓存，速度更快]
+- 利用缓存：让二次构建时，不需要再去做重复的工作[没有变化的直接使用缓存，速度更快]
   - 开启 Loader、压缩插件的 cache 配置【如 babel-loader 的`cacheDirectory:true`】，uglifyjs-webpack-plugin【如`cache: true`】，构建完将缓存存放在`node_modules/.cache/..`。
   - [cache-loader](https://www.npmjs.com/package/cache-loader)：将 loader 的编译结果写入硬盘缓存，再次构建如果文件没有发生变化则会直接拉取缓存,添加在时间长的 loader 的最前面。
   ```js
@@ -367,9 +456,33 @@ module.exports = {
       ],
   }
   ```
-- 多核：充分利用了硬件本身的优势
+- 利用多进程：充分利用了硬件本身的优势
 
-  - happypack：
+  - thread-loader：添加在此 loader 后面的放入单独的 worker 池里运行，配置简单
+
+    ```js
+    //安装：npm install thread-loader -D
+    module.exports = {
+      module: {
+        //我的项目中,babel-loader耗时比较长，所以我给它配置 thread-loader
+        rules: [
+          {
+            test: /\.jsx?$/,
+            use: ["thread-loader", "cache-loader", "babel-loader"],
+          },
+        ],
+      },
+    };
+    ```
+
+  - 多进程压缩
+
+    - 默认的 TerserWebpackPlugin（比 uglifyjs 性能更好）：默认开启了多进程和缓存，缓存文件 `node_modules/.cache/terser-webpack-plugin`
+    - 其他并行压缩插件：
+      - webpack-parallel-uglify-plugin:子进程并发执行把结果送回主进程，多核并行压缩来提升代码压缩速度
+      - uglifyjs-webpack-plugin 自带的 parallel：【如`parallel: true`】配置项开启多核编译
+
+  - happypack(不维护了)：
 
     - 原理：将 Loader 转换分解到多个子进程中去并行处理，子进程处理完成后把结果发送到主进程中，从而减少总的构建时间
     - 使用方法：开启系统 CPU 最大线程，通过插件将 loader 包装，暴露 id，直接 module.rules 引用该 id。
@@ -405,141 +518,99 @@ module.exports = {
     ];
     ```
 
-  - thread-loader：添加在此 loader 后面的放入单独的 worker 池里运行，配置简单
+- 提取公共资源
+  - SplitChunksPlugin 进行拆包 cacheGroups 配置
+  - 配置 Externals（推荐）
+- DLL 打包
+
+  - 内置 webpack 的 DllPlugin 编译 和 DllReferencePlugin 引入 dll，避免反复编译，提高打包速度
+
+  - Vue 全家桶、element-ui、echarts、工具库 lodash 不常变更的依赖 【几十秒】，避免每次构建都进行打包
+  - 通过 **DllPlugin** 来对那些我们引用但是不会经常修改的 npm 包来进行预编译
+  - 再通过 **DllReferencePlugin** 将预编译的模块加载进来，避免反复编译浪费时间，提高打包速度
+  - 步骤：
+
+    - 新建一个 webpack.dll.config.js 的配置文件(与 webpack 配置同级)，配置 DllPlugin 插件和打包的库和输出文件的位置
+    - package.json 添加 dll 命令，执行 webpack.dll.config.js 文件
+    - npm run dll 命令，生成第三方代码集合 js 文件
+    - webpack.config.js 里配置 DllReferencePlugin 插件、找到 manifest.json 文件映射到依赖并打包引入
+    - 修改 index.html，加入 script 标签，写上对应 dll 路径
+    - 如果更新依赖包，执行`npm run dll`,新的 dll 文件名便会加上新的 hash
+
     ```js
-    //安装：npm install thread-loader -D
+    // webpack.config.dll.js
+    const webpack = require('webpack');
+    const path = require('path');
+
     module.exports = {
-      module: {
-        //我的项目中,babel-loader耗时比较长，所以我给它配置 thread-loader
-        rules: [
-          {
-            test: /\.jsx?$/,
-            use: ["thread-loader", "cache-loader", "babel-loader"],
-          },
-        ],
-      },
-    };
-    ```
-  - 多进程压缩
-    - 默认的 TerserWebpackPlugin（比 uglifyjs 性能更好）：默认开启了多进程和缓存，缓存文件 `node_modules/.cache/terser-webpack-plugin`
-    - 其他并行压缩插件：
-      - webpack-parallel-uglify-plugin:子进程并发执行把结果送回主进程，多核并行压缩来提升代码压缩速度
-      - uglifyjs-webpack-plugin 自带的 parallel：【如`parallel: true`】配置项开启多核编译
+        entry: {
+            react: ['react', 'react-dom']
+        },
+        mode: 'production',
+        output: {
+            filename: '[name].dll.[hash:6].js',
+            path: path.resolve(__dirname, 'dist', 'dll'),
+            library: '[name]_dll' //暴露给外部使用
+            //libraryTarget 指定如何暴露内容，缺省时就是 var
+        },
+        plugins: [
+            new webpack.DllPlugin({
+                //name和library一致
+                name: '[name]_dll',
+                path: path.resolve(__dirname, 'dist', 'dll', 'manifest.json') //manifest.json的生成路径
+            })
+        ]
+    }
 
-- 抽离：
+    // package.json 中新增 dll 命令
+    {
+        "scripts": {
+            "build:dll": "webpack --config webpack.config.dll.js"
+        },
+    }
 
-  - dll：内置 webpack 的 DllPlugin 编译 和 DllReferencePlugin 引入 dll，提高打包速度
+    // npm run build:dll 后，会生成
+    dist
+        └── dll
+            ├── manifest.json
+            └── react.dll.9dcd9d.js
 
-    - Vue 全家桶、element-ui、echarts、工具库 lodash 不常变更的依赖 【几十秒】，避免每次构建都进行打包
-    - 通过 DllPlugin 来对那些我们引用但是不会经常修改的 npm 包来进行预编译，
-    - 再通过 DllReferencePlugin 将预编译的模块加载进来,避免反复编译浪费时间，提高打包速度。
-    - 步骤：
+    // manifest.json 用于让 DLLReferencePlugin 映射到相关依赖上。至此 dll 准备工作完成，接下来在 webpack 中引用即可。
 
-      - 新建一个 webpack.dll.config.js 的配置文件(与 webpack 配置同级)，配置 DllPlugin 插件和打包的库和输出文件的位置
-      - package.json 添加 dll 命令，执行 webpack.dll.config.js 文件
-      - npm run dll 命令，生成第三方代码集合 js 文件
-      - webpack.config.js 里配置 DllReferencePlugin 插件、找到 manifest.json 文件映射到依赖并打包引入
-      - 修改 index.html，加入 script 标签，写上对应 dll 路径
-      - 如果更新依赖包，执行`npm run dll`,新的 dll 文件名便会加上新的 hash
-
-      ```js
-      // webpack.config.dll.js
-      const webpack = require('webpack');
-      const path = require('path');
-
-      module.exports = {
-          entry: {
-              react: ['react', 'react-dom']
-          },
-          mode: 'production',
-          output: {
-              filename: '[name].dll.[hash:6].js',
-              path: path.resolve(__dirname, 'dist', 'dll'),
-              library: '[name]_dll' //暴露给外部使用
-              //libraryTarget 指定如何暴露内容，缺省时就是 var
-          },
-          plugins: [
-              new webpack.DllPlugin({
-                  //name和library一致
-                  name: '[name]_dll',
-                  path: path.resolve(__dirname, 'dist', 'dll', 'manifest.json') //manifest.json的生成路径
-              })
-          ]
-      }
-
-      // package.json 中新增 dll 命令
-      {
-          "scripts": {
-              "build:dll": "webpack --config webpack.config.dll.js"
-          },
-      }
-
-      // npm run build:dll 后，会生成
-      dist
-          └── dll
-              ├── manifest.json
-              └── react.dll.9dcd9d.js
-
-      // manifest.json 用于让 DLLReferencePlugin 映射到相关依赖上。至此 dll 准备工作完成，接下来在 webpack 中引用即可。
-
-      // webpack.config.js
-      const webpack = require('webpack');
-      const path = require('path');
-      module.exports = {
-          //...
-          devServer: {
-              contentBase: path.resolve(__dirname, 'dist')
-          },
-          plugins: [
-              new webpack.DllReferencePlugin({
-                  manifest: path.resolve(__dirname, 'dist', 'dll', 'manifest.json')
-              }),
-              new CleanWebpackPlugin({
-                  cleanOnceBeforeBuildPatterns: ['**/*', '!dll', '!dll/**'] //不删除dll目录
-              }),
-              //...
-          ]
-      }
-      // 修改 public/index.html 文件，在其中引入 react.dll.js
-      <script src="/dll/react.dll.9dcd9d.js"></script>
-      // 使用 npm run build 构建，可以看到 bundle.js 的体积大大减少，提高打包速度。
-      ```
-
-  - 配置 Externals（推荐）：外部引入，将不需要打包的库或静态资源从构建逻辑中剔除，使用 **CDN** 的方式去引用。
-    - 步骤：在 externals 中配置 key[包名]+value[CDN 全局变量名]，然后在 HTML 中引入 CDN 的 script 标签。就能实现 import 引入了。
-    ```js
-    // index.html
-    <script
-      src="https://code.jquery.com/jquery-3.1.0.js"
-      integrity="sha256-slogkvB1K3VOkzAI8QITxV3VzpOnkeNVsKvtkYLMjfk="
-      crossorigin="anonymous"
-    ></script>;
-    //webpack.config.js
+    // webpack.config.js
+    const webpack = require('webpack');
+    const path = require('path');
     module.exports = {
-      //...
-      externals: {
-        //jquery通过script引入之后，全局中即有了 jQuery 变量
-        jquery: "jQuery",
-      },
-    };
+        //...
+        devServer: {
+            contentBase: path.resolve(__dirname, 'dist')
+        },
+        plugins: [
+            new webpack.DllReferencePlugin({
+                manifest: path.resolve(__dirname, 'dist', 'dll', 'manifest.json')
+            }),
+            new CleanWebpackPlugin({
+                cleanOnceBeforeBuildPatterns: ['**/*', '!dll', '!dll/**'] //不删除dll目录
+            }),
+            //...
+        ]
+    }
+    // 修改 public/index.html 文件，在其中引入 react.dll.js
+    <script src="/dll/react.dll.9dcd9d.js"></script>
+    // 使用 npm run build 构建，可以看到 bundle.js 的体积大大减少，提高打包速度。
     ```
-    - 常见 CDN 链接由 host 域名+包名+版本号+路径
-    ```js
-    <script src="https://cdn.bootcss.com/react/16.9.0/umd/react.production.min.js"></script>
-    ```
-    - 有些 CDN 服务不稳定，尽量选择成熟的 CDN 服务。
 
 - Vue 关闭在 vue.config.js： `module.exports= { productionSourceMap:false （表示生产环境进行代码压缩） }`
   - 优点：构建速度快，体积变小，不需要源码 map 文件，进行代码压缩加密
   - 缺点：运行时有错误，无法准确定位哪一行。
-- 更直接：
+- 更直接
   - 升级机器配置
   - 升级 webpack5 或 node 版本
 - 效果提升：(20 页)
   - 初次打包：20s
   - 二次打包：8s
 
-### webpack 在 vue cli3 的使用
+## webpack 在 vue cli3 的使用
 
 - 默认 splitChunks 和 minimize
 
@@ -620,23 +691,57 @@ module.exports = {
   };
   ```
 
-### 参考阅读
+## 文件指纹
 
+- 文件指纹是打包后输出的文件名的后缀。
+
+  - Hash：和整个项目的构建相关，只要项目文件有修改，整个项目构建的 hash 值就会更改
+  - Chunkhash：和 Webpack 打包的 chunk 有关，不同的 entry 会生出不同的 chunkhash
+  - Contenthash：根据文件内容来定义 hash，文件内容不变，则 contenthash 不变
+
+- 指纹设置
+  - JS：设置 output 的 filename，用 chunkhash。
+  - CSS：设置 MiniCssExtractPlugin 的 filename，使用 contenthash。
+  - 图片：设置 file-loader 的 name，使用 hash。
+
+```js
+// js
+module.exports = {
+  entry: { app: "./scr/app.js", search: "./src/search.js" },
+  output: { filename: "[name][chunkhash:8].js", path: __dirname + "/dist" },
+};
+// css
+module.exports = {
+  entry: { app: "./scr/app.js", search: "./src/search.js" },
+  output: { filename: "[name][chunkhash:8].js", path: __dirname + "/dist" },
+  plugins: [
+    new MiniCssExtractPlugin({ filename: `[name][contenthash:8].css` }),
+  ],
+};
+// 图片
+const path = require("path");
+module.exports = {
+  entry: "./src/index.js",
+  output: { filename: "bundle.js", path: path.resolve(__dirname, "dist") },
+  module: {
+    rules: [
+      {
+        test: /\.(png|svg|jpg|gif)$/,
+        use: [
+          {
+            loader: "file-loader",
+            options: { name: "img/[name][hash:8].[ext]" },
+          },
+        ],
+      },
+    ],
+  },
+};
+```
+
+## 参考阅读
+
+- [掘金-webpack 优化](https://juejin.cn/post/6844904093463347208#heading-0)
+- [掘金-拆包实践](https://juejin.cn/post/6844903728374546445#heading-9)
+- [掘金-webpack 常见问题](https://juejin.cn/post/6844904094281236487#heading-0)
 - [Webpack 4 和单页应用入门](https://github.com/wallstreetcn/webpack-and-spa-guide)
-
-## 前端工程化
-
-- 模块化
-  - JS 模块化
-  - CSS 模块化
-  - 资源模块化
-- 组件化
-  - 复杂页面按功能拆分成多个独立的组件
-  - 通用组件
-  - 业务组件
-- 规范化
-  - UI 规范
-  - 接口规范
-  - 编码规范(eslint)
-  - 提交规范(commitizen 工具 + cz-conventional-changelog 规范适配器)
-  - 开发流程(四大阶段、GitFlow 工作流、CodeReview、测试、部署)
