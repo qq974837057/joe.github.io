@@ -1,3 +1,57 @@
+## AST
+
+- 概念
+  - 抽象语法树（abstract syntax code，AST）是源代码的抽象语法结构的树状表示，树上的每个节点都表示源代码中的一种结构，.
+  - 之所以说是抽象的，抽象表示把 js 代码进行了结构化的转化，转化为一种数据结构。这种数据结构其实就是一个大的 json 对象
+- 应用
+  - JavaScript 引擎的编译
+  - babel 将 ES6 转为 ES5
+  - UglifyJS 代码压缩、混淆
+  - CSS 预处理器
+  - ...
+- 工具：[AST Explorer](https://astexplorer.net/)
+  - 可以看代码转为 AST 结构
+  - 可以通过 babel 和 jscodeshift 的自定义规则进行代码转换
+  - ![](./img/AST-Explorer-1.png)
+  - ![](./img/AST-Explorer-2.png)
+  - ![](./img/AST-Explorer-3.png)
+- 举个例子
+
+  - var a = 1
+
+  ```js
+
+  {
+    "type": "Program",
+    "sourceType": "script",
+    "body": [
+      {
+        "type": "VariableDeclaration",
+        "kind": "var",
+        "declarations": [
+          {
+            "type": "VariableDeclarator",
+            "id": {
+              "type": "Identifier",
+              "name": "a"
+            },
+            "init": {
+              "type": "Literal",
+              "value": 1
+            }
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+  - 当我操作对象 init 中 value 的值 1 改为 2 时，对应的 js 也会跟着改变为 var a = 2 当我操作对象 id 中的 name 的值 a 改为 b 时， 对应的 js 也会跟着改变为 var b = 2
+  - 操作 AST 无非就是操作一组有规则的 JSON， 那么只要明白规则，很快就可以掌握转换方法
+
+- AST [节点类型](https://babeljs.io/docs/en/babel-types)
+  - ![](./img/AST-2.png)
+
 ## babel 原理
 
 - 它的功能：是个编译器，将源代码字符串传入，返回一段新的代码字符串，即不运行代码，也不组合打包代码，比如输入 ES6+的代码，编译为 ES5。
@@ -6,8 +60,8 @@
 - 有三个步骤：
 
   - 第一步解析：将代码字符串解析成 AST 抽象语法树，字符串变为对象结构
-    - 词法分析(拆分语句得到 token 流)
-    - 语义分析(依据标准进行判断，如语句、表达式、声明，变成有结构的语法树)
+    - 词法分析(将字符串形式的代码转换为一个语法片段数组 Tokens )
+    - 语义分析(依据标准进行判断，如语句、表达式、声明，把 Tokens 转换成 AST 形式)
   - 第二步变换：遍历 AST 抽象语法树进行修改，变换成另一个 AST 树【.babelrc 里配置的 presets 和 plugins 在此处工作】
     - 遍历器 traverser 接收两个参数,一个是 ast 节点对象,一个是 visitor,visitor 本质是挂载不同方法的 JavaScript 对象,visitor 也叫做访问者,顾名思义它会访问 ast 上每个节点,然后根据针对不同节点用相应的方法做出不同的转换.
   - 第三步再建：遍历变换后的 AST 抽象语法树再生成代码字符串
