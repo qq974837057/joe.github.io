@@ -625,3 +625,280 @@ React 异常捕获：使用错误边界组件包裹
   - react-router-dom 库：在 react-router 的核心基础上，添加了用于跳转的 Link 组件，和 histoy 模式下的 BrowserRouter 和 hash 模式下的 HashRouter 组件等
 - 流程图
   ![](./img/react-router-2.png)
+
+## React 题目参考
+
+![](./img/react-interview.png)
+
+- [参考答案 1](https://juejin.cn/post/6941546135827775525#heading-1)
+- [参考答案 2](https://juejin.cn/post/6940942549305524238#heading-1)
+
+## React 题目一、组件基础
+
+### React Fiber 是什么，解决什么问题
+
+- 原因：React15 渲染时，深度优先遍历 diff 会对虚拟 DOM 树进行递归，找出变动的节点，同步更新，这个过程 React 会占用主线程，导致用户感觉卡顿。React16 通过 Fiber 架构，让这个过程可中断，可恢复，能够及时响应用户交互。
+- 核心：Fiber 会将⼀个⼤的更新任务拆解为许多个⼩任务。每当执⾏完⼀个⼩任务时，渲染任务会交出主线程，看看有没有优先级更⾼的⼯作要处理，空闲后再继续渲染，避免同步渲染带来的卡顿。
+- 时间分片：React 会根据浏览器的帧率，计算出时间切⽚的⼤⼩，并结合当前时间计算出每⼀个切⽚的到期时间。在 循环创建 Fiber 节点的函数中，while 循环每次执⾏前，会询问当前时间切⽚是否到期，若已到期，则结束循环、交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，没有这个判断，会循环调用，直到节点为空）
+- 任务调度
+  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务
+  - 先创建一个 task，根据任务开始时间，推入两个队列（待执行、已过期）其中一个
+  - 队列是小顶堆的数据结构，堆顶是需要最早被执行的任务
+  - 如果任务开始时间小于当前时间，那么推入 taskQueue 过期任务队列。
+  - 如果任务开始时间大于当前时间，则先判断有没有过期任务，有就发起即时任务并执行
+  - 再去看未过期的 timerQueue 任务队列，是堆顶任务就派发延时任务，等过期后加入另一个队列，等待执行
+
+### 类组件与函数组件有什么异同？
+
+- 概念
+  - 类组件：基于 ES6 的 Class 写法，继承 React.Component 的 React 组件
+  - 函数组件：函数形态存在的 React 组件，早期没有 Hook，函数组件内部无法维护 state，所以也叫无状态组件。后来 Hook 出现后，补齐一些生命周期和 state 的状态管理的能力
+- 相同
+  - 可复用的最小代码片段，返回要渲染的元素
+- 不同
+  - 编程模式：类组件面向对象，函数组件是函数式编程
+  - 生命周期：类组件可以访问生命周期，函数组件不能
+  - this：类组件可以获取到实例化的 this，函数组件没有 this
+  - 灵活性：类组件难拆分和复用，函数组件灵活，可自由选择 Hook 能力
+  - 性能优化：类组件用 shouldComponentUpdate 阻止更新，函数组件依靠 React.memo 缓存渲染结果
+
+### React 事件机制
+
+- 概念
+  - JSX 上写的事件并没有绑定在对应的真实 DOM 上，而是通过事件委托的方式，将所有的事件都统一绑定在了 document 上。这样的方式不仅减少了内存消耗，还能在组件挂载销毁时统一订阅和移除事件。
+  - 另外冒泡到 document 上的事件也不是原生浏览器事件，而是 React 自己实现的合成事件（SyntheticEvent）。
+- 合成事件
+
+  - 简介：它是 React 自定义的事件对象，底层抹平了不同浏览器的差异，上层提供与原生事件相同的接口，它保存了原生 DOM 事件的引用，通过`e.nativeEvent` 属性可以获取
+  - 优点：开发者可以专注逻辑开发，不必关注兼容问题。帮助 React 对所有事件进行统一管理，中⼼化管控
+  - 顺序：先执行原生事件，后执行 react 合成事件
+
+- 原理
+  - 注册：源码上使用原生 JS 的 `addEventListener(eventType,listener)`来进行监听，listener 是注册到 document 的统一事件分发函数，里面调用原生 JS 的 `dispatchEvent`
+  - 触发：事件触发，冒泡到 document->执行 dispatchEvent->创建事件对应的合成对象，收集节点的回调和节点实例，作为合成对象的两个属性，`_dispatchListeners` 和`_dispatchInstances`，分别存放捕获-目标-冒泡这个三个阶段所涉及的回调集合和节点实例集合，按顺序执行即可。
+
+### React 事件和 HTML 原生事件的区别
+
+- 【事件名小驼峰】react 事件命令采用**小驼峰式**，原生事件是纯小写
+- 【事件方法函数】使用 JSX 语法时，需要**传入一个函数**作为事件处理函数，原生事件是一个字符串
+- 【阻止默认行为】不能通过 `return false` 来阻止默认行为。必须明确调用 `e.preventDefault()`阻止默认行为
+
+### HOC 高阶组件是什么，和普通组件有什么区别
+
+- 概念
+  - 是一个函数，接收组件为参数，返回新的组件
+- 优缺点
+  - 优点：逻辑复用，不影响被包裹组件的内部逻辑
+  - 缺点：HOC 传递给被包裹组件的 props 容易重名，导致被覆盖
+- 作用
+  - 代码复用，逻辑抽象
+  - 根据条件渲染被包裹组件
+  - 更改 被包裹组件 State 和 Props
+- 实际应用
+  - 权限控制
+  - 渲染事件计算
+
+```js
+// hoc的定义
+function withSubscription(WrappedComponent, selectData) {
+  return class extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {
+        data: selectData(DataSource, props)
+      };
+    }
+    // 一些通用的逻辑处理
+    render() {
+      // ... 并使用新数据渲染被包装的组件!
+      return <WrappedComponent data={this.state.data} {...this.props} />;
+    }
+  };
+
+// 使用
+const BlogPostWithSubscription = withSubscription(BlogPost,
+  (DataSource, props) => DataSource.getBlogPost(props.id));
+
+```
+
+### React 高阶组件、Render props、hooks 有什么区别，为什么要不断迭代
+
+- Render props
+  - 概念：组件有一个 props，它是一个返回 React 元素的 render 函数
+  - 优点：代码复用，数据共享
+  - 缺点：无法在 return 语句外访问数据、嵌套写法不够优雅
+
+```js
+// DataProvider组件内部的渲染逻辑如下
+class DataProvider extends React.Components {
+  state = {
+    name: "Tom",
+  };
+
+  render() {
+    return (
+      <div>
+        <p>共享数据组件自己内部的渲染逻辑</p>
+        {this.props.render(this.state)}
+      </div>
+    );
+  }
+}
+
+// 调用方式
+<DataProvider render={(data) => <h1>Hello {data.name}</h1>} />;
+```
+
+- 自定义 hook
+  - 概念：使用 React16.8 的 Hook API，写自定义 hook，复用代码逻辑
+  - 优点：使用简介直观；解决了 prop 的重名问题；解决 render props 嵌套的问题；
+  - 缺点：只能在顶层使用，不能在分支语句中使用
+
+```js
+// 自定义一个获取订阅数据的hook
+function useSubscription() {
+  const data = DataSource.getComments();
+  return [data];
+}
+//
+function CommentList(props) {
+  const {data} = props;
+  const [subData] = useSubscription();
+    ...
+}
+// 使用
+<CommentList data='hello' />
+
+```
+
+- 总结
+  - 都是为了解决代码逻辑复用的问题
+  - HOC 和 render props 有一些缺点
+  - Hooks 的代码逻辑复用更简介清晰，也避免了 HOC 和 render props 的问题
+
+### React 中什么是受控组件和非控组件？
+
+- 受控组件（推荐使用）
+  - `<input type="text">, <textarea> 和 <select>` 之类的标签它们都接受一个 value 属性，当表单的状态发生变化，就会触发 onChange 事件，更新组件的 state。`this.setState({value: event.target.value});`
+  - 缺点：如果多个输入框，每个都要写事件处理函数，比较繁琐
+  ```jsx
+  <input
+    type="text"
+    value="{this.state.value}"
+    onChange="{this.handleChange}"
+  />
+  ```
+- 非受控组件
+  - 概念：一个表单组件没有 value props（单选和复选按钮对应的是 checked props）时，就可以称为非受控组件
+  - 在非受控组件中，可以使用一个 ref 来从 DOM 获得表单值。而不是为每个状态更新编写一个事件处理程序
+
+```js
+class NameForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.input = React.createRef();
+  }
+
+  handleSubmit(event) {
+    alert("A name was submitted: " + this.input.current.value);
+    event.preventDefault();
+  }
+
+  render() {
+    return (
+      <form onSubmit={this.handleSubmit}>
+        <label>
+          Name:
+          <input type="text" ref={this.input} />
+        </label>
+        <input type="submit" value="Submit" />
+      </form>
+    );
+  }
+}
+```
+
+- 总结
+  - React 推荐使用受控组件，与 state 有关
+  - 想快速编写代码，减少代码量使用非受控组件，与组件 state 无关
+
+### 对 React context 的理解
+
+### 在 React 中如何避免不必要的 render？
+
+## React 题目二、数据管理
+
+- React setState 调用的原理
+- React setState 调用之后发生了什么？是同步还是异步？
+- React 中的 setState 批量更新的过程是什么？
+- 在 React 中组件的 this.state 和 setState 有什么区别？
+- React 组件的 state 和 props 有什么区别？
+- React 中的 props 为什么是只读的？
+- 在 React 中组件的 props 改变时更新组件的有哪些方法？
+
+## React 题目三、生命周期
+
+- React 的生命周期有哪些？
+- React 废弃了哪些生命周期？为什么？
+- React 16.X 中 props 改变后在哪个生命周期中处理
+- React 性能优化在哪个生命周期？它优化的原理是什么？
+- state 和 props 触发更新的生命周期分别有什么区别？
+- React 中发起网络请求应该在哪个生命周期中进行？为什么？
+- React 16 中新生命周期有哪些
+
+## React 题目四、组件通信
+
+- 组件通信的方式有哪些
+  - 父子组件的通信方式？
+  - 跨级组件的通信方式？
+  - 非嵌套关系组件的通信方式？
+- 如何解决 props 层级过深的问题
+
+## React 题目五、路由
+
+- React-Router 的实现原理是什么？
+- React-Router 的路由有几种模式？
+- 如何配置 React-Router 实现路由切换
+- react-router 里的 Link 标签和 a 标签的区别
+- React-Router 如何获取 URL 的参数和历史对象？
+- React-Router 4 的 Switch 有什么用？
+
+## React 题目六、Redux
+
+- 对 Redux 的理解，主要解决什么问题
+- Redux 原理及工作流程
+- Redux 中异步的请求怎么处理
+- Redux 怎么实现属性传递，介绍下原理
+- Redux 和 Vuex 有什么区别，它们的共同思想
+
+## React 题目七、Hooks
+
+- 对 React Hook 的理解，它的实现原理是什么
+- 常用 Hooks 有哪些
+- 为什么 useState 要使用数组而不是对象
+- React Hooks 解决了哪些问题？
+- React Hook 的使用限制有哪些？
+- useEffect 与 useLayoutEffect 的区别
+- React Hooks 在平时开发中需要注意的问题和原因
+- React Hooks 和生命周期的关系？
+
+## React 题目八、虚拟 DOM
+
+- 对虚拟 DOM 的理解？虚拟 DOM 主要做了什么？虚拟 DOM 本身是什么？（参考框架通识）
+- React diff 算法的原理是什么？
+- React key 是干嘛用的 为什么要加？key 主要是解决哪一类问题的
+- 虚拟 DOM 的引入与直接操作原生 DOM 相比，哪一个效率更高，为什么
+- React 与 Vue 的 diff 算法有何不同？
+
+## React 题目九、其他
+
+- 为什么  React 要用 JSX？React 必须使用 JSX 吗？
+- react 最新版本解决了什么问题，增加了哪些东西
+- React 数据持久化有什么实践吗？
+- React 设计思路，它的理念是什么？
+- React 的状态提升是什么？使用场景有哪些？
+- 在 React 中遍历的方法有哪些？
+- 同时引用这三个库 react.js、react-dom.js 和 babel.js 它们都有什么作用？
+- 在 React 中怎么使用 async/await？
+- React.Children.map 和 js 的 map 有什么区别？
