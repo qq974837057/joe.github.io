@@ -1,5 +1,27 @@
 ## React 15 和 React 16 的生命周期
 
+### 流程总结
+
+- 整体结构
+  ![](./img/react-process-1.jpg)
+- React 17 生命周期和阶段展示（绿色新为增）
+  ![](./img/react-process-2.jpg)
+- 渲染过程
+  - 调用 ReactDOM.render
+  - **进入 Render 阶段**
+  - 深度优先遍历创建完整的 Fiber 树（虚拟 DOM 树）
+  - 遍历到的节点会执行生命周期函数（constructor->getDerivedStateFromProps/componentWillMount->render）
+  - **进入 Commit 阶段**
+  - 将整棵 fiber 树对应 DOM 渲染到视图中
+  - 从子节点开始执行对应的生命周期函数，然后调用父节点的（componentDidMount）
+  - **调用 this.setState 改变某个子节点的状态**
+  - 进入 Render 阶段
+  - 再次深度优先遍历创建完整的 Fiber 树（虚拟 DOM 树）
+  - 通过 diff 算法（reconcile 算法）发现不同，标记此次变化。调用该子节点的生命周期函数（getDerivedStateFromProps->render）
+  - **进入 Commit 阶段**
+  - 执行状态变化对应的操作，执行该子节点生命周期函数（getSnapshotBeforeUpdate）
+  - 新创建的 fiber 树替换旧的 fiber 树
+
 ### React 15
 
 ![](./img/react-15-life.png)
