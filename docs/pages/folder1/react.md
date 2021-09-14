@@ -6,13 +6,13 @@
   ![](./img/react-process-1.jpg)
 - React 17 生命周期和阶段展示（绿色新为增）
   ![](./img/react-process-2.jpg)
-- 渲染过程
+- 渲染过程（render 阶段可以同步也可以异步，但 commit ⼀定是同步的。）
   - 调用 ReactDOM.render
   - **进入 Render 阶段**
   - 深度优先遍历创建完整的 Fiber 树（虚拟 DOM 树）
   - 遍历到的节点会执行生命周期函数（constructor->getDerivedStateFromProps/componentWillMount->render）
   - **进入 Commit 阶段**
-  - 将整棵 fiber 树对应 DOM 渲染到视图中
+  - 将整棵 fiber 树对应 DOM 渲染到视图（真实 DOM）中
   - 从子节点开始执行对应的生命周期函数，然后调用父节点的（componentDidMount）
   - **调用 this.setState 改变某个子节点的状态**
   - 进入 Render 阶段
@@ -471,11 +471,45 @@ handleSomething() {
   - 对 React 核心算法（调和）的重写
 - Fiber 核心：可中断、可恢复、优先级
 - React 架构
-  - React16 之前：Reconciler 找不同->Renderer 渲染不同->
+  - React16 之前：Reconciler 找不同->Renderer 渲染不同
   - React16 之后：Scheduler (调度器)优先级->Reconciler 找不同->Renderer 渲染不同
 - 联系上下文 React15 和 16 的生命周期改动
   - 因为调度器会将整个更新任务拆分为多个小的任务，并给它们分配了优先级，然后根据优先级来进行打断任务和恢复任务
   - render 阶段的打断和恢复会重复执行一些 WillMount 的生命周期钩子，为了避免，React16 废弃了这些钩子
+
+### 常见问题
+
+- Fiber 节点如何连接
+  - child 指向子节点
+  - return 指向父节点
+  - sibling 指向第一个兄弟节点
+- Fiber 树：由多个 Fiber 节点组成，数据结构本质上已经从树变为链表了
+- completeWork：负责处理 Fiber 节点到 DOM 节点的映射逻辑，是自底向上处理的
+  - 创建 DOM 节点（CreateInstance），创建好的 DOM 节点放在 stateNode 属性里
+  - 将 DOM 节点插⼊到 DOM 树中（AppendAllChildren），挂载到父 Fiber 节点的 DOM 节点里去
+  - 为 DOM 节点设置属性（FinalizeInitialChildren）
+
+### React 3 种启动方式
+
+> 主要是 mode 属性的不同，决定着这个⼯作流【初始化 → render → commit 】是⼀⽓呵成（同步）的，还是分⽚执⾏（异步）的。Fiber 架构在 React 中并不能够和异步渲染画严格的等号，它是⼀种同时兼容了同步渲染与异步渲染的设计。
+
+- legacy 模式：`ReactDOM.render(<App />,rootNode)`，目前的使用方式
+- concurrent 模式：`ReactDOM.createRoot(rootNode).render(<App />)`，实验中，未来的默认模式
+- blocking 模式：介于两者之间，渐进迁移用
+
+### Fiber 架构下 异步渲染（Concurrent 模式）的 Scheduler 调度层的核心
+
+- 时间分片
+
+  - React 会根据浏览器的帧率，计算出时间切⽚的⼤⼩，并结合当前时间计算出每⼀个切⽚的到期时间。在 循环创建 Fiber 节点的函数中，while 循环每次执⾏前，会询问当前时间切⽚是否到期，若已到期，则结束循环、交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，没有这个判断，会循环调用，直到节点为空）
+
+- 优先级调度
+  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务
+  - 先创建一个 task，根据任务开始时间，推入两个队列（待执行、已过期）其中一个
+  - 队列是小顶堆的数据结构，堆顶是需要最早被执行的任务
+  - 如果任务开始时间小于当前时间，那么推入 taskQueue 过期任务队列。
+  - 如果任务开始时间大于当前时间，则先判断有没有过期任务，有就发起即时任务并执行
+  - 再去看未过期的任务队列，是堆顶任务就派发延时任务，等过期后加入另一个队列，等待执行
 
 ## React 性能优化
 
