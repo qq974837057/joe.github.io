@@ -384,9 +384,50 @@ function instance_of(L, R) {
 }
 ```
 
+## 数组去重、拍平
+
+### 去重
+
+- 使用`[...new Set(arr)]`
+
+```js
+function uniqueArr(arr) {
+  return [...new Set(arr)];
+}
+```
+
+### 拍平
+
+- 使用 reduce，判断当前元素是否为数组 Array，是的话，递归调用并合并
+- 使用展开运算法，返回合并的数组
+
+```js
+function flatter(arr) {
+  return arr.reduce((acc, cur) => {
+    Array.isArray(cur) ? [...acc, flatter(arr)] : [...acc, cur];
+  }, []);
+}
+```
+
 ## 防抖
 
 - [木易杨](https://muyiy.cn/blog/7/7.2.html#underscore-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90)
+- 简版
+
+  ```js
+  function debounce(fn, wait) {
+    let timer = null;
+    return function () {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        fn.apply(this, arguments);
+      }, wait);
+    };
+  }
+  ```
+
 - 立即执行版的防抖
 
 ```js
@@ -424,7 +465,7 @@ document.addEventListener("scroll", betterFn);
     - 时间到，则执行`fn.apply(this, arguments)`，再把 flag 置为 true，继续下一轮的计时。
 
 ```js
-function throttle(fn, wait = 500) {
+function throttle(fn, wait) {
   let flag = true; // 利用闭包声明flag开关标志位，不被销毁
   return function () {
     if (!flag) {
