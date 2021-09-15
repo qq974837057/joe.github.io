@@ -907,13 +907,104 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目三、生命周期
 
-- React 的生命周期有哪些？
-- React 废弃了哪些生命周期？为什么？
-- React 16.X 中 props 改变后在哪个生命周期中处理
-- React 性能优化在哪个生命周期？它优化的原理是什么？
-- state 和 props 触发更新的生命周期分别有什么区别？
-- React 中发起网络请求应该在哪个生命周期中进行？为什么？
-- React 16 中新生命周期有哪些
+### React 的生命周期有哪些？
+
+![](./img/react-16-life.png)
+生命周期可分为三个阶段：挂载阶段、更新阶段、卸载阶段
+
+- 挂载阶段：完成组件第一次渲染，只发生一次
+  - 顺序：`constructor()`->`getDerivedStateFromProps()`->`render()`-`>componentDidMount()`
+  - `constructor`：初始化 state，事件处理方法绑定 this
+  - `getDerivedStateFromProps(nextProps,prevState)`
+    - 静态方法，里面访问不到 this
+    - 接收参数，props（父组件的新 props） 和 state（当前自身的 state）
+    - 函数需要返回一个对象用于将派生 state，不需要更新则返回 null
+  - `render`：返回要渲染的内容（原生 DOM、React 组件、字符串、null 等），是每个组件必须的一个方法
+  - `componentDidMount`：插入 DOM 树后调用，常用于发送请求、操作 DOM、添加订阅
+- 更新阶段：当组件 props 改变或调用 setState 会触发，可发生多次
+  - 顺序：`getDerivedStateFromProps()`->`shouldComponentUpdate()`->`render()`->`getSnapshotBeforeUpdate()`->`componentDidUpdate()`
+  - `shouldComponentUpdate(nextProps,nextState)`：在父组件更新，所有子组件都会重新渲染，可利用这个阻止子组件重新渲染。可以比较 this.props 和 nextProps ，this.state 和 nextState 值是否变化，来确认返回 true 或者 false。当返回 false 时，组件就停止更新过程，后面的 render、componentDidUpdate 也不会被调用。
+  - `getSnapshotBeforeUpdate(prevProps, prevState)`
+    - 在 render 方法之后，在真实 DOM 更新前
+    - 要和 componentDidUpdate 配合使用，函数的 return 返回值传给 DidUpdate()的第三个参数，默认为 null
+  - `componentDidUpdate(prevProps, prevState, snapshot)`：组件更新完成后调用，一般用于操作 DOM，发请求。
+- 卸载阶段：组件销毁之前调用
+  - 顺序：`componentWillUnmount()`
+  - 作用：一般用来取消订阅、清除计时器等
+  - 注意：不要在这里 setState 了
+- 错误处理阶段：
+  - 顺序：`componentDidCatch(error, info)`
+  - 后代组件抛出错误时调用，error 是错误信息，info 是堆栈信息
+
+React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ commit 阶段⼜被细分为
+了 pre-commit 和 commit。**render 阶段在执⾏过程中允许被打断（Fiber 的作用）**，⽽ commit 阶段则总是同步执⾏的。
+
+- render 阶段：计算状态信息，可能会被 React 暂停、终⽌或重新启动。
+- pre-commit 阶段：还没最终更新到真实 DOM，但可以读取 DOM。
+- commit 阶段：真正完成真实 DOM 更新，可以使⽤ DOM，运⾏副作⽤。
+
+### React 新增/废弃了哪些生命周期？为什么？
+
+- 新增
+  - getDerivedStateFromProps
+  - getSnapshotBeforeUpdate
+  - getDerivedStateFromError
+- 废弃 will 之类的
+  - componentWillMount
+  - componentWillReceiveProps
+  - componentWillUpdate
+
+废弃这三个函数的原因：fiber 的出现，高优先级任务会打断当前任务，导致被执行多次。而且避免开发者滥用生命周期，导致不好维护。
+
+- componentWillMount：初始化可以在 constructor 里操作，还有有些开发者会把异步请求放这里，其实错误，并不能提高获取结果的速度，放在 componentDidMount 就可以。
+- componentWillReceiveProps：可用 getDerivedStateFromProps 代替，只能根据新 props 对比前 state，来派生新的 state，不能访问 this，写不出副作用的代码
+- componentWillUpdate：可用 getSnapshotBeforeUpdate 替换，获取 render 前的 DOM 元素状态，保证和 componentDidUpdate 的状态保持一致
+
+### React 16.X 中 props 改变后在哪个生命周期中处理
+
+getDerivedStateFromProps
+
+- 根据新的 props 和组件自身的旧 state 来映射新 state
+- 如果 props 不影响 state，则返回 null
+
+```js
+static getDerivedStateFromProps(nextProps, prevState) {
+    const {type} = nextProps;
+    // 当传入的type发生变化的时候，更新state
+    if (type !== prevState.type) {
+        return {
+            type,
+        };
+    }
+    // 否则，对于state不进行任何操作
+    return null;
+}
+
+```
+
+### React 性能优化在哪个生命周期？它优化的原理是什么？
+
+- 父组件 render 会导致子组件重新渲染，有时候子组件不需要更新，导致影响性能。
+- 可进行优化的生命周期：shouldComponentUpdate
+
+  - 拿当前 props 中值和下一次 props 中的值进行对比，数据相等时，返回 false，反之返回 true。
+  - 是浅比较
+
+  ```js
+  shouldComponentUpdate(nextProps) {
+      if (this.props.num === nextProps.num) {
+          return false
+      }
+      return true;
+  }
+  ```
+
+### state 和 props 触发更新的生命周期分别有什么区别？
+
+### React 中发起网络请求应该在哪个生命周期中进行？为什么？
+
+- 异步请求，最好放在 componentDidMount 中去操作，componentDidMount 方法中的代码，是在组件已经完全挂载到网页上才会调用被执行，所以可以保证数据的加载。此外，在这方法中调用 setState 方法，会触发重新渲染。
+- react16.0 以后，componentWillMount 可能会因为中断任务被执行多次。
 
 ## React 题目四、组件通信
 

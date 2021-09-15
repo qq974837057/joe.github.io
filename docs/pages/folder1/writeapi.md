@@ -336,7 +336,7 @@ joe.apply2(test, ["joe", 25]);
 - 简洁写法
 
 ```js
-Function.prototype.bind2 = function (context, ...args) {
+Function.prototype.bind2 = function (context = window, ...args) {
   const fn = this;
   const newFun = function () {
     const newArgs = args.concat([...arguments]);
