@@ -277,39 +277,39 @@ store.dispatch(action);
 
 ### setState 之后发生什么
 
-- 【数据合并】多个 setState 会进行数据合拼，准备批量更新
+- 【数据合并】多个 setState 会进行数据合并，准备批量更新
 - 【生成虚拟 DOM】生成新的 虚拟 DOM 树
-- 【diff，更新 UI】比较使用 diff 算法，比较新旧 虚拟 DOM 树，进行 patch，渲染 UI
+- 【diff，更新 UI】使用 diff 算法，比较新旧 虚拟 DOM 树，进行 patch，渲染 UI
 - 【执行回调函数】setState 第二个参数
 
 ### setState 是同步还是异步的
 
 - setState 并不是单纯同步/异步的，本质上是同步的，setTimeout 之类的函数 “逃脱”了 React 对它的管控，不过只要是在 React 管控下的 setState，看起来⼀定是异步的。
 
-  - 异步：在 React 钩⼦函数(生命周期)、合成事件中
+- 异步：在 React 钩⼦函数(生命周期)、合成事件中
 
-    - **避免频繁的 re-render**，类似 vue 的 nextTick 和浏览器 EventLoop，将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算，再拿最新的 state 值进行一次更新，也叫批量更新。
+  - **避免频繁的 re-render**，类似 vue 的 nextTick 和浏览器 EventLoop，将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算，再拿最新的 state 值进行一次更新，也叫批量更新。
 
-    ```js
-    // 正常的操作
-    handleClick = () => {
-      const fans = Math.floor(Math.random() * 10);
-      console.log("开始运行");
-      this.setState(
-        {
-          count: this.state.count + fans,
-        },
-        () => {
-          console.log("新增粉丝数:", fans);
-        }
-      );
-      console.log("结束运行");
-    };
+  ```js
+  // 正常的操作
+  handleClick = () => {
+    const fans = Math.floor(Math.random() * 10);
+    console.log("开始运行");
+    this.setState(
+      {
+        count: this.state.count + fans,
+      },
+      () => {
+        console.log("新增粉丝数:", fans);
+      }
+    );
+    console.log("结束运行");
+  };
 
-    // 开始运行
-    // 结束运行
-    // 新增粉丝数:xx
-    ```
+  // 开始运行
+  // 结束运行
+  // 新增粉丝数:xx
+  ```
 
 - 同步：在 setTimeout、setInterval 等函数中、 DOM 原⽣事件中
 
@@ -825,17 +825,85 @@ class NameForm extends React.Component {
 
 ### 对 React context 的理解
 
+- 概念
+  - 组件层级太多，不想逐层传递 props 数据，可以用 context 实现跨层级数据传递
+  - 组件上的 context 由父节点的所有 context 对象组合成的，所以可以访问到父组件链上的所有节点 context 属性
+
 ### 在 React 中如何避免不必要的 render？
+
+- shouldComponentUpdate 返回 false
+  - 减少因父组件更新触发子组件的 render
+- React.memo
+  - React16.6 的 API，用来缓存组件的渲染，只能用于函数组件
 
 ## React 题目二、数据管理
 
-- React setState 调用的原理
-- React setState 调用之后发生了什么？是同步还是异步？
-- React 中的 setState 批量更新的过程是什么？
-- 在 React 中组件的 this.state 和 setState 有什么区别？
-- React 组件的 state 和 props 有什么区别？
-- React 中的 props 为什么是只读的？
-- 在 React 中组件的 props 改变时更新组件的有哪些方法？
+### React setState 源码调用的原理
+
+- 将新的 `state` push 进组件的状态队列
+- 调用函数对组件实例进行更新，这里根据 batchingStrategy 对象的`isBatchingUpdates`属性决定是否立即更新（false），还是要排队等待（true）。
+- isBatchingUpdates 初始值是 false，如果 React 要执行批量更新的时候，会把它置为 true。在没更新完之前，要更新的组件都进入 dirtyComponents 排队等待下一次的批量更新。
+
+### React setState 调用之后发生了什么？是同步还是异步？
+
+- 调用 setState 后
+  - 【数据合并】多个 setState 会进行数据合并，准备批量更新
+  - 【生成虚拟 DOM】生成新的 虚拟 DOM 树
+  - 【diff，更新 UI】使用 diff 算法，比较新旧 虚拟 DOM 树，进行 patch，渲染 UI
+  - 【执行回调函数】setState 第二个参数
+- 同步和异步要看情况
+  - 异步：React 控制的地方就是异步，如生命周期、合成事件中
+  - 同步：脱离 React 控制的地方是同步，如原生事件 setTimeout、setInterval、addEventListener
+- 异步设计的好处
+  - 性能优化，避免每次调用 setState 都进行 render 更新，可以做批量更新
+  - 同步的话可能会导致 state 和 prop 和最新的不一致
+
+### React 中的 setState 批量更新的过程是什么？
+
+- 批量更新
+  - 将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算
+  - 多次 setState 合并成一次状态，再拿最新的 state 值进行一次更新，渲染
+  - 比如同步代码里多次对一个 state 属性进行更新，只会保留最后一次更新。
+
+### 在 React 中组件的 this.state 和 setState 有什么区别？
+
+- this.state 通常是用来初始化 state 的，this.setState 是用来修改 state 值的。
+- 如果初始化了 state 之后再使用 this.state，之前的 state 会被覆盖掉，如果使用 this.setState，只会替换掉相应的 state 值。
+- 所以，如果想要修改 state 的值，就需要使用 setState，而不能直接修改 state，直接修改 state 之后页面是不会更新的。
+
+### React 组件的 state 和 props 有什么区别？
+
+- state
+
+  - 主要用于组件自身的状态，通过 this.setState 修改，修改 state 会导致组件重新渲染
+
+- props
+  - 主要用于父组件向子组件传递数据，是可读，不可变的。只能通过外部传入新的 props，将新的 props 更新到 state，实现子组件渲染。
+
+### React 中的 props 为什么是只读的？
+
+- 原则上只能是从父组件流向子组件，保证相同的输入，显示内容一致
+
+### 在 React 中组件的 props 改变时更新组件的有哪些方法？
+
+- getDerivedStateFromProps
+  - 使用：通过参数提供的 nextProps 以及 prevState 来进行判断，根据新传入的 props 来映射到 state
+  - 如果 props 传入的内容不需要影响到你的 state，那么就需要返回一个 null，表示不对 state 进行操作
+
+```js
+static getDerivedStateFromProps(nextProps, prevState) {
+    const {type} = nextProps;
+    // 当传入的type发生变化的时候，更新state
+    if (type !== prevState.type) {
+        return {
+            type,
+        };
+    }
+    // 否则，对于state不进行任何操作
+    return null;
+}
+
+```
 
 ## React 题目三、生命周期
 
