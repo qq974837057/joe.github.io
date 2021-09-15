@@ -176,6 +176,19 @@ function create(obj) {
 - 执行构造函数，用 apply 使 this 指向新建的对象`fn.apply(obj, [...arguments].slice(1))`。
 - 构造函数执行完若有返回引用类型的值，则返回该对象 res，返回非引用类型的值，则忽略。
 - 执行完无返回，则返回创建的对象 obj。
+- 简洁实现
+
+```js
+function New(fn, ...args) {
+  const obj = new Object();
+  obj.__proto__ = fn.prototype;
+  const res = fn.apply(obj, args);
+  if ((typeof res === "object" || typeof res === "function") && res !== null) {
+    return res;
+  }
+  return obj;
+}
+```
 
 ```js
 function New(fn) {
