@@ -224,6 +224,17 @@ console.log(joe2.age); // 25
 
 ### call
 
+- 简洁写法
+
+```js
+Function.prototype.call2 = function (context = window, ...args) {
+  context.fn = this;
+  const res = context.fn(...args);
+  delete context.fn;
+  return res;
+};
+```
+
 ```js
 // 设置目标this的fn为函数本身
 // 不要第一个this参数，取剩余传入的参数
@@ -255,6 +266,17 @@ joe.call2(test, "joe", 25);
 ```
 
 ### apply
+
+- 简洁写法
+
+```js
+Function.prototype.apply2 = function (context = window, args) {
+  context.fn = this;
+  const res = context.fn(...args);
+  delete context.fn;
+  return res;
+};
+```
 
 ```js
 // 设置目标this的fn为函数本身
@@ -297,6 +319,20 @@ joe.apply2(test, ["joe", 25]);
 - 3. bind 返回的函数作为构造函数，bind 时指定的 this 失效，但传入参数仍有效。
 - 4. 判断 this 有没有被 new 构造函数改成指向实例，若被 new 调用(改变 this)，则 apply 执行的 this 指向 this，使 context 的 this 失效，否则为 context。
 - 5. 返回的函数作为构造函数需要实现继承(通过返回 bound 构造函数 new 出来的实例可以继承绑定函数的原型中的值)，为了避免绑定函数的 prototype 被同时修改，使用 Object.create 隔离开原型，再通过原型链实现继承。
+
+- 简洁写法
+
+```js
+Function.prototype.bind2 = function (context, ...args) {
+  const fn = this;
+  const newFun = function () {
+    const newArgs = args.concat([...arguments]);
+    return fn.apply(this instanceof newFun ? this : context, newArgs);
+  };
+  newFun.prototype = Object.create(fn.prototype);
+  return newFun;
+};
+```
 
 ```js
 Function.prototype.bind2 = function (context) {
