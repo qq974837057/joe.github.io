@@ -760,6 +760,7 @@ let difference = arr1.filter((v) => {
   }
   ```
 - 对象的属性遍历
+
   - 从该属性的描述对象，看可枚举性 enumerable
     ```js
     let obj = { foo: 123 };
@@ -776,6 +777,28 @@ let difference = arr1.filter((v) => {
   - `Object.getOwnPropertyNames(obj)`【返回键名数组，自身 + 可枚举 + 不可枚举（不含 Symbol）】
   - `Object.getOwnPropertySymbols(obj)`【返回键名数组，里面是自身 Symbol 属性】
   - `Reflect.ownKeys(obj)`【返回键名数组，自身 + 可枚举 + 不可枚举 + Symbol 属性】
+
+- 让一个变量的属性不可遍历，不可更改
+  - 使用 Object.defineProperty
+  - writable：是否可改变，默认 false
+  - enumerable：是否可枚举，默认 false
+  - configurable：是否可改变描述符，默认 false
+  - value：值，默认 undefined
+
+```js
+const object1 = {};
+
+Object.defineProperty(object1, "property1", {
+  value: 42,
+  writable: false,
+});
+
+object1.property1 = 77;
+// throws an error in strict mode
+
+console.log(object1.property1);
+// expected output: 42
+```
 
 ## 类数组对象
 
@@ -1292,6 +1315,20 @@ let { firstName: fName, position = "默认" } = employee;
 - 闭包：当函数中存在对其它函数的调用时，JS 引擎会在父函数执行的过程中，将子函数的全局执行上下文 push 到执行栈。
 - 当子函数执行的过程中，父函数已经 return 了，JS 引擎会将父函数的上下文从执行栈中移除，与此同时，JS 引擎会为还在执行的子函数上下文创建一个闭包，这个闭包里保存了父函数内声明的变量及其赋值，子函数仍然能够在其上下文中访问并使用这边变量/常量。当子函数执行完毕，JS 引擎才会将子函数的上下文及闭包一并从执行栈中移除。
 - 异步：JS 引擎是单线程的，当代码中存在异步调用时，比如 setTimeout 或 ajax 请求都是非阻塞(non-blocking)的，执行到异步任务，JS 引擎会将需要异步执行的代码移出调用栈，等到有返回结果时，JS 引擎会立即将回调函数 push 进任务队列中等待被调用，当监视进程检查到执行栈中已经为空时，JS 引擎会立刻将任务队列中的回调函数逐个 push 进调用栈并执行。这个过程我们也称之为事件循环。
+- 解决递归自身的爆栈问题：加上 setTimeout 可以变成异步任务，等下个循环再执行，不会导致栈溢出。
+
+```js
+// 爆栈
+function foo() {
+  foo();
+}
+// 不会爆栈
+function foo() {
+  setTimeout(() => {
+    foo();
+  });
+}
+```
 
 ## 浏览器事件循环(Event Loop) ✨
 
@@ -1328,12 +1365,20 @@ let { firstName: fName, position = "默认" } = employee;
   - 重复以上过程
     ![JS-eventloop-1](./img/JS-eventloop-1.png)
 
-- 宏任务（Macro-Task）：`script`(整体代码)、I/O 操作(点击)、`setTimeout`、`setInterval`、`setImmediate`（IE&Node 独有、事件队列尾部执行）、requestAnimationFrame(浏览器独有)、ajax 中的回调函数
-- 微任务（Micro-Task）：`Promise.then`、`MutationObserver`的回调(监听 DOM、浏览器独有)、`Process.nextTick`（Node 独有）
+- 宏任务（Macro-Task）：`script`(整体代码)、`setTimeout`、`setInterval`、`setImmediate`（IE&Node 独有）、requestAnimationFrame(浏览器独有)、MessageChannel、ajax 中的回调函数、I/O 操作(点击)
+- 微任务（Micro-Task）：`Promise.then`、`Process.nextTick`（Node 独有）、`MutationObserver`的回调(监听 DOM、浏览器独有)、
 - （调用）栈：后进先出
-- （任务) 队列：先进先出
+- （任务）队列：先进先出
+- 优先级
+
+  - 对于微任务 micro-task：process.nextTick(node)(微任务优先级最高) > Promise.then > MutationObserver
+  - 对于宏任务 macro-task：主代码 > setImmediate(node) > MessageChannel > setTimeout/setInterval
+
 - 细节
 
+  - 浏览器的微任务 API：**MutationObserver**
+  - 浏览器的宏任务 API：**rAF(requestAnimationFrame)**、setTimeout、setInterval
+  - setImmediate 相当于 setTimeout(fn, 0);
   - 总的来说：宿主环境提供的方法是宏任务，比如 setTimeout、setInterval、requestAnimationFrame、ajax 中的回调函数。JS 引擎自身提供的是微任务，例如 Promise。
   - setTimeout：经过指定时间，将回调函数置入 Event Queue，等待主线程空闲时来执行。`setTimeout(fn, 0)`表示立即加入宏任务队列，当主线程同步任务执行完后，执行完微任务队列，立即执行。即使主线程啥也没有，规范也是最低 4 毫秒。（多个宏任务 setTimeout 记得看时间长短排序）
   - setInterval：每隔指定的时间将注册的函数置入 Event Queue。比如使用定时器每隔 300ms 循环执行一个 promise 请求，如果 promise 有响应，就关闭定时器，如果 promise 响应时间太长，定时器不断将请求加入任务队列，等到 promise.then 返回数据，就会清除计时器，不再往队列里添加，但此时任务队列的多个请求会依次执行完。
@@ -1341,11 +1386,8 @@ let { firstName: fName, position = "默认" } = employee;
   - 遇到 resolve 关键字 后，不管嵌套多少 then，将最近的 then 加入微任务，然后继续执行其他同步代码
   - async/await 基于 promise，await 前面直接执行 ，await 后面只有调用 resolve 后，才会将 promise.then 加入微任务队列
 
-- 优先级
-
-  - 对于微任务 micro-task：process.nextTick(node)(微任务优先级最高) > Promise.then
-  - 对于宏任务 macro-task：setTimeout > setImmediate(node)(宏任务优先级最低)
-
+- 为什么需要微任务
+  - 为了实现优先级排列，因为任务是不平等的，有些任务对用户影响大，需要优先执行，一些定时器之类的可以稍晚点再执行。
 - 输出结果：247536 async2 的结果 1
 
   ```js
@@ -2004,6 +2046,22 @@ console.log(it.next(13)); // => {value: 42, done: true}
       }, 0);
     })(i);
   }
+  ```
+
+  ```js
+  // 这个不是闭包，不是内部创建的函数，用的变量不是bar的name
+  var name = 1;
+  var foo = {
+    test: function () {
+      console.log(name);
+    },
+  };
+  function bar() {
+    var name = 2;
+    return foo.test;
+  }
+  const f = bar();
+  f(); // 1
   ```
 
 - 特性

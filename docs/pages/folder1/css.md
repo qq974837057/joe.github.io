@@ -433,6 +433,7 @@ display: inline-block;
   - 因为 iOS 8+和 Android 4.4+以上支持 vw，1vw 就等于屏幕宽度 window.innerWidth 的 1%
   - 缺点：px 转换成 vw 不一定能完全整除，因此有一定的像素差。同时存在 1px 像素问题，需要另外解决。
   - 可使用 vw：容器大小、内外边距，文字，圆角，边框等
+  - 不推荐 vh：可能会导致手机软键盘弹起时，布局发生变化
   - 工具：postcss-px-to-viewport
   - Sass 换算：设计稿元素/设计稿宽度 \*100 **vw**
 

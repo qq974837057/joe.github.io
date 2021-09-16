@@ -635,12 +635,15 @@ React 异常捕获：使用错误边界组件包裹
 
 ## React 题目一、组件基础
 
-### React Fiber 是什么，解决什么问题
+### ✨React Fiber 是什么，解决什么问题
 
-- 原因：React15 渲染时，深度优先遍历 diff 会对虚拟 DOM 树进行递归，找出变动的节点，同步更新，这个过程 React 会占用主线程，导致用户感觉卡顿。React16 通过 Fiber 架构，让这个过程可中断，可恢复，能够及时响应用户交互。
+- **总结：React15 更新渲染时，深度优先遍历 diff 会对虚拟 DOM 树进行递归，找出变动的节点，这个过程没有优先级，也不能控制顺序，所以 React 会占用主线程，无法及时响应用户操作，导致用户感觉卡顿。为了解决不可中断和缺少优先级的痛点，React16 通过 Fiber 架构，让这个过程可中断，可恢复，能够及时响应用户交互。Fiber 是存储节点更新信息 effectList 和 dom 信息的数据结构，本质是链表结构（有 return，child，sibling 属性），可以随时中断遍历，避免长时间递归。主要有三个设计：**
+  - **第一是副作用链的设计，每个 Fiber 都有自己的 effectList，存放待更新的副作用 DOM 操作。顺序是从叶子节点自底向上，将当前节点的副作用链插入到父节点的副作用链中，最后在 组件根节点 rootFiber 上，拿到存储当前 Fiber 树的所有副作用集合。方便 commit 阶段对它们进行更新。**
+  - **第二是时间分片的设计，根据 浏览器的帧率将渲染进程切分为一个个时间分片，默认为 5ms，如果在一个时间分片内没有完成我们的更新操作，就会中断更新，保存状态，交出执行权给浏览器进行重绘重排。等到下个分片再恢复执行。**
+  - **第三是使用双缓存机制，用两个 fiber 树，一个是当前 DOM 树对应的 Fiber（current） 树，另一个是进行 diff 形成的新 Fiber 树，叫 workInProgress，它是在内存承接更新的信息，为了实现节点复用，每个节点的 alternate 属性指向上一棵树对应的节点。commit 阶段完成后，此时将 current 指向新的 workInProgress 树，workInProgress 树对应的 DOM 树渲染到了页面上。**
 - 核心：Fiber 会将⼀个⼤的更新任务拆解为许多个⼩任务。每当执⾏完⼀个⼩任务时，渲染任务会交出主线程，看看有没有优先级更⾼的⼯作要处理，空闲后再继续渲染，避免同步渲染带来的卡顿。
 - 时间分片：React 会根据浏览器的帧率，计算出时间切⽚的⼤⼩，并结合当前时间计算出每⼀个切⽚的到期时间。在 循环创建 Fiber 节点的函数中，while 循环每次执⾏前，会询问当前时间切⽚是否到期，若已到期，则结束循环、交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，没有这个判断，会循环调用，直到节点为空）
-- 任务调度
+- 任务优先级调度
   - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务
   - 先创建一个 task，根据任务开始时间，推入两个队列（待执行、已过期）其中一个
   - 队列是小顶堆的数据结构，堆顶是需要最早被执行的任务
@@ -984,7 +987,9 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ### React 性能优化在哪个生命周期？它优化的原理是什么？
 
-- 父组件 render 会导致子组件重新渲染，有时候子组件不需要更新，导致影响性能。
+- 两种情况导致不必要的重新渲染影响性能。
+  - setState 函数设置同个变量，是会触发重新渲染的。`this.setState({number: this.state.number})`
+  - 父组件 render 会导致子组件重新渲染，有时候子组件不需要更新
 - 可进行优化的生命周期：shouldComponentUpdate
 
   - 拿当前 props 中值和下一次 props 中的值进行对比，数据相等时，返回 false，反之返回 true。
@@ -998,8 +1003,6 @@ static getDerivedStateFromProps(nextProps, prevState) {
       return true;
   }
   ```
-
-### state 和 props 触发更新的生命周期分别有什么区别？
 
 ### React 中发起网络请求应该在哪个生命周期中进行？为什么？
 
@@ -1033,9 +1036,20 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目七、Hooks
 
-- 对 React Hook 的理解，它的实现原理是什么
+- 对 React Hook 的理解，为什么需要他，它的实现原理是什么
 - 常用 Hooks 有哪些
-- 为什么 useState 要使用数组而不是对象
+
+- useState
+
+  - 为什么 useState 要使用数组而不是对象
+  - useState 的原理，做了啥
+    - 里面创建了闭包和维护闭包的一个 dispatch 函数，dispatch 里面根据 mount 还是 update 阶段做了不同的事情
+  - 一个父组件更新了，那么这个子组件如果没有更新，会不会触发 rerender?子组件会不会重复触发 useState 的初始化？
+    - 子组件会重新渲染，不会触发子组件的 useState 初始化。因为源码里判断一个 fiber 处于 mount 还是 update 阶段，是根据 fiberNode 的 alternate 是否存在来判断的。
+  - 如果我 useState 的回调函数里还是 设置了相同的变量，会不会触发更新？
+    - 不会，因为 hooks 算出来的 updatePayload 是相同的。
+    - PS: useState 不会，但是 setState 会
+
 - React Hooks 解决了哪些问题？
 - React Hook 的使用限制有哪些？
 - useEffect 与 useLayoutEffect 的区别
