@@ -1383,12 +1383,28 @@ function foo() {
   - setTimeout：经过指定时间，将回调函数置入 Event Queue，等待主线程空闲时来执行。`setTimeout(fn, 0)`表示立即加入宏任务队列，当主线程同步任务执行完后，执行完微任务队列，立即执行。即使主线程啥也没有，规范也是最低 4 毫秒。（多个宏任务 setTimeout 记得看时间长短排序）
   - setInterval：每隔指定的时间将注册的函数置入 Event Queue。比如使用定时器每隔 300ms 循环执行一个 promise 请求，如果 promise 有响应，就关闭定时器，如果 promise 响应时间太长，定时器不断将请求加入任务队列，等到 promise.then 返回数据，就会清除计时器，不再往队列里添加，但此时任务队列的多个请求会依次执行完。
   - promise：new Promise 立即执行，then 的回调函数遇到 resolve 后分发到微任务 Event Queue。
-  - 遇到 resolve 关键字 后，不管嵌套多少 then，将最近的 then 加入微任务，然后继续执行其他同步代码
-  - async/await 基于 promise，await 前面直接执行 ，await 后面只有调用 resolve 后，才会将 promise.then 加入微任务队列
+  - 遇到 resolve 关键字 后，不管嵌套多少 then，将最近的 then 加入微任务，然后继续执行其他同步代码。因为 then 链是等上一个执行完才能将下一个 then 链加入微任务的。
+  - async/await 基于 promise，await 前面直接执行 ，await 后面只有调用 resolve 后，才会将 promise.then 加入微任务队列，然后等promise.then调用完成，再调用await后面的其他内容。
 
 - 为什么需要微任务
+
   - 为了实现优先级排列，因为任务是不平等的，有些任务对用户影响大，需要优先执行，一些定时器之类的可以稍晚点再执行。
-- 输出结果：247536 async2 的结果 1
+
+- 示例代码 1：打印顺序 3 6 4 5 1 2
+
+```js
+setTimeout(() => console.log(1), 0);
+setTimeout(() => console.log(2), 0);
+new Promise((resolve, reject) => {
+  console.log(3);
+  resolve();
+})
+  .then((resolve) => console.log(4))
+  .then((resolve) => console.log(5));
+console.log(6);
+```
+
+- 示例代码 2：打印顺序 2 4 7 5 3 6 async2 的结果 1
 
   ```js
   setTimeout(function () {

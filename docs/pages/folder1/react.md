@@ -1011,50 +1011,307 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目四、组件通信
 
-- 组件通信的方式有哪些
-  - 父子组件的通信方式？
-  - 跨级组件的通信方式？
-  - 非嵌套关系组件的通信方式？
-- 如何解决 props 层级过深的问题
+> React 的数据流是单向的
+
+### 组件通信的方式有哪些
+
+**总结：父子通信可以用 props 和父组件传入函数，兄弟组件可以通过父组件进行转接，跨级组件可以层次传递 props 或者使用 Context API，没有任何关系的组件可以用自定义的发布订阅或者使用 redux 全局状态管理**
+
+- 父->子通信：props
+  - 父组件通过在子组件上通过属性赋值`<Child xx={this.state.data}/>`
+  - 子组件通过 `props.xx` 获取父组件传入的值 data
+- 子->父通信：props 传入父的函数
+  - 在父组件中写一个修改自身数据 setState 的函数 `changeData()`，并作为 props 属性传给子组件`<Child xx={this.changeData}/>`
+  - 子组件通过调用 `props.xx('newData')`，将数据传给父组件
+- 兄弟组件通信
+  - 共用一个父组件
+  - 利用这个父组件来进行通信，转换为兄弟 1->父组件，父组件->兄弟 2 的通信形式
+- 跨级
+
+  - 层层传递 props：不推荐，作为桥梁的组件引入很多不属于自己的属性，难以维护。
+
+  - 使用 Context API
+    - 三要素：React.createContext、Provider 数据提供者、Consumer 数据消费者
+    - 创建一个 context 对象`const AppContext = React.createContext(defaultValue)`
+    - 读取 Provider 和 Consumer`const { Provider, Consumer } = AppContext`
+    - 使用 Provider 进行包裹根组件` <Provider value={title: this.state.title, content: this.state.content}> </Provider>`
+    - 使用 Consumer 在孙子组件进行读取数据 `<Consumer>{value => <div>{value.title}</div>}</Consumer>`
+    - 即便组件的 shouldComponentUpdate 返回 false，它仍然可以“穿透”组件继续向后代组件进⾏传播，进⽽确保了数据⽣产者和数据消费者之间数据的⼀致性。
+
+- 没有任何关系的组件
+  - 发布订阅模式 EventEmitter
+  - redux 全局状态管理
+
+### 如何解决 props 层级过深的问题
+
+- 使用 Context API：提供一种组件之间的状态共享，而不必通过显式组件树逐层传递 props
+- 使用 Redux 等状态库
 
 ## React 题目五、路由
 
-- React-Router 的实现原理是什么？
-- React-Router 的路由有几种模式？
-- 如何配置 React-Router 实现路由切换
-- react-router 里的 Link 标签和 a 标签的区别
-- React-Router 如何获取 URL 的参数和历史对象？
-- React-Router 4 的 Switch 有什么用？
+### React-Router 的实现原理是什么？
+
+- 基于 hash
+- 基于 H5 的 history API
+
+### React-Router 的路由有几种模式？
+
+- React-Router 支持使用 HashRouter 和 BrowserRouter 两种路由规则
+- BrowserRouter
+
+  - basename 路由的基准 URL
+
+  ```js
+  // 相当于<a href="/calendar/today" />
+  <BrowserRouter basename="/calendar">
+    <Link to="/today" />
+  </BrowserRouter>
+  // 使用确认函数，内部是window.confirm
+  <BrowserRouter getUserConfirmation={getConfirmation} />
+  ```
+
+- HashRouter
+  - hashType
+    - slash - 后面跟一个斜杠，例如 #/ 和 #/sunshine/lollipops；
+    - noslash - 后面没有斜杠，例如 # 和 #sunshine/lollipops；
+    - hashbang - Google 风格的 ajax crawlable，例如 #!/ 和 #!/sunshine/lollipops。
+
+```js
+<HashRouter basename={string} getUserConfirmation={func} hashType={string} />
+```
+
+### 如何配置 React-Router 实现路由切换
+
+- Route 组件
+
+  - 比较 path 属性和当前地址的 pathname
+  - 匹配到了渲染内容，匹配不到渲染 null
+  - 没配置 path 属性始终被匹配
+
+  ```js
+  // when location = { pathname: '/about' }
+  <Route path='/about' component={About}/> // renders <About/>
+  <Route path='/contact' component={Contact}/> // renders null
+  <Route component={Always}/> // renders <Always/>
+
+  ```
+
+- Route 组件 + Switch 组件
+
+  - Switch 包裹多个 Route 组件，遍历它们，找到匹配的第一个元素。不加 Switch 的话可能会匹配多个，然后同时展示
+  - 搭配 exact 实现精准匹配
+  - Switch 除了 Route 和 Redirect ，不能放其他元素。
+
+  ```js
+  import { Switch, Route } from "react-router-dom";
+
+  <Switch>
+    <Route exact path="/" component={Home}></Route>
+    <Route exact path="/login" component={Login}></Route>
+  </Switch>;
+  ```
+
+- Link、NavLink、Redirect 组件
+
+  - Link 组件会渲染成`<a>`标签，创建一个链接，to 属性表示将跳转的路由地址
+
+  ```js
+  <Link to="/">Home</Link>
+  // <a href='/'>Home</a>
+  ```
+
+### React-Router 如何获取 URL 的参数和历史对象？
+
+- 获取 URL 参数
+  - ？传值：`/admin?id=xxx`
+    - `this.props.location.search` 可以获取字符串`'?id=xxx'`
+  - 动态路由传值：`path='/admin/:id'`
+    - `this.props.match.params.id` 获取 id 的值
+  - query 或 state：在 Link 组件的 to 属性中可以传递`{pathname:'/admin',query:'111',state:'111'}`
+    - `this.props.location.state` 或 `this.props.location.query`
+- 获取历史对象 history
+
+  - useHistory
+  - this.props.history
+
+  ```js
+  import { useHistory } from "react-router-dom";
+  let history = useHistory();
+  // or
+  let history = this.props.history;
+  ```
 
 ## React 题目六、Redux
 
-- 对 Redux 的理解，主要解决什么问题
-- Redux 原理及工作流程
-- Redux 中异步的请求怎么处理
-- Redux 怎么实现属性传递，介绍下原理
-- Redux 和 Vuex 有什么区别，它们的共同思想
+### Redux 原理及工作流程
+
+- Redux 工作流
+  ![](./img/redux-1.png)
+- React 数据流是单向的，简单的 props 传递不足以支撑大型项目对很多 state 状态的管理
+- Redux 是一个状态容器：用来存放公共数据的仓库，它由三部分组成：store、reducer 和 action。react- redux 作用是将 Redux 的状态机和 React 的 UI 呈现绑定在一起，当你 dispatch action 去改变 state 的时候，会自动更新页面。
+- 工作流程：任何组件可以通过 dispatch 派发 action 对象，由 reducer 读取 action，根据 action 的不同 对数据进行修改，生成新的 state，更新到用来存放数据的 store 里。
+- 任何组件可以通过约定的方式如 getState()读取到这些状态数据，也可以通过派发 Action 修改全局状态，实现组件数据的穿梭。
+
+- 源码模块
+
+  - createStore.js 提供作为生成唯一 store 的函数（重要）
+    - 接收参数 reducer、初始 state、中间件
+    - 定义了 getState、subscribe、dispatch 等方法
+    - 执行一次 dispatch 完成初始化
+    - 将方法放入 store 对象中，并返回
+  - applyMiddleware.js 这个方法通过中间件来增强 dispatch 的功能
+  - 以下是工具性质
+  - compose.js 提供从右到左组合函数
+  - combineReducers.js 合并多个 reducer 的函数
+
+- 源码细节（注册、发布、订阅监听）
+
+  - 创建 store 对象成功后，通过 store.subscribe 注册监听函数，会保存在 listeners 数组中
+  - 在 dispatch 发布时，通过上锁的方式，避免开发者在 reducer 中又调用 dispatch 进行操作导致死循环
+  - reducer 执行完后，触发订阅，将 listeners 数组中的监听函数逐个执行
+
+- 数据传递顺序：view-->action-->reducer-->store-->view
+- 具体使用
+  ![](./img/redux-2.png)
+
+  ```js
+  import { createStore } from "redux";
+  // 创建 reducer
+  const reducer = (state, action) => {
+    // 此处是判断action的类型，做各种样的 state处理逻辑
+    return new_state;
+  };
+  // 基于 reducer 创建 state
+  const store = createStore(reducer);
+  // 创建⼀个 action，这个 action ⽤ “ADD_ITEM” 来标识
+  const action = {
+    type: "ADD_ITEM",
+    payload: "<li>text</li>",
+  };
+  // 使⽤ dispatch 派发 action，action 会进⼊到 reducer ⾥触发对应的更新
+  store.dispatch(action);
+  ```
+
+- react-redux 使用，主要是两个 API
+
+  - Provider: 从最外部封装整个应用，并向 connect 模块传递 store;
+  - connect: （高阶组件）负责连接 react 和 redux
+    - 包装原组件：将 state,action 通过 props 的方式传入到原组件内部
+    - 监听 store tree 变化：使其包装的原组件可以响应 state 的变化，调用 setState()进行更新渲染
+
+  ```js
+  import React from "react";
+  import ReactDOM from "react-dom";
+  import { createStore } from "redux";
+  import { Provider, connect } from "react-redux";
+  class App extends React.Component {
+    render() {
+      let { text, click, clickR } = this.props;
+      return (
+        <div>
+          <div>数据:已有人{text}</div>
+          <div onClick={click}>加人</div>
+          <div onClick={clickR}>减人</div>
+        </div>
+      );
+    }
+  }
+  const initialState = {
+    text: 5,
+  };
+  const reducer = function (state, action) {
+    switch (action.type) {
+      case "ADD":
+        return { text: state.text + 1 };
+      case "REMOVE":
+        return { text: state.text - 1 };
+      default:
+        return initialState;
+    }
+  };
+
+  let ADD = {
+    type: "ADD",
+  };
+  let Remove = {
+    type: "REMOVE",
+  };
+
+  const store = createStore(reducer);
+
+  let mapStateToProps = function (state) {
+    return {
+      text: state.text,
+    };
+  };
+
+  let mapDispatchToProps = function (dispatch) {
+    return {
+      click: () => dispatch(ADD),
+      clickR: () => dispatch(Remove),
+    };
+  };
+
+  const App1 = connect(mapStateToProps, mapDispatchToProps)(App);
+
+  ReactDOM.render(
+    <Provider store={store}>
+      <App1></App1>
+    </Provider>,
+    document.getElementById("root")
+  );
+  ```
+
+### Redux 中异步的请求怎么处理
+
+- 使用 redux 的异步中间件：主流有两种
+  - redux-thunk
+  - redux-saga
+
+### Redux 的中间件
+
+- Redux 的中间件主要用于改变数据流，做一些"副作用"的操作，如异步请求、打印日志等，主要是 applyMiddleware 这个方法。通过在创建 store 时将 applyMiddleware()的返回值 作为参数传入的。
+  - 未使用 redux: action-> reducer
+  - 使用 redux: 自定义拦截，变成 action->middlewares->reducer
+  - applyMiddleware 会对 dispatch 进行改写，让他触发 reducer 之前，先执行 Redux 的中间件链式调用。
+  - 使用 compose 组合函数，原理是数组的 reduce 方法。
+
+### Redux 和 Vuex 有什么区别，它们的共同思想
+
+- 相同
+  - 都是从 Flux 衍生而来的单一数据源、单向数据流
+- 不同
+  - Vuex 以 mutations 变化函数取代 Reducer，无需 switch 判断，只需在 action 函数中使用 commit 对应的 mutation 函数，由 mutation 直接改变指定的 state 值即可，Vue 检测到数据变化自动渲染
+  - Redux 是可以用到 Vue 中的，但不如 vuex 契合度更高
+- 和 Flux 有何不同
+  - Store 数目：Flux 可以多个，Redux 只有一个
 
 ## React 题目七、Hooks
 
-- 对 React Hook 的理解，为什么需要他，它的实现原理是什么
-- 常用 Hooks 有哪些
+### 对 React Hook 的理解，为什么需要他，它的实现原理是什么
 
-- useState
+### 常用 Hooks 有哪些
 
-  - 为什么 useState 要使用数组而不是对象
-  - useState 的原理，做了啥
-    - 里面创建了闭包和维护闭包的一个 dispatch 函数，dispatch 里面根据 mount 还是 update 阶段做了不同的事情
-  - 一个父组件更新了，那么这个子组件如果没有更新，会不会触发 rerender?子组件会不会重复触发 useState 的初始化？
-    - 子组件会重新渲染，不会触发子组件的 useState 初始化。因为源码里判断一个 fiber 处于 mount 还是 update 阶段，是根据 fiberNode 的 alternate 是否存在来判断的。
-  - 如果我 useState 的回调函数里还是 设置了相同的变量，会不会触发更新？
-    - 不会，因为 hooks 算出来的 updatePayload 是相同的。
-    - PS: useState 不会，但是 setState 会
+### useState
 
-- React Hooks 解决了哪些问题？
-- React Hook 的使用限制有哪些？
-- useEffect 与 useLayoutEffect 的区别
-- React Hooks 在平时开发中需要注意的问题和原因
-- React Hooks 和生命周期的关系？
+- 为什么 useState 要使用数组而不是对象
+- useState 的原理，做了啥
+  - 里面创建了闭包和维护闭包的一个 dispatch 函数，dispatch 里面根据 mount 还是 update 阶段做了不同的事情
+- 一个父组件更新了，那么这个子组件如果没有更新，会不会触发 rerender?子组件会不会重复触发 useState 的初始化？
+  - 子组件会重新渲染，不会触发子组件的 useState 初始化。因为源码里判断一个 fiber 处于 mount 还是 update 阶段，是根据 fiberNode 的 alternate 是否存在来判断的。
+- 如果我 useState 的回调函数里还是 设置了相同的变量，会不会触发更新？
+  - 不会，因为 hooks 算出来的 updatePayload 是相同的。
+  - PS: useState 不会，但是 setState 会
+
+### React Hooks 解决了哪些问题？
+
+### React Hook 的使用限制有哪些？
+
+### useEffect 与 useLayoutEffect 的区别
+
+### React Hooks 在平时开发中需要注意的问题和原因
+
+### React Hooks 和生命周期的关系？
 
 ## React 题目八、虚拟 DOM
 
