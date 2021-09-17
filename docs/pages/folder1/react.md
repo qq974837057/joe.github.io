@@ -1420,11 +1420,54 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目九、其他
 
-- 为什么  React 要用 JSX？React 必须使用 JSX 吗？
-- react 最新版本解决了什么问题，增加了哪些东西
-- React 数据持久化有什么实践吗？
-- React 设计思路，它的理念是什么？
-- React 的状态提升是什么？使用场景有哪些？
+### React 性能优化
+
+- 避免重复渲染
+
+  - shouldComponentUpdate
+
+  ```js
+  shouldComponentUpdate(nextProps, nextState) {
+    /* 当 state 中 data1 发生改变的时候，重新更新组件 */
+    return nextState.data1 !== this.state.data1
+  }
+
+  ```
+
+  - useMemo 包裹组件
+  - useCallback 包裹回调，react.memo 可以判断出 callback 函数没改变
+  - 合并 state，多个 state 合并为一个
+  - 缓存数据不放在 state 中，跟视图相关的菜放在 state 中，避免不必要的渲染。
+
+- 其他
+
+  - 循环的 key 写法，不要用 index，要用唯一 id
+  - 懒加载：Suspense 和 lazy 可以实现 dynamic import 懒加载效果
+
+  ```js
+  const LazyComponent = React.lazy(() => import("./LazyComponent"));
+
+  function demo() {
+    return (
+      <div>
+        <Suspense fallback={<div>Loading...</div>}>
+          <LazyComponent />
+        </Suspense>
+      </div>
+    );
+  }
+  ```
+
+### 为什么  React 要用 JSX？React 必须使用 JSX 吗？
+
+### react 最新版本解决了什么问题，增加了哪些东西
+
+### React 设计思路，它的理念是什么？
+
+### React 的状态提升是什么？使用场景有哪些？
+
+- 将多个组件需要共享的状态提升到它们最近的父组件上，在父组件上改变这个状态然后通过 props 分发给子组件。
+- 父组件中有两个 input 子组件，如果想在第一个输入框输入数据，来改变第二个输入框的值，这就需要用到状态提升。
 - 在 React 中遍历的方法有哪些？
 - 同时引用这三个库 react.js、react-dom.js 和 babel.js 它们都有什么作用？
 - 在 React 中怎么使用 async/await？
