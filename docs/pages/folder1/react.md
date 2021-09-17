@@ -60,7 +60,7 @@
   - 如果任务开始时间大于当前时间，则先判断有没有过期任务，有就发起即时任务并执行
   - 再去看未过期的任务队列，是堆顶任务就派发延时任务，等过期后加入另一个队列，等待执行
 
-### 类组件与函数组件有什么异同？
+### ✨ 类组件与函数组件有什么异同？
 
 - 概念
   - 类组件：基于 ES6 的 Class 写法，继承 React.Component 的 React 组件
@@ -74,7 +74,7 @@
   - 灵活性：类组件难拆分和复用，函数组件灵活，可自由选择 Hook 能力
   - 性能优化：类组件用 shouldComponentUpdate 阻止更新，函数组件依靠 React.memo 缓存渲染结果
 
-### React 事件机制
+### ✨React 事件机制
 
 - 概念
   - JSX 上写的事件并没有绑定在对应的真实 DOM 上，而是通过事件委托的方式，将所有的事件都统一绑定在了 document 上。这样的方式不仅减少了内存消耗，还能在组件挂载销毁时统一订阅和移除事件。
@@ -95,7 +95,7 @@
 - 【事件方法函数】使用 JSX 语法时，需要**传入一个函数**作为事件处理函数，原生事件是一个字符串
 - 【阻止默认行为】不能通过 `return false` 来阻止默认行为。必须明确调用 `e.preventDefault()`阻止默认行为
 
-### HOC 高阶组件是什么，和普通组件有什么区别
+### ✨HOC 高阶组件是什么，和普通组件有什么区别
 
 - 概念
   - 是一个函数，接收组件为参数，返回新的组件。使用了装饰模式
@@ -241,7 +241,7 @@ class NameForm extends React.Component {
   - 组件层级太多，不想逐层传递 props 数据，可以用 context 实现跨层级数据传递
   - 组件上的 context 由父节点的所有 context 对象组合成的，所以可以访问到父组件链上的所有节点 context 属性
 
-### 在 React 中如何避免不必要的 render？
+### ✨ 在 React 中如何避免不必要的 render？
 
 - shouldComponentUpdate 返回 false
   - 减少因父组件更新触发子组件的 render
@@ -250,13 +250,13 @@ class NameForm extends React.Component {
 
 ## React 题目二、数据管理
 
-### React setState 源码调用的原理
+### ✨React setState 源码调用的原理
 
 - 将新的 `state` push 进组件的状态队列
 - 调用函数对组件实例进行更新，这里根据 batchingStrategy 对象的`isBatchingUpdates`属性决定是否立即更新（false），还是要排队等待（true）。
 - isBatchingUpdates 初始值是 false，如果 React 要执行批量更新的时候，会把它置为 true。在没更新完之前，要更新的组件都进入 dirtyComponents 排队等待下一次的批量更新。
 
-### React setState 调用之后发生了什么？是同步还是异步？
+### ✨React setState 调用之后发生了什么？是同步还是异步？
 
 - 调用 setState 后
   - 【数据合并】多个 setState 会进行数据合并，准备批量更新
@@ -270,14 +270,14 @@ class NameForm extends React.Component {
   - 性能优化，避免每次调用 setState 都进行 render 更新，可以做批量更新
   - 同步的话可能会导致 state 和 prop 和最新的不一致
 
-### React 中的 setState 批量更新的过程是什么？
+### ✨React 中的 setState 批量更新的过程是什么？
 
 - 批量更新
   - 将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算
   - 多次 setState 合并成一次状态，再拿最新的 state 值进行一次更新，渲染
   - 比如同步代码里多次对一个 state 属性进行更新，只会保留最后一次更新。
 
-### 给 setState 传递一个对象与传递一个函数的区别是什么？
+### ✨ 给 setState 传递一个对象与传递一个函数的区别是什么？
 
 - 给 setState 传递一个函数，而不是一个对象，可以确保每次的调用都是读取的就是当前的 state 值，而不是 this.state，**因为 React 不会更新 `this.state.count`，直到该组件被重新渲染才会更新**。
 - 例子：传递对象，导致只更新一次，后调用的 setState() 将覆盖同一周期内先调用 setState 的值，因此商品数仅增加一次。
@@ -364,7 +364,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目三、生命周期
 
-### React 的生命周期有哪些？
+### ✨React 的生命周期有哪些？
 
 ![](./img/react-16-life.png)
 生命周期可分为三个阶段：挂载阶段、更新阶段、卸载阶段
@@ -400,7 +400,7 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
 - pre-commit 阶段：还没最终更新到真实 DOM，但可以读取 DOM。
 - commit 阶段：真正完成真实 DOM 更新，可以使⽤ DOM，运⾏副作⽤。
 
-### React 新增/废弃了哪些生命周期？为什么？
+### ✨React 新增/废弃了哪些生命周期？为什么？
 
 - 新增
   - getDerivedStateFromProps
@@ -458,7 +458,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
   }
   ```
 
-### React 中发起网络请求应该在哪个生命周期中进行？为什么？
+### ✨React 中发起网络请求应该在哪个生命周期中进行？为什么？
 
 - 异步请求，最好放在 componentDidMount 中去操作，componentDidMount 方法中的代码，是在组件已经完全挂载到网页上才会调用被执行，所以可以保证数据的加载。此外，在这方法中调用 setState 方法，会触发重新渲染。
 - react16.0 以后，componentWillMount 可能会因为中断任务被执行多次。
@@ -467,7 +467,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 > React 的数据流是单向的
 
-### 组件通信的方式有哪些
+### ✨ 组件通信的方式有哪些
 
 **总结：父子通信可以用 props 和父组件传入函数，兄弟组件可以通过父组件进行转接，跨级组件可以层次传递 props 或者使用 Context API，没有任何关系的组件可以用自定义的发布订阅或者使用 redux 全局状态管理**
 
@@ -508,7 +508,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 基于 hash
 - 基于 H5 的 history API
 
-### React-Router 的路由有几种模式？
+### ✨React-Router 的路由有几种模式？
 
 - React-Router 支持使用 HashRouter 和 BrowserRouter 两种路由规则
 - BrowserRouter
@@ -610,7 +610,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目六、Redux
 
-### Redux 原理及工作流程
+### ✨Redux 原理及工作流程
 
 - Redux 工作流
   ![](./img/redux-1.png)
@@ -735,7 +735,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
   - redux-thunk
   - redux-saga
 
-### Redux 的中间件
+### ✨Redux 的中间件
 
 - Redux 的中间件主要用于改变数据流，做一些"副作用"的操作，如异步请求、打印日志等，主要是 applyMiddleware 这个方法。通过在创建 store 时将 applyMiddleware()的返回值 作为参数传入的。
   - 未使用 redux: action-> reducer
@@ -743,7 +743,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
   - applyMiddleware 会对 dispatch 进行改写，让他触发 reducer 之前，先执行 Redux 的中间件链式调用。
   - 使用 compose 组合函数，原理是数组的 reduce 方法。
 
-### Redux 和 Vuex 有什么区别，它们的共同思想
+### ✨Redux 和 Vuex 有什么区别，它们的共同思想
 
 - 相同
   - 都是从 Flux 衍生而来的单一数据源、单向数据流
@@ -755,7 +755,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目七、Hooks
 
-### 对 React Hook 的理解，为什么需要他，解决了什么问题
+### ✨ 对 React Hook 的理解，为什么需要它，解决了什么问题
 
 - 以前的函数组件无法维护 state 状态，也叫无状态组件。设计了 hooks 来补全生命周期，state 管理能力，同时更契合 React 理念，也就是数据驱动视图。还可以让状态复用变得更简单，不用破坏组件结构。**Hooks 本质是链表**
 - 优点
@@ -767,7 +767,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
   - 不能完全补齐类组件的生命周期，如 getSnapshotBeforeUpdate、 componentDidCatch
   - 使用层面有限制，比如说不能在嵌套、循环、判断中写 Hook
 
-### 常用 Hooks 有哪些
+### ✨ 常用 Hooks 有哪些
 
 - 基础 Hook
   - useState : 状态钩子，为函数组件提供内部状态
@@ -814,7 +814,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
         }, [num1, num2, num3]);
         ```
 
-### useState
+### ✨useState
 
 - 为什么 useState 要使用数组而不是对象
   - 解构赋值可以按顺序自定义命名
@@ -827,14 +827,14 @@ static getDerivedStateFromProps(nextProps, prevState) {
   - 不会，因为 hooks 算出来的 updatePayload 是相同的。
   - PS: useState 不会，但是 setState 会
 
-### React Hook 的使用限制有哪些？React Hooks 在平时开发中需要注意的问题和原因
+### ✨React Hook 的使用限制有哪些？React Hooks 在平时开发中需要注意的问题和原因
 
 - 不要在循环、条件或嵌套函数中调用 Hook，要在顶层使用
   - 会导致遍历 hooks 对象时，顺序不一致，发生数据错位
 - 使用 useState，不能使用 push 和 pop 等方式，需要用解构展开的方式
 - 只能在 React 的函数组件中调用 Hook
 
-### useEffect 与 useLayoutEffect 的区别
+### ✨useEffect 与 useLayoutEffect 的区别
 
 - 不同点
 
@@ -848,7 +848,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 建议
   - 先用 useEffect，一般问题不大；如果页面有异常或者要 DOM 操作，再直接替换为 useLayoutEffect 即可
 
-### React Hooks 和生命周期的关系？
+### ✨React Hooks 和生命周期的关系？
 
 - constructor -> `useState`
 - getDerivedStateFromProps -> `useState` 里的 update 函数
@@ -876,7 +876,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
   - 更好的研发体验和效率：数据驱动视图，函数式 UI 编程，同时性能还不错
   - 跨平台：多出中间一层描述性的虚拟 DOM，可以对接不同平台的渲染逻辑，实现多端运行。
 
-### Diff 算法原理
+### ✨Diff 算法原理
 
 - 调和指的是让虚拟 DOM 映射到真实 DOM 上，分别有 React 15 栈调和、React16 的 Fiber 调和
 - Diff 算法属于调和 Reconciler 里的一个环节：更新过程调用 Diff 算法
@@ -947,7 +947,7 @@ React 异常捕获：使用错误边界组件包裹
 
 ## React 题目十、其他
 
-### React 性能优化
+### ✨React 性能优化
 
 - 避免重复渲染
 
