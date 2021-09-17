@@ -1,4 +1,4 @@
-## React 题目一、组件基础
+## React 一、组件基础
 
 ### ✨ 流程总结
 
@@ -248,7 +248,7 @@ class NameForm extends React.Component {
 - React.memo
   - React16.6 的 API，用来缓存组件的渲染，只能用于函数组件
 
-## React 题目二、数据管理
+## React 二、数据管理
 
 ### ✨React setState 源码调用的原理
 
@@ -362,7 +362,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ```
 
-## React 题目三、生命周期
+## React 三、生命周期
 
 ### ✨React 的生命周期有哪些？
 
@@ -463,7 +463,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 异步请求，最好放在 componentDidMount 中去操作，componentDidMount 方法中的代码，是在组件已经完全挂载到网页上才会调用被执行，所以可以保证数据的加载。此外，在这方法中调用 setState 方法，会触发重新渲染。
 - react16.0 以后，componentWillMount 可能会因为中断任务被执行多次。
 
-## React 题目四、组件通信
+## React 四、组件通信
 
 > React 的数据流是单向的
 
@@ -502,7 +502,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 使用 Context API：提供一种组件之间的状态共享，而不必通过显式组件树逐层传递 props
 - 使用 Redux 等状态库
 
-## React 题目五、路由
+## React 五、路由
 
 ### React-Router 的实现原理是什么？
 
@@ -609,7 +609,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 流程图
   ![](./img/react-router-2.png)
 
-## React 题目六、Redux
+## React 六、Redux
 
 ### ✨Redux 原理及工作流程
 
@@ -754,7 +754,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 和 Flux 有何不同
   - Store 数目：Flux 可以多个，Redux 只有一个
 
-## React 题目七、Hooks
+## React 七、Hooks
 
 ### ✨ 对 React Hook 的理解，为什么需要它，解决了什么问题
 
@@ -914,7 +914,7 @@ const App = () => {
 - 定义一个 hook 函数，并返回一个数组（内部可以调用 react 其他 hooks）
 - 从自定义的 hook 函数中取出对象的数据，做业务逻辑处理即可
 
-## React 题目八、虚拟 DOM
+## React 八、虚拟 DOM
 
 ### 虚拟 DOM
 
@@ -937,7 +937,7 @@ const App = () => {
   - 组件层面：类型一致的节点才 Diff，不同组件类型直接替换，不进行 diff，减少冗余递归操作
   - 节点层面：节点 key 属性的设置，使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
 
-## React 题目九、错误处理
+## React 九、错误处理
 
 React 异常捕获：使用错误边界组件包裹
 
@@ -997,7 +997,7 @@ React 异常捕获：使用错误边界组件包裹
   - 错误边界只针对 React 组件
   - 只有 class 组件才可以成为错误边界组件
 
-## React 题目十、其他
+## React 十、其他
 
 ### ✨React 性能优化
 
