@@ -486,6 +486,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
   - 使用 Context API
     - 三要素：React.createContext、Provider 数据提供者、Consumer 数据消费者
+    - hooks 则使用 useContext 替换 Consumer 即可`const ctx = useContext(Context); ctx.xx`
     - 创建一个 context 对象`const AppContext = React.createContext(defaultValue)`
     - 读取 Provider 和 Consumer`const { Provider, Consumer } = AppContext`
     - 使用 Provider 进行包裹根组件` <Provider value={title: this.state.title, content: this.state.content}> </Provider>`
@@ -856,6 +857,57 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - componentDidMount -> `useEffect(callBack, [])`
 - componentDidUpdate -> `useEffect(callBack, [num1,num2])`
 - componentWillUnmount -> `useEffect` 返回的函数
+
+### 函数组件的闭包问题：Hooks 的 capture values
+
+- 本质：**非 useRef 相关的 Hooks API，本质上都形成了闭包，闭包有自己独立的状态**
+- capture values：每次 Render 的内容都会形成一个快照并保留下来，每个 Render 状态都拥有自己固定不变的 Props 与 State。
+- 异步回调的场景下，会拿到旧的 state 值，比如使用定时器，初始化 setInterval 时候，将 count 闭包起来，导致无论调用多少次，都是初始的那个值
+
+```js
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      // 初始化时的这个render时刻，count已固定为0
+      setCount(count + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return <h1>{count}</h1>;
+}
+```
+
+```js
+const App = () => {
+  const [temp, setTemp] = React.useState(5);
+
+  const log = () => {
+    setTimeout(() => {
+      // 虽然延时3秒，但还是在那个render时刻里面的值，是5。
+      console.log("3 秒前 temp = 5，现在 temp =", temp);
+    }, 3000);
+  };
+
+  return (
+    <div
+      onClick={() => {
+        log();
+        setTemp(3);
+        // 3 秒前 temp = 5，现在 temp = 5
+      }}
+    >
+      xyz
+    </div>
+  );
+};
+```
+
+- 我们可以用 useRef 解决，它的引用不变，通过`const countRef = useRef(count);countRef.current = count;` 通过 countRef.current 来访问最新的值
+- 还可以使用 setState()的函数形式，获取最新的 state
+- 还可以 useEffect 诚实的写上我们所依赖元素，让它重新执行
 
 ### 创建自定义 Hooks
 
