@@ -1288,30 +1288,112 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目七、Hooks
 
-### 对 React Hook 的理解，为什么需要他，它的实现原理是什么
+### 对 React Hook 的理解，为什么需要他，解决了什么问题
+
+- 以前的函数组件无法维护 state 状态，也叫无状态组件。设计了 hooks 来补全生命周期，state 管理能力，同时更契合 React 理念，也就是数据驱动视图。还可以让状态复用变得更简单，不用破坏组件结构。**Hooks 本质是链表**
+- 优点
+  - 【避开难以理解的 Class 组件】：this 的不确定性（常用 bind 和箭头函数解决）和生命周期会将逻辑打散塞进去，比如设置订阅和卸载订阅会被分散到不同生命周期去处理
+  - 【让状态逻辑复用更简单】：以前是用 HOC 高阶组件等方式实现复用状态逻辑（会破坏组件结构，容易导致嵌套地狱），现在可以通过自定义 Hook 来实现（不会破坏组件结构）
+  - 【解决业务逻辑难以拆分的问题】比如订阅和取消订阅会被分散在不同生命周期里，导致不聚合。用 hook 可以实现聚合。
+  - 【函数组件更契合 React 的理念】：UI=f(data)，数据驱动视图
+- 缺点
+  - 不能完全补齐类组件的生命周期，如 getSnapshotBeforeUpdate、 componentDidCatch
+  - 使用层面有限制，比如说不能在嵌套、循环、判断中写 Hook
 
 ### 常用 Hooks 有哪些
+
+- 基础 Hook
+  - useState : 状态钩子，为函数组件提供内部状态
+  - useEffect ：副作用钩子，提供了类似于 componentDidMount 等生命周期钩子的功能
+  - useContext ：共享钩子，在组件之间共享状态，可以解决 react 逐层通过 props 传递数据
+- 额外的 Hook
+
+  - useReducer: action 钩子，提供了状态管理，其基本原理是通过用户在页面上发起的 action，从而通过 reduce 方法来改变 state，从而实现页面和状- 态的通信，**使用很像 redux**
+  - useCallBack：把内联回调函数及依赖项数组作为参数传入 useCallback，它将返回该回调函数的 memoized 版本，该回调函数仅在某个依赖项改变时- 才会更新
+  - useMemo：把"创建"函数和依赖项数组作为参数传入 useMemo，它仅会在某个依赖项改变时重新计算， 可以作为性能优化的手段
+  - useRef：获取组件的实例，返回一个可变的 ref 对象，返回的 ref 对象在组件的整个生命周期内保持不变
+  - useLayoutEffect： 它会在所有 DOM 变更后同步调用 effect
+
+- 核心：
+
+  - useState()
+    - 为函数组件引入状态，state 类似类组件的 state 中的某个属性，对应一个单独状态，可以存储任何类型的值
+    - 初始化`const [state, setState] = useState(initialState);`
+    - 触发更新和渲染`setState(newState)`
+  - useEffect()
+
+    - 两个参数：回调函数和依赖数组
+    - 允许函数组件执行副作用操作，一定程度上弥补了生命周期的能力
+    - useEffect 回调中返回的函数被称为“清除函数”，会在卸载时执⾏清除函数内部的逻辑。
+    - 使用
+
+      - 每次渲染都会执行的副作用`useEffect(callBack)`
+      - 仅挂载阶段执行一次的副作用`useEffect(callBack, [])`
+      - 仅挂载阶段和卸载阶段执行的副作用：挂载阶段执行 A，卸载阶段执行 B
+
+        ```js
+        useEffect(() => {
+          // 这⾥是 A 的业务逻辑
+
+          // 返回⼀个函数记为 B
+          return () => {};
+        }, []);
+        ```
+
+      - 根据依赖更新触发执行副作用：React 进行一次新的渲染会对比前后依赖数组中是否有某个元素改变，有就会触发副作用。
+        ```js
+        useEffect(() => {
+          // 业务逻辑
+        }, [num1, num2, num3]);
+        ```
 
 ### useState
 
 - 为什么 useState 要使用数组而不是对象
+  - 解构赋值可以按顺序自定义命名
+  - 如果返回对象，用来解构，需要保持同名，或者修改为别名，比较麻烦
 - useState 的原理，做了啥
-  - 里面创建了闭包和维护闭包的一个 dispatch 函数，dispatch 里面根据 mount 还是 update 阶段做了不同的事情
+  - 将 hook 对象追加进链表尾部，hook 是一个对象，以单向链表相互串联。里面根据初始 state 创建一个记忆 state，还有一个 dispatch 函数，并返回。总结：mountState（⾸次渲染）构建链表并渲染；updateState 依次遍历链表并渲染。
 - 一个父组件更新了，那么这个子组件如果没有更新，会不会触发 rerender?子组件会不会重复触发 useState 的初始化？
   - 子组件会重新渲染，不会触发子组件的 useState 初始化。因为源码里判断一个 fiber 处于 mount 还是 update 阶段，是根据 fiberNode 的 alternate 是否存在来判断的。
 - 如果我 useState 的回调函数里还是 设置了相同的变量，会不会触发更新？
   - 不会，因为 hooks 算出来的 updatePayload 是相同的。
   - PS: useState 不会，但是 setState 会
 
-### React Hooks 解决了哪些问题？
+### React Hook 的使用限制有哪些？React Hooks 在平时开发中需要注意的问题和原因
 
-### React Hook 的使用限制有哪些？
+- 不要在循环、条件或嵌套函数中调用 Hook，要在顶层使用
+  - 会导致遍历 hooks 对象时，顺序不一致，发生数据错位
+- 使用 useState，不能使用 push 和 pop 等方式，需要用解构展开的方式
+- 只能在 React 的函数组件中调用 Hook
 
 ### useEffect 与 useLayoutEffect 的区别
 
-### React Hooks 在平时开发中需要注意的问题和原因
+- 不同点
+
+  - useLayoutEffect 会在 DOM 更新完成后同步调用，会在绘制之前完成，阻塞浏览器绘制。主要用于处理 DOM 操作、避免页面闪烁的问题
+  - 而 useEffect 是异步调用的，不阻塞浏览器更新屏幕。
+  - useLayoutEffect 总是比 useEffect 先执行。
+
+- 相同点
+  - 都是执行副作用
+  - 使用方式一致
+- 建议
+  - 先用 useEffect，一般问题不大；如果页面有异常或者要 DOM 操作，再直接替换为 useLayoutEffect 即可
 
 ### React Hooks 和生命周期的关系？
+
+- constructor -> `useState`
+- getDerivedStateFromProps -> `useState` 里的 update 函数
+- shouldComponentUpdate -> `useMemo`
+- componentDidMount -> `useEffect(callBack, [])`
+- componentDidUpdate -> `useEffect(callBack, [num1,num2])`
+- componentWillUnmount -> `useEffect` 返回的函数
+
+### 创建自定义 Hooks
+
+- 定义一个 hook 函数，并返回一个数组（内部可以调用 react 其他 hooks）
+- 从自定义的 hook 函数中取出对象的数据，做业务逻辑处理即可
 
 ## React 题目八、虚拟 DOM
 
