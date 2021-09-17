@@ -1397,11 +1397,26 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ## React 题目八、虚拟 DOM
 
-- 对虚拟 DOM 的理解？虚拟 DOM 主要做了什么？虚拟 DOM 本身是什么？（参考框架通识）
-- React diff 算法的原理是什么？
-- React key 是干嘛用的 为什么要加？key 主要是解决哪一类问题的
-- 虚拟 DOM 的引入与直接操作原生 DOM 相比，哪一个效率更高，为什么
-- React 与 Vue 的 diff 算法有何不同？
+### 虚拟 DOM
+
+- 虚拟 DOM 工作流：新旧虚拟 DOM 树进行 diff，然后找出需要更新的内容，最后 patch 到真实 DOM 上。
+  ![](./img/react-dom-1.png)
+- 【What】虚拟 DOM 是什么：虚拟 DOM 是 JS 对象，是对真实 DOM 的描述，不依赖具体框架。
+- 【How】React 中的虚拟 DOM
+  - 挂载阶段：结合 JSX 的描述，构建出虚拟 DOM 树，通过 ReactDOM.render 实现虚拟 DOM 到真实 DOM 的映射（触发渲染流水线）
+  - 更新阶段：虚拟 DOM 在 JS 层借助 diff 算法找出哪些需要被改变，再讲这些改变作用于真实 DOM
+- 【Why】虚拟 DOM 的价值
+  - 更好的研发体验和效率：数据驱动视图，函数式 UI 编程，同时性能还不错
+  - 跨平台：多出中间一层描述性的虚拟 DOM，可以对接不同平台的渲染逻辑，实现多端运行。
+
+### Diff 算法原理
+
+- 调和指的是让虚拟 DOM 映射到真实 DOM 上，分别有 React 15 栈调和、React16 的 Fiber 调和
+- Diff 算法属于调和 Reconciler 里的一个环节：更新过程调用 Diff 算法
+- React 的 Diff 的三个策略
+  - 树层面：两个虚拟 DOM 树的分层递归对比：降低 diff 算法时间复杂度，O(n^3)->O(n)
+  - 组件层面：类型一致的节点才 Diff，不同组件类型直接替换，不进行 diff，减少冗余递归操作
+  - 节点层面：节点 key 属性的设置，使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
 
 ## React 题目九、其他
 
