@@ -252,8 +252,8 @@ class NameForm extends React.Component {
 
 ### ✨React setState 源码调用的原理
 
-- 将新的 `state` push 进组件的状态队列
-- 调用函数对组件实例进行更新，这里根据 batchingStrategy 对象的`isBatchingUpdates`属性决定是否立即更新（false），还是要排队等待（true）。
+- 调用函数 enqueueSetState，将新的 `state` push 进组件的状态队列
+- 调用函数 enqueueUpdate 对组件实例进行更新，这里根据 batchingStrategy 对象的`isBatchingUpdates`属性决定是否立即更新（false），还是要排队等待（true）。
 - isBatchingUpdates 初始值是 false，如果 React 要执行批量更新的时候，会把它置为 true。在没更新完之前，要更新的组件都进入 dirtyComponents 排队等待下一次的批量更新。
 
 ### ✨React setState 调用之后发生了什么？是同步还是异步？
@@ -263,7 +263,8 @@ class NameForm extends React.Component {
   - 【生成虚拟 DOM】生成新的 虚拟 DOM 树
   - 【diff，更新 UI】使用 diff 算法，比较新旧 虚拟 DOM 树，进行 patch，渲染 UI
   - 【执行回调函数】setState 第二个参数
-- 同步和异步要看情况
+- 是同步还是异步
+  - 本质是同步，只是改变 state 时机不同，由全局唯一的是否在进行批量更新的变量 isBatchingUpdates 判断的，在执行生命周期和 React 事件前，React 会将这个锁设置为 true，保证每一次 setState 都有效，手动开启批量更新，执行完后再设置为 false，导致了异步的现象。
   - 异步：React 控制的地方就是异步，如生命周期、合成事件中
   - 同步：脱离 React 控制的地方是同步，如原生事件 setTimeout、setInterval、addEventListener
 - 异步设计的好处
@@ -275,7 +276,7 @@ class NameForm extends React.Component {
 - 批量更新
   - 将每次 setState 塞入队列，待事件同步代码或生命周期执行结束后，取出队列进行计算
   - 多次 setState 合并成一次状态，再拿最新的 state 值进行一次更新，渲染
-  - 比如同步代码里多次对一个 state 属性进行更新，只会保留最后一次更新。
+  - 比如同步代码里多次对同一个 this.state.xx 属性进行更新，因为 this.state.xx 还没更新，获取到的都是旧的那个值，队列里同个属性更新只会保留最后一次更新。
 
 ### ✨ 给 setState 传递一个对象与传递一个函数的区别是什么？
 
