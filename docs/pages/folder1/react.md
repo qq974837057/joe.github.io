@@ -1014,7 +1014,7 @@ React 异常捕获：使用错误边界组件包裹
 
   ```
 
-  - useMemo 包裹组件
+  - useMemo + React.memo 包裹组件
   - useCallback 包裹回调，react.memo 可以判断出 callback 函数没改变
   - 合并 state，多个 state 合并为一个
   - 缓存数据不放在 state 中，跟视图相关的菜放在 state 中，避免不必要的渲染。

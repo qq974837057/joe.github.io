@@ -431,8 +431,8 @@ myDate instanceof Object; // true
 
 ```js
 function instance_of(L, R) {
-  var O = R.prototype,
-    L = L.__proto__;
+  let O = R.prototype;
+  let L = L.__proto__;
   while (true) {
     if (L === null) return false;
     if (O === L) return true;
@@ -644,7 +644,7 @@ function deepClone(obj, map = new WeakMap()) {
   }
 
   // 解决循环引用问题
-  if (map.get(obj)) {
+  if (map.has(obj)) {
     return map.get(obj);
   }
   let copy = Array.isArray(obj) ? [] : {};

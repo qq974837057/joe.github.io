@@ -20,7 +20,7 @@
 - 简述：基于[数据劫持+发布者-订阅者模式]，分三个步骤：数据劫持、依赖收集、通知订阅者进行更新
 - 步骤：
 
-  - 1、**数据劫持**：Vue 构造函数中，Vue 上的 data 的每个属性会被 Object.defineProperty 方法添加 getter 和 setter 属性。在 vue3.0 中通过 Proxy 代理对象进行类似的操作。
+  - 1、**数据劫持**：Vue 构造函数中，Object.defineProperty 遍历 Vue 上的 data 的每个属性进行劫持，添加 getter 和 setter 属性。在 vue3.0 中通过 Proxy 代理对象进行类似的操作。
 
     ```js
     Object.defineProperty(obj, prop, descriptor)
@@ -523,7 +523,8 @@ vue 项目中主要使用 v-model 指令在表单 input、textarea、select 等�
 
 ## Vue2.x 检查数组变化 ✨
 
-- 本质：Object.defineProperty 无法监听到数组内部变化、也无法探测创建实例之后普通对象新增的属性(`this.myObject.newProperty = 'hi'`)
+- 总结：可用数组方法如 push/splice/unshift 或者用 Vue.set
+- 本质：Object.defineProperty 无法监听到数组内部变化（其实本身是可以的，只是尤大对数组没有处理）、也无法探测创建实例之后普通对象新增的属性(`this.myObject.newProperty = 'hi'`)
 - 方案：Vue 采用 hack 的方法实现数组监听
   ```js
   push();
@@ -1090,17 +1091,19 @@ new Profile().$mount("#mount-point");
 
 - 性能更好：采用 proxy 劫持对象 和 Diff 算法优化
 - 体积更小：Tree-shaking
-- 逻辑清晰：组合式 API Composition API 解决代码反复横跳的问题
+- 逻辑清晰：组合式 API Composition API 将业务相关逻辑代码抽取到一起，解决代码反复横跳的问题
 
-#### Proxy 与 Object.defineProperty 的优劣对比?
+#### ✨Proxy 与 Object.defineProperty 的优劣对比?
 
 - 基于数据劫持的双向绑定有两种实现
-  - 一个是目前 Vue 在用的 Object.defineProperty
-  - 另一个是 Vue3.0 即将加入的 ES2015 中新增的 Proxy
+  - 一个是目前 Vue2 在用的 Object.defineProperty`const proxy = new Proxy(target, handler)`
+  - 另一个是 Vue3.0 加入的 ES2015 中新增的 Proxy
 - Proxy 的优势
   - 可以直接监听对象(Object.defineProperty 遍历对象里面的属性，属性是对象还得深度遍历)
-  - 可以直接监听数组的变化(Object.defineProperty 无法监听)
+  - 可以直接监听数组的变化(Object.defineProperty 其实是可以监听数组的，只是尤大说性价比不高，数组元素比较多，容易影响性能)
+  - 有多种拦截方法：如 has、deleteProperty
   - Proxy 作为新标准将受到浏览器厂商重点持续的性能优化
+  - 缺点：浏览器兼容性不如 Object.defineProperty 好
 - Object.defineProperty 的优势:
   - 兼容性好,支持 IE9(不能兼容 IE8 及以下)。而 Proxy 的存在浏览器兼容性问题，且无法用 polyfill 磨平，所以在 Vue3.0 才能引入这个破坏性改变。
   - 缺点：只能劫持对象的属性,需要对每个对象的每个属性进行遍历，如果属性值也是对象那么需要深度遍历。
@@ -1139,6 +1142,8 @@ new Profile().$mount("#mount-point");
   - [蜗牛老湿](https://juejin.im/post/5e9faa8fe51d4546fe263eda)
 
 #### Composition API
+
+setup 是 Composition API 的入口函数，是在 beforeCreate 声明周期函数之前执行的。还提供了 ref 函数定义一个响应式的数据，reactive 函数定义多个数据的响应式等等。
 
 ![组合式API-RFC](https://composition-api.vuejs.org/zh/#%E6%A6%82%E8%BF%B0)
 
