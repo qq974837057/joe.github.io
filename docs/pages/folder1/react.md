@@ -40,10 +40,10 @@
 
 ### React 3 种启动方式
 
-> 主要是 mode 属性的不同，决定着这个⼯作流【初始化 → render → commit 】是⼀⽓呵成（同步）的，还是分⽚执⾏（异步）的。Fiber 架构在 React 中并不能够和异步渲染画严格的等号，它是⼀种同时兼容了同步渲染与异步渲染的设计。
+> 主要是 fiber 节点的 mode 属性的不同，决定着这个⼯作流【初始化 → render → commit 】是⼀⽓呵成（同步）的，还是分⽚执⾏（异步）的。Fiber 架构在 React 中是⼀种同时兼容了同步渲染与异步渲染的设计。
 
-- legacy 模式：`ReactDOM.render(<App />,rootNode)`，目前的使用方式
-- concurrent 模式：`ReactDOM.createRoot(rootNode).render(<App />)`，实验中，未来的默认模式
+- legacy 模式：`ReactDOM.render(<App />,rootNode)`，目前的使用方式，render 是同步渲染模式。
+- concurrent 模式：`ReactDOM.createRoot(rootNode).render(<App />)`，实验中，未来的默认模式。拥有时间分片功能，可中断，可恢复
 - blocking 模式：介于两者之间，渐进迁移用
 
 ### Fiber 架构下 异步渲染（Concurrent 模式）的 Scheduler 调度层的核心
@@ -1002,25 +1002,35 @@ React 异常捕获：使用错误边界组件包裹
 
 ### ✨React 性能优化
 
-- 避免重复渲染
+- 三大主要手段
 
-  - shouldComponentUpdate
+  - shouldComponentUpdate（针对类组件）
+  - PureComponent 和 Immutable.js（针对类组件）
+  - React.memo 和 useMemo（针对函数组件）
+
+- shouldComponentUpdate：根据返回值 true 则执行 render，false 则不 render
 
   ```js
   shouldComponentUpdate(nextProps, nextState) {
-    /* 当 state 中 data1 发生改变的时候，重新更新组件 */
-    return nextState.data1 !== this.state.data1
+    /* 当 props 发生改变的时候，重新更新组件 */
+    return nextProps.data1 !== this.props.data1
   }
 
   ```
 
-  - useMemo + React.memo 包裹组件
+- PureComponent + Immutable.js
+  - PureComponent 内置了一个功能，在 shouldComponentUpdate 中对组件更新前后的 props 和 state 进⾏浅⽐较，并根据浅⽐较的结果，决定是否需要继续更新流程。`export default class ChildA extends React.PureComponent`
+  - “浅⽐较”将针对值类型数据对⽐其值是否相等，⽽针对数组、对象等引⽤类型的数据则对⽐其引⽤是否相等。在 PureComponent 对引用类型可能会判断失误，比如引用没变，但是内部属性值变了，不会导致重渲染。
+  - 使用不可变值的库 Immutable.js，创建一个 Map 对象，调用其 api 如 set 修改内容，会返回一个新的对象，搭配 PureComponent，判断数据变更了，就会执行渲染，避免误判的情况。
+- React.memo 和 useMemo 包裹组件
+  - React.memo 接收两个参数，一个是目标组件，一个是可选的 props 的对比逻辑（类似 shouldComponentUpdate 内的逻辑），如果不传，默认进行 props 的浅比较。
+  - useMemo 控制是否需要重复执行某段逻辑（组件内的某个小函数组件），React.memo 控制是否重渲染某个组件
+  - useMemo `const memoizedValue = useMemo(() => compute(a, b), [a, b]);` 如果依赖没变，那么会复用该记忆值，依赖改变，重新计算。
+- 其他
+
   - useCallback 包裹回调，react.memo 可以判断出 callback 函数没改变
   - 合并 state，多个 state 合并为一个
   - 缓存数据不放在 state 中，跟视图相关的菜放在 state 中，避免不必要的渲染。
-
-- 其他
-
   - 循环的 key 写法，不要用 index，要用唯一 id
   - 懒加载：Suspense 和 lazy 可以实现 dynamic import 懒加载效果
 
