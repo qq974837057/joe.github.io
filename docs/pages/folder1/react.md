@@ -6,12 +6,13 @@
   ![](./img/react-process-1.jpg)
 - React 17 生命周期和阶段展示（绿色新为增）
   ![](./img/react-process-2.jpg)
-- 渲染过程（render 阶段可以同步也可以异步，但 commit ⼀定是同步的。）
+- 渲染过程（render 阶段可以同步也可以异步，但 commit ⼀定是同步的）
+
   - 调用 ReactDOM.render
-  - **进入 Render 阶段**
+  - **进入 Render 阶段**【schedulerUpdateOnFiber 为标志】
   - 深度优先遍历创建完整的 Fiber 树（虚拟 DOM 树）
   - 遍历到的节点会执行生命周期函数（constructor->getDerivedStateFromProps/componentWillMount->render）
-  - **进入 Commit 阶段**
+  - **进入 Commit 阶段**【commitRoot 为标志】
   - 将整棵 fiber 树对应 DOM 渲染到视图（真实 DOM）中
   - 从子节点开始执行对应的生命周期函数，然后调用父节点的（componentDidMount）
   - **调用 this.setState 改变某个子节点的状态**
@@ -22,21 +23,70 @@
   - 执行状态变化对应的操作，执行该子节点生命周期函数（getSnapshotBeforeUpdate）
   - 新创建的 fiber 树替换旧的 fiber 树
 
+- 源码流程
+  - jsx 经过 babel 转变成 render 函数
+  - create update
+  - enqueueUpdate（每个 fiber 节点有属于自己的 update 队列，存储多个更新，是链表的形式）
+  - workLoop 大循环 【分同步和异步模式，异步会多一个 shouldYield（需要让出）的变量决定是否继续执行】
+    - performUnitOfWork（当 workInProgress 不为空时，while 循环执行这个函数）
+      - beginWork【递】（对单个节点工作，返回子节点 next）
+      - completeUnitOfWork【归】（没有 next 的话，回溯向上找兄弟节点或父节点）
+  - Effect List（明确的 DOM 操作如插入/更新/删除）
+  - commit
+
 ### ✨React Fiber 是什么，解决什么问题
 
-- **总结：React15 更新渲染时，深度优先遍历 diff 会对虚拟 DOM 树进行递归，找出变动的节点，这个过程没有优先级，也不能控制顺序，所以 React 会占用主线程，无法及时响应用户操作，导致用户感觉卡顿。为了解决不可中断和缺少优先级的痛点，React16 通过 Fiber 架构，让这个过程可中断，可恢复，能够及时响应用户交互。Fiber 是存储节点更新信息 effectList 和 dom 信息的数据结构，本质是链表结构（有 return，child，sibling 属性），可以随时中断遍历，避免长时间递归。主要有三个设计：**
-  - **第一是副作用链的设计，每个 Fiber 都有自己的 effectList，存放待更新的副作用 DOM 操作。顺序是从叶子节点自底向上，将当前节点的副作用链插入到父节点的副作用链中，最后在 组件根节点 rootFiber 上，拿到存储当前 Fiber 树的所有副作用集合。方便 commit 阶段对它们进行更新。**
-  - **第二是时间分片的设计，根据 浏览器的帧率将渲染进程切分为一个个时间分片，默认为 5ms，如果在一个时间分片内没有完成我们的更新操作，就会中断更新，保存状态，交出执行权给浏览器进行重绘重排。等到下个分片再恢复执行。**
-  - **第三是使用双缓存机制，用两个 fiber 树，一个是当前 DOM 树对应的 Fiber（current） 树，另一个是进行 diff 形成的新 Fiber 树，叫 workInProgress，它是在内存承接更新的信息，为了实现节点复用，每个节点的 alternate 属性指向上一棵树对应的节点。commit 阶段完成后，此时将 current 指向新的 workInProgress 树，workInProgress 树对应的 DOM 树渲染到了页面上。**
-- 核心：Fiber 会将⼀个⼤的更新任务拆解为许多个⼩任务。每当执⾏完⼀个⼩任务时，渲染任务会交出主线程，看看有没有优先级更⾼的⼯作要处理，空闲后再继续渲染，避免同步渲染带来的卡顿。
-- 时间分片：React 会根据浏览器的帧率，计算出时间切⽚的⼤⼩，并结合当前时间计算出每⼀个切⽚的到期时间。在 循环创建 Fiber 节点的函数中，while 循环每次执⾏前，会询问当前时间切⽚是否到期，若已到期，则结束循环、交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，没有这个判断，会循环调用，直到节点为空）
-- 任务优先级调度
-  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务
+#### 架构对比
+
+- React-15 架构图
+
+  - Reconciler(协调器) 找不同->Renderer 渲染不同
+    ![](./img/react-15-design.png)
+
+- React-16 架构图
+  - Scheduler (调度器)找高优先级->Reconciler(协调器) 找不同->Renderer 渲染不同
+    ![](./img/react-16-design.png)
+- **总结：React15 创建和更新渲染时，会对虚拟 DOM 树进行递归（深度优先遍历），找出变动的节点，这个过程没有优先级，所以 React 会占用主线程，无法及时响应优先级更高的任务，渲染超过时间，导致用户感觉卡顿。为了解决不可中断和缺少优先级的痛点，React16 通过 Fiber 架构的 Concurrency 并发模式，让这个过程可中断，可恢复，这样能够及时处理优先级更高的任务，将正在执行的中途任务暂存，待完成任务后再去执行。主要结构和三个设计：**
+
+  - Fiber 结构本质是链表结构，有三类属性：实例属性（组件类型）、构建属性（return、child、sibling）、工作属性（数据、effectList、优先级）Fiber ，用来存储节点更新信息 effectList 和 dom 信息，可以随时中断遍历，避免长时间递归。
+  - **第一是副作用链的设计，每个 Fiber 都有自己的 effectList，存放待更新的副作用 DOM 操作类型。在 completeUnitOfWork 函数，顺序是从叶子节点自底向上，将当前节点的副作用链插入到父节点的副作用链中。最后在 组件根节点 rootFiber 上，拿到存储当前 Fiber 树的所有副作用集合。方便 commit 阶段对它们进行更新。**
+  - **第二是时间分片的设计，根据 浏览器的帧率将渲染进程切分为一个个时间分片，如果在一个时间分片内没有完成我们的更新操作，就会中断更新，保存状态，交出执行权给浏览器进行重绘重排。等到下个分片再恢复执行。**
+  - **第三是使用双缓存机制，用两个 fiber 树，一个是屏幕上已建立的 DOM 树对应的 Fiber（current） 树，另一个因为数据变化重新在内存里创建的新 Fiber 树，叫 workInProgress，通过 alternate 属性(指针) 建立连接。实现节点复用，每个节点的 alternate 属性指向上一棵树对应的节点。commit 阶段完成后，workInProgress 树对应的 DOM 树渲染到了页面上，此时将 current 指向新的 workInProgress 树，完成晋升**
+
+#### 核心流程和设计
+
+- 核心
+  - Fiber 会将⼀个⼤的更新任务拆解为许多个⼩任务。每当执⾏完⼀个⼩任务时，渲染任务会交出主线程，看看有没有优先级更⾼的⼯作要处理，空闲后再继续渲染，避免同步渲染带来的卡顿。
+- 流程
+  - 数据更新时，执行调度更新函数 **schedulerUpdateOnFiber**，进入 render 阶段，渲染 render 的入口模式。先判断当前是否需要调度，不需要直接同步构造 fiber 树（比如使用了 ReactDOM.render 同步模式）。如果需要调度（比如 ReactDOM.createRoot 并发模式），搭配 Scheduler 处理。注册回调函数分为同步任务构建树（performSyncWorkOnRoot 里面调用 workLoopSync）和异步任务构建树（performConcurrentWorkOnRoot 调用 workLoopConcurrent），异步任务是可中断的。
+  - Scheduler 的 workLoop 会根据当前时间和任务时间判断是否需要中断（shouldYield），中断则退出循环，不需要中断则取出任务队列（expirationTime 过期时间的小顶堆结构）中堆顶的回调函数逐个执行。
+  - 同步/异步构建树的 workLoop 大循环 【分同步和异步模式，异步会多一个 shouldYield（需要让出）的变量决定是否继续执行】
+    - performUnitOfWork（当 workInProgress 不为空时，while 循环执行这个函数）
+      - beginWork【递】（对单个节点工作，返回子节点 next）
+      - completeUnitOfWork【归】（没有 next 的话，回溯向上找兄弟节点或父节点）
+
+#### Concurrent 模式（异步渲染）下的“时间切⽚”和“优先级”实现
+
+- 时间分片
+  - React 会根据浏览器的帧率，默认是 5ms，计算出时间切⽚的⼤⼩，并计算出每⼀个切⽚的到期时间（当前时间+切片时间长度）。
+  - 在 循环创建 Fiber 节点的函数 workLoopConcurrent 中，while 循环每次执⾏前，会询问当前时间切⽚是否到期 shouldYield（当前时间大于切片到期时间），若已到期，则结束循环、交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，workLoopSync 没有这个判断，会循环调用，直到节点 workInProgress 为空）
+- 任务优先级调度：利用小顶堆结构的任务队列，取出任务在下个事件循环执行。
+  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务。
   - 先创建一个 task，根据任务开始时间，推入两个队列（待执行、已过期）其中一个
   - 队列是小顶堆的数据结构，堆顶是需要最早被执行的任务
   - 如果任务开始时间小于当前时间，那么推入 taskQueue 过期任务队列。
-  - 如果任务开始时间大于当前时间，则先判断有没有过期任务，有就发起即时任务并执行
-  - 再去看未过期的 timerQueue 任务队列，是堆顶任务就派发延时任务，等过期后加入另一个队列，等待执行
+  - 如果任务开始时间大于当前时间，则先判断有没有过期任务，有就发起即时任务并执行过期的任务
+  - 再去看未过期的 timerQueue 任务队列，是堆顶任务就派发延时任务，等过期后加入另一个任务队列 taskQueue，等待执行
+  - workLoop 会逐⼀执⾏ taskQueue 中的任务，直到调度过程被暂停（时间⽚⽤尽）或任务全部被清空。
+- 优先级分类 priorityLevel
+  - 每个 fiber 节点的过期时间根据优先级来计算，不同优先级 timeout 不同
+  - 过期时间越小，也就是 timeout 越小，代表优先级越高`expirationTime = startTime + timeout`
+  - 五种优先级：
+  - ImmediatePriority 99 IMMEDIATE_PRIORITY_TIMEOUT=-1 需要立即执行的
+  - UserBlockingPriority 98 USER_BLOCKING_PRIORITY=250：用户 UI 操作
+  - NormalPriority 97 NORMAL_PRIORITY_TIMEOUT=5000：正常优先级
+  - LowPriority 96 LOW_PRIORITY_TIMEOUT=10000：低优先级悬停
+  - IdlePriority 85 LOW_PRIORITY_TIMEOUT=10000 ：用户代码出现问题，被 catch 住时
 
 ### React 3 种启动方式
 

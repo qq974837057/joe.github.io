@@ -237,6 +237,39 @@
 5. 调用 GPU 进行绘制（Paint），遍历节点，生成渲染层、图形层、再转为位图，绘制到屏幕显示。
    ![HTTP-render](./img/HTTP-render.png)
 
+### 一帧的渲染进程和 RAF 的关系
+
+![](./img/chrome-render-process.png)
+
+- 简单描述一帧的生命周期: 优先处理事件回调，然后执行 RAF，最后有空闲执行 RequestIdleCallback
+- 如果有高耗时任务，对高耗时任务进行分步骤处理，可以采用在一帧空闲时 RequestIdleCallback 处理拆分的小任务。
+
+1. 一帧开始。
+
+2. 主线程:
+
+- **Event Handlers: UI 交互输入的事件回调, 例如 input、click、wheel 等。**
+
+- **RAF: 执行 requestAnimationFrame 回调。**
+
+- DOM Tree: 解析 HTML, 构建 DOM Tree, 当 JS 对 DOM 有变更会重新触发该流程。
+
+- CSS Tree: 构建 CSS Tree。至此构建出 Render Tree。
+
+- Layout: 所有元素的 position、size 信息。
+
+- Paint: 像素填充, 例如颜色、文字、边框等可视部分。
+
+- Composite: 绘制的指令信息传到合成线程中。
+
+- **RequestIdleCallback: 如果此时一帧还有空余时间, 则执行该回调。**
+
+3. 合成线程:
+
+- Raster: 合成线程将信息分块, 并把每块发送给光栅线程, 光栅线程创建位图, 并通知 GPU 进程刷新这一帧。
+
+4. 一帧结束。
+
 ### 细节：HTML 建立 dom 树-词法解析和语法解析
 
 - 词法解析：
