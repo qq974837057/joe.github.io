@@ -36,6 +36,8 @@
 
 ### ✨React Fiber 是什么，解决什么问题
 
+Fiber 结构本质是链表结构，有三类属性：实例属性（组件类型）、构建属性（return、child、sibling）、工作属性（数据、effectList、优先级）Fiber ，用来存储节点更新信息 effectList 和 dom 信息。
+
 #### 架构对比
 
 - React-15 架构图
@@ -46,12 +48,14 @@
 - React-16 架构图
   - Scheduler (调度器)找高优先级->Reconciler(协调器) 找不同->Renderer 渲染不同
     ![](./img/react-16-design.png)
-- **总结：React15 创建和更新渲染时，会对虚拟 DOM 树进行递归（深度优先遍历），找出变动的节点，这个过程没有优先级，所以 React 会占用主线程，无法及时响应优先级更高的任务，渲染超过时间，导致用户感觉卡顿。为了解决不可中断和缺少优先级的痛点，React16 通过 Fiber 架构的 Concurrency 并发模式，让这个过程可中断，可恢复，这样能够及时处理优先级更高的任务，将正在执行的中途任务暂存，待完成任务后再去执行。主要结构和三个设计：**
+  - Scheduler 负责时间切片和任务调度
+  - Reconciler 的工作就是使用 Diff 算法对比 current Fiber 和 React Element ，生成 workInProgress Fiber ，这个阶段是可中断的（中断遍历），Renderer 的工作是把 workInProgress Fiber 转换成真正的 DOM 节点。
+- **总结：React15 创建和更新渲染时，会对虚拟 DOM 树进行递归（深度优先遍历），找出变动的节点，这个过程没有优先级，所以 React 会占用主线程，无法及时响应优先级更高的任务，渲染超过时间，导致用户感觉卡顿。为了解决不可中断和缺少优先级的痛点，React16 通过 Fiber 架构的 Concurrency 并发模式，让这个过程可中断，可恢复，这样能够及时处理优先级更高的任务，将正在执行的中途任务暂存，待完成任务后再去执行。主要的四个设计：**
 
-  - Fiber 结构本质是链表结构，有三类属性：实例属性（组件类型）、构建属性（return、child、sibling）、工作属性（数据、effectList、优先级）Fiber ，用来存储节点更新信息 effectList 和 dom 信息，可以随时中断遍历，避免长时间递归。
-  - **第一是副作用链的设计，每个 Fiber 都有自己的 effectList，存放待更新的副作用 DOM 操作类型。在 completeUnitOfWork 函数，顺序是从叶子节点自底向上，将当前节点的副作用链插入到父节点的副作用链中。最后在 组件根节点 rootFiber 上，拿到存储当前 Fiber 树的所有副作用集合。方便 commit 阶段对它们进行更新。**
-  - **第二是时间分片的设计，根据 浏览器的帧率将渲染进程切分为一个个时间分片，如果在一个时间分片内没有完成我们的更新操作，就会中断更新，保存状态，交出执行权给浏览器进行重绘重排。等到下个分片再恢复执行。**
-  - **第三是使用双缓存机制，用两个 fiber 树，一个是屏幕上已建立的 DOM 树对应的 Fiber（current） 树，另一个因为数据变化重新在内存里创建的新 Fiber 树，叫 workInProgress，通过 alternate 属性(指针) 建立连接。实现节点复用，每个节点的 alternate 属性指向上一棵树对应的节点。commit 阶段完成后，workInProgress 树对应的 DOM 树渲染到了页面上，此时将 current 指向新的 workInProgress 树，完成晋升**
+  - **第一是 Scheduler 的时间分片的设计，根据 浏览器的帧率将渲染进程切分为一个个时间分片，如果在一个时间分片内没有完成我们的更新操作，就会中断更新，保存状态，交出执行权给浏览器进行重绘重排。等到下个分片再恢复执行。**
+  - **第二是 Scheduler 的任务调度的设计，React 根据不同场景赋予任务不同优先级，同一时间可能产生不同的任务，放入 taskQueue 队列中，这个队列采用了小顶堆的数据结构，按照任务的过期时间从小到大排列，可以很快找到最早过期或是最高级的任务。**
+  - **第三是使用双缓存机制，用两个 fiber 树，一个是屏幕上显示内容对应的 Fiber 树，叫 current Fiber 树，另一个因为数据变化重新在内存里构建的新 Fiber 树，叫 workInProgress Fiber 树，通过 alternate 属性(指针) 建立连接。实现节点复用，每个节点的 alternate 属性指向上一棵树对应的节点。React 根节点用 current 指针指向当前的 current Fiber 树，当 workInProgress 树构建完成交给 renderer 渲染到了页面上后，此时将 current 指向新的 workInProgress 树，完成晋升变成 current Fiber 树**。
+  - **第四是副作用链的设计，每个 Fiber 都有自己的 effectList，存放待更新的副作用 DOM 操作类型。在 completeUnitOfWork 函数，顺序是从叶子节点自底向上，将当前节点的副作用链插入到父节点的副作用链中。最后在 组件根节点 rootFiber 上，拿到存储当前 Fiber 树的所有副作用集合。方便 commit 阶段对它们进行更新。**
 
 #### 核心流程和设计
 
@@ -69,24 +73,18 @@
 
 - 时间分片
   - React 会根据浏览器的帧率，默认是 5ms，计算出时间切⽚的⼤⼩，并计算出每⼀个切⽚的到期时间（当前时间+切片时间长度）。
-  - 在 循环创建 Fiber 节点的函数 workLoopConcurrent 中，while 循环每次执⾏前，会询问当前时间切⽚是否到期 shouldYield（当前时间大于切片到期时间），若已到期，则结束循环、交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，workLoopSync 没有这个判断，会循环调用，直到节点 workInProgress 为空）
-- 任务优先级调度：利用小顶堆结构的任务队列，取出任务在下个事件循环执行。
-  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务。
-  - 先创建一个 task，根据任务开始时间，推入两个队列（待执行、已过期）其中一个
-  - 队列是小顶堆的数据结构，堆顶是需要最早被执行的任务
-  - 如果任务开始时间小于当前时间，那么推入 taskQueue 过期任务队列。
-  - 如果任务开始时间大于当前时间，则先判断有没有过期任务，有就发起即时任务并执行过期的任务
-  - 再去看未过期的 timerQueue 任务队列，是堆顶任务就派发延时任务，等过期后加入另一个任务队列 taskQueue，等待执行
-  - workLoop 会逐⼀执⾏ taskQueue 中的任务，直到调度过程被暂停（时间⽚⽤尽）或任务全部被清空。
-- 优先级分类 priorityLevel
-  - 每个 fiber 节点的过期时间根据优先级来计算，不同优先级 timeout 不同
+  - 在 循环创建 Fiber 节点的函数 workLoopConcurrent 中，while 循环每次执⾏前，会询问当前时间切⽚是否到期 shouldYield（当前时间大于切片到期时间），若已到期，则中断，结束循环，交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，workLoopSync 没有这个判断，会循环调用，直到节点 workInProgress 为空）
+- 任务优先级调度
+  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务。本质是模拟 requestIdleCallback 这个 API，让任务在一帧的空余时间内执行。
+  - React 根据不同场景赋予任务不同优先级，同一时间可能产生不同的任务，放入 taskQueue 队列中，这个队列采用了小顶堆的数据结构，按照任务的过期时间从小到大排列，可以很快找到最早过期或是最高级的任务。
   - 过期时间越小，也就是 timeout 越小，代表优先级越高`expirationTime = startTime + timeout`
   - 五种优先级：
-  - ImmediatePriority 99 IMMEDIATE_PRIORITY_TIMEOUT=-1 需要立即执行的
-  - UserBlockingPriority 98 USER_BLOCKING_PRIORITY=250：用户 UI 操作
+  - ImmediatePriority 99 IMMEDIATE_PRIORITY_TIMEOUT=-1 立即执行的优先级，优先级最高
+  - UserBlockingPriority 98 USER_BLOCKING_PRIORITY=250：用户阻塞级别
   - NormalPriority 97 NORMAL_PRIORITY_TIMEOUT=5000：正常优先级
-  - LowPriority 96 LOW_PRIORITY_TIMEOUT=10000：低优先级悬停
-  - IdlePriority 85 LOW_PRIORITY_TIMEOUT=10000 ：用户代码出现问题，被 catch 住时
+  - LowPriority 96 LOW_PRIORITY_TIMEOUT=10000：较低优先级
+  - IdlePriority 85 LOW_PRIORITY_TIMEOUT=10000 ：优先级最低，可以闲置的
+  - 举例：生命周期方法优先级最高，是用户输入也属于同步执行的。一些交互事件是高优先级的，数据请求那些就是低优先级的。
 
 ### React 3 种启动方式
 
@@ -95,20 +93,6 @@
 - legacy 模式：`ReactDOM.render(<App />,rootNode)`，目前的使用方式，render 是同步渲染模式。
 - concurrent 模式：`ReactDOM.createRoot(rootNode).render(<App />)`，实验中，未来的默认模式。拥有时间分片功能，可中断，可恢复
 - blocking 模式：介于两者之间，渐进迁移用
-
-### Fiber 架构下 异步渲染（Concurrent 模式）的 Scheduler 调度层的核心
-
-- 时间分片
-
-  - React 会根据浏览器的帧率，计算出时间切⽚的⼤⼩，并结合当前时间计算出每⼀个切⽚的到期时间。在 循环创建 Fiber 节点的函数中，while 循环每次执⾏前，会询问当前时间切⽚是否到期，若已到期，则结束循环、交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，没有这个判断，会循环调用，直到节点为空）
-
-- 优先级调度
-  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务
-  - 先创建一个 task，根据任务开始时间，推入两个队列（待执行、已过期）其中一个
-  - 队列是小顶堆的数据结构，堆顶是需要最早被执行的任务
-  - 如果任务开始时间小于当前时间，那么推入 taskQueue 过期任务队列。
-  - 如果任务开始时间大于当前时间，则先判断有没有过期任务，有就发起即时任务并执行
-  - 再去看未过期的任务队列，是堆顶任务就派发延时任务，等过期后加入另一个队列，等待执行
 
 ### ✨ 类组件与函数组件有什么异同？
 
@@ -127,7 +111,7 @@
 ### ✨React 事件机制
 
 - 概念
-  - JSX 上写的事件并没有绑定在对应的真实 DOM 上，而是通过事件委托的方式，将所有的事件都统一绑定在了 document 上。这样的方式不仅减少了内存消耗，还能在组件挂载销毁时统一订阅和移除事件。
+  - JSX 上写的事件并没有绑定在对应的真实 DOM 上，而是通过事件委托的方式，将所有的事件都统一绑定在了 document 上。这样的方式不仅减少了内存消耗，还能在组件挂载销毁时统一订阅和移除事件。不过在 React17 为了实现多 React 版本共存，将事件绑定在 React 渲染树的根 DOM 容器。
   - 另外冒泡到 document 上的事件也不是原生浏览器事件，而是 React 自己实现的合成事件（SyntheticEvent）。
 - 合成事件
 
@@ -1709,6 +1693,10 @@ handleSomething() {
 1. **原生的事件会先执行**
 2. **执行 react 合成事件**
 3. 最后**执行真正在 document 上挂载的事件**
+
+## React 关键概念理解
+
+- [React 关键概念](https://juejin.cn/post/7010539227284766751#heading-0)
 
 ## React 题目参考
 
