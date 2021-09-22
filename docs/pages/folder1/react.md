@@ -85,6 +85,8 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
   - LowPriority 96 LOW_PRIORITY_TIMEOUT=10000：较低优先级
   - IdlePriority 85 LOW_PRIORITY_TIMEOUT=10000 ：优先级最低，可以闲置的
   - 举例：生命周期方法优先级最高，是用户输入也属于同步执行的。一些交互事件是高优先级的，数据请求那些就是低优先级的。
+- 一帧的顺序
+  ![](./img/requestIdle.png)
 
 ### React 3 种启动方式
 
