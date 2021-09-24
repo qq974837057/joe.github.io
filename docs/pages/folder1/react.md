@@ -784,12 +784,38 @@ static getDerivedStateFromProps(nextProps, prevState) {
 ### ✨Redux 和 Vuex 有什么区别，它们的共同思想
 
 - 相同
-  - 都是从 Flux 衍生而来的单一数据源、单向数据流
+  - 都是从 Flux 衍生
+  - 单一数据源、单向数据流
 - 不同
   - Vuex 以 mutations 变化函数取代 Reducer，无需 switch 判断，只需在 action 函数中使用 commit 对应的 mutation 函数，由 mutation 直接改变指定的 state 值即可，Vue 检测到数据变化自动渲染
   - Redux 是可以用到 Vue 中的，但不如 vuex 契合度更高
 - 和 Flux 有何不同
   - Store 数目：Flux 可以多个，Redux 只有一个
+
+### Redux 和 Mobx 有什么区别
+
+- redux 数据存在单一的 store 中，适用于单个全局状态管理。mobx 数据存在多个分散的 store 中，适用于多个全局状态
+- redux 状态是不能直接修改的，需要通过 dispatch 来派发 action。mobx 是可以直接修改的
+- redux 保存数据后手动处理变化后的操作，mobx 用 observable 保存数据，数据变化自动处理响应操作
+  - 结合 react-redux 可实现自动变更，mobx 使用 mobx-react-lite，自定义 hook 获取 store 的实例，用 observer 将组件包裹起来完成监测，数据变动会更新
+
+### 项目使用哪种方案
+
+- 简单场景：使用组件通信
+- 中等场景：优先考虑使用 React 提供的 API 进行管理，如 React.createContext 和 useContext
+- 复杂场景：第三方状态管理库 Redux、Mobx
+
+- 方案汇总
+  - React Context
+    - createContext、useContext 和 useReducer
+    - 缺点：嵌套 Provider 的写法难受，而且 context 小部分 state 变更导致消费 context 的组件重渲染，需要结合 memo 优化
+  - Redux
+    - 搭配 react-redux
+    - 缺点：嵌套模板写法难受，副作用要使用中间件隔离
+  - umi 的 useModel
+    - 常用于中台项目的全局共享数据
+    - 就是一个普通的自定义 hooks，但 @umijs/plugin-model 把其中的状态变成了『全局状态』，多个组件中使用该 model 时，拿到的同一份状态。
+    - `const { user, fetchUser } = useModel('user', model => ({ user: model.user, fetchUser: model.fetchUser }));`
 
 ## React 七、Hooks
 

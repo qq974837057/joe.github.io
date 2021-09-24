@@ -1,3 +1,54 @@
+## 概要总结
+
+### 加载时
+
+- 网络和缓存
+  - HTTP2
+  - 拆包配置+缓存策略
+- 减少体积
+  - Tree-Shaking
+  - gzip 压缩
+- 懒加载
+  - 图片懒加载
+  - 路由懒加载
+- 图片优化
+  - 小 icon 使用 url-loader 转为 base64
+  - 适当选择 jpg、png、svg
+
+### 运行时
+
+- 减少回流重绘
+  - 集中改变样式
+  - 离线操作 DOM
+  - 提升为合成层
+- 减少内存泄漏
+  - 定时器及时销毁
+  - 事件监听正确销毁
+  - DOM 引用使用 WeakMap 保存
+- 防抖节流
+  - 防抖：按钮提交、输入请求
+  - 节流：滚动监听、动画场景
+- 虚拟列表
+
+### 指标
+
+- FP 首次绘制
+- FCP 首次内容绘制
+- TTI 可交互时间
+- FPS 帧率
+
+### 分析
+
+- Chrome DevTools - Lighthouse 面板：性能评分、SEO、FCP、TTI
+- Chrome DevTools - Performance 面板
+  - Timings：FP、FCP
+  - Main：函数调用栈和执行时间块
+  - Frames：帧率
+- API：window.performance.timing
+  - navigationStart 按下回车瞬间
+  - domInteractive DOM 开始解析（白屏时间）
+  - domContentLoadedEventEnd DOM 解析完成（首屏加载时间）
+
 ## 概述
 
 - 前端应用最影响性能的是加载速度，直接影响用户体验。
