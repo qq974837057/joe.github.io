@@ -787,6 +787,24 @@ module.exports = {
 };
 ```
 
+## vite
+
+- Vite 核心
+  - 源码部分：是基于浏览器原生的 ES Module，在浏览器请求源码时进行转换
+  - 依赖部分：使用 esbuild 对 ts、jsx、js 代码进行转换
+  - HMR 部分：也是基于 ESModule，源码是协商缓存，依赖模块是强缓存
+  - 生产环境：用 Rollup 打包代码，因为 esbuild 代码分割和 CSS 还不成熟。
+- Webpack 和 Vite 的区别
+
+  - Webpack 会先打包整个应用，然后启动开发服务器，请求服务器时直接给予打包结果。
+  - Vite 是直接启动开发服务器，请求哪个模块再对该模块进行实时编译，不需要分析模块的依赖、不需要编译。因此启动速度非常快。
+    ![](./img/webpack-vite-1.png)
+    ![](./img/webpack-vite-2.png)
+
+- esbuild
+  - esbuild 是一个「JavaScript」Bundler 打包和压缩工具，支持压缩、Tree-shaking、sourcemap。
+  - 使用 GO 语言编写，全部实现机器码，性能快，比其他 JS 写的编译工具快几十倍
+
 ## 参考阅读
 
 - [掘金-webpack 优化](https://juejin.cn/post/6844904093463347208#heading-0)

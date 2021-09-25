@@ -1724,7 +1724,9 @@ handleSomething() {
 
 ## React 关键概念理解
 
+- [React 技术揭秘](https://react.iamkasong.com/)
 - [React 关键概念](https://juejin.cn/post/7010539227284766751#heading-0)
+- [优先级概念](https://zhuanlan.zhihu.com/p/182411298)
 
 ## React 题目参考
 
