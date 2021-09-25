@@ -2,7 +2,7 @@
 
 - 简单说
   - 初始化：启动构建，读取与合并配置参数，加载 Plugin，实例化 Compiler
-  - 编译：从 Entry 出发，针对每个 Module 串行调用对应的 Loader 去翻译文件的内容，再找到该 Module 依赖的 Module，递归地进行编译处理
+  - 编译：从 Entry 出发，针对每个 Module 串行调用对应的 Loader 去翻译文件的内容，再找到该 Module 依赖的 Module，递归地进行编译处理，形成依赖图
   - 输出：将编译后的 Module 组合成 Chunk，将 Chunk 转换成文件，输出到文件系统中
 - 1、初始化参数：拷贝配置文件 webpack.config.js 合并参数，并实例化插件，得到最终 options 对象。
 - 2、开始编译：初始化 Compiler 编译对象，传入各插件的 apply 方法，为事件挂载对应的回调，**执行 Compiler 的 run 方法开始编译**，以下是一些关键事件点。
@@ -24,6 +24,8 @@ function webpack(options) {
 - 【事件钩子】执行 run 开始编译：过程中触发一些钩子 beforeRun->run->beforeCompile->compile（开始编译）->make（入口分析依赖）->seal（构建封装，不可更改）->afterCompile（完成构建，缓存数据）->emit （输出 dist 目录），每个节点会触发对应的 webpack 事件，**plugin 插件监听事件**进行对应的处理。
 - 【监听事件】编写插件 plugin 的时候，在 apply 中执行`compilation.plugin('xxx', callback)`绑定对应的监听事件，监听到就会执行特定的逻辑
 - 【获取构建文件】`compiler.hooks.emit.tap('xxx',(compilation)=>{})` 这个钩子可以获取到 emit 阶段的 compilation 对象，compilation.assets 有所有构建好的资源文件，可以方便我们处理
+- compiler 对象是一个全局单例，他负责把控整个 webpack 打包的构建流程。
+- compilation 对象是每一次构建的上下文对象，它包含了当次构建所需要的所有信息，每次热更新和重新构建，compiler 都会重新生成一个新的 compilation 对象，负责此次更新的构建过程。
 
 ## webpack.config.js 配置
 
@@ -399,24 +401,29 @@ module.exports = {
 
 ## webpack 打包加速优化(缓存 + 多进程 + 提取资源 + DLL 分包) ✨
 
-- 总结
-  - 提高版本：升级 Webpack 和 Node.js 和机器
-  - 利用缓存：cache-loader、loader/plugin 开启 自身的 cache 配置（如 babel-loader/terser-webpack-plugin ）
-  - 多进程：thread-loader、TerserWebpackPlugin 开启 parallel 参数
-  - 提取公共资源：SplitChunksPlugin 拆包配置、Externals 基础包用 CDN 引入
-  - DLL 预编译：不常变更的第三方库，避免反复编译
-- 提高热更新速度：
+- 分析工具
+  - 体积：webpack-bundle-analyzer
+  - 速度：插件 speed-measure-webpack-plugin 查看 loader 和 plugin 的耗时
+- 优化总结
+  - 利用缓存：cache-loader 放在其他 loader 前面、loader/plugin 开启 自身的 cache 配置（如 babel-loader/terser-webpack-plugin 默认开启 ）、hard-source-webpack-plugin 提供二次缓存加速效果
+  - 利用多进程：thread-loader 放在耗时的 loader 前面、TerserWebpackPlugin 默认开启多进程
+  - 体积优化：Tree-Shaking 基于 ES6 的静态检测删除无用代码、SplitChunksPlugin 拆包 cacheGroups 配置、Externals 基础包用 CDN 引入
+  - Dll 打包：先 DllPlugin 预编译，再用 DllReferencePlugin 加载模块。避免反复编译不常变更的第三方库
+  - 优化搜索时间：loader 的 test 和 include/exclude（比如 babel-loader 排除 node_modules）、 resolve 的 module 模块搜索目录/alias 别名/extensions 后缀
+  - 提高配置：升级 Webpack 和 Node.js 和机器
+- 提高热更新速度
   - 提高热更新速度，上百页 2000ms 内搞定，10 几页面区别不大
   ```js
   //在.env.development环境变量配置
   VUE_CLI_BABEL_TRANSPILE_MODULES: true;
   ```
-  - 原理：利用插件，在开发环境中将异步组件变为同步引入，也就是 import()转化为 require())
+  - 原理：利用插件，在开发环境中将异步组件变为同步引入，也就是 import()转化为 require()
   - 一般页面到达几十上百，热更新慢的情况下需要用到。
   - webpack5 即将发布，大幅提高了打包和编译速度
 - 分析打包时长：
 
   - 速度分析插件[speed-measure-webpack-plugin](https://www.npmjs.com/package/speed-measure-webpack-plugin)
+    ![](./img/webpack-speed.png)
 
   ```
   npm install --save-dev speed-measure-webpack-plugin
@@ -598,6 +605,47 @@ module.exports = {
     // 修改 public/index.html 文件，在其中引入 react.dll.js
     <script src="/dll/react.dll.9dcd9d.js"></script>
     // 使用 npm run build 构建，可以看到 bundle.js 的体积大大减少，提高打包速度。
+    ```
+
+  - 优化搜索时间
+
+    ```js
+    // 编译代码的基础配置
+    module.exports = {
+      // ...
+      module: {
+        // 项目中使用的 jquery 并没有采用模块化标准，webpack 忽略它
+        noParse: /jquery/,
+        rules: [
+          {
+            // 这里编译 js、jsx
+            // 注意：如果项目源码中没有 jsx 文件就不要写 /\.jsx?$/，提升正则表达式性能
+            test: /\.(js|jsx)$/,
+            // babel-loader 支持缓存转换出的结果，通过 cacheDirectory 选项开启
+            use: ["babel-loader?cacheDirectory"],
+            // 排除 node_modules 目录下的文件
+            // node_modules 目录下的文件都是采用的 ES5 语法，没必要再通过 Babel 去转换
+            exclude: /node_modules/,
+          },
+        ],
+      },
+      resolve: {
+        // 设置模块导入规则，import/require时会直接在这些目录找文件
+        // 可以指明存放第三方模块的绝对路径，以减少寻找
+        modules: [
+          path.resolve(`${project}/client/components`),
+          path.resolve("h5_commonr/components"),
+          "node_modules",
+        ],
+        // import导入时省略后缀
+        // 注意：尽可能的减少后缀尝试的可能性
+        extensions: [".js", ".jsx", ".react.js", ".css", ".json"],
+        // import导入时别名，减少耗时的递归解析操作
+        alias: {
+          "@compontents": path.resolve(`${project}/compontents`),
+        },
+      },
+    };
     ```
 
 - Vue 关闭在 vue.config.js： `module.exports= { productionSourceMap:false （表示生产环境进行代码压缩） }`

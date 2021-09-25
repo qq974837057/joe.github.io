@@ -1183,7 +1183,7 @@ http://www.domain2.com/b.js        不同域名                         不允�
   - 不同子域名：通过将 cookie 设置在父级域名上，可以使子域名实现共享 cookie
   - 完全不同域名：无法直接共享。
     - 可将 token 存储在 localStorage 中，然后用 postMessage 来实现跨域共享。
-    - 或可使用 cors 设置对应域名+xhr 配置 withCredentials，实现跨域获取 cookie，识别用户的登录态。
+    - 或可使用 cors 设置对应域名+xhr 配置 withCredentials，实现跨域获取 cookie 和设置 cookie，注意，只会发送同域的 cookie。
 
 - CAS 中央认证服务: 通过跳转中间域名的方式来实现登录，多个系统都跳转到这个中间域来认证，同个 SSO 的 cookie 可以携带，然后多系统都找 SSO 验证该用户是否通过。
 
