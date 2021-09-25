@@ -1,3 +1,75 @@
+## node.js
+
+### 文件路径和 path API
+
+- 文件路径
+  - `__dirname` : 总是返回被执行的 js 所在文件夹的绝对路径
+  - `__filename`: 总是返回被执行的 js 的绝对路径
+  - `process.cwd()`: 总是返回运行 node 命令时所在的文件夹的绝对路径
+- path API
+  - `path.dirname()`： 返回 path 的目录名
+  - `path.join()`：所有给定的 path 片段连接到一起，会去除干扰的.
+  - `path.resolve()`：方法会将路径或路径片段的序列解析为相对于当前目录的绝对路径，相当于 cd 命令
+
+### 文件读取
+
+- fs 模块
+  - `const fs = require('fs')` 载入 fs 模块
+  - fs 模块中所有方法都有同步和异步两种形式
+  - readFileSync
+  - writeFileSync
+  - copyFileSync
+- fs-extra 模块
+  - 继承了 fs 模块的 API
+  - 支持 promise
+
+### url 模块
+
+- `url.parse`：将一个 url 的字符串解析为一个 url 的对象
+- `url.format`:将传入的 url 对象格式化为一个 url 字符串
+
+### http 模块
+
+- http 模块的使用`const http = require('http');const server = http.createServer(function(req,res){...}); server.listen(3000)`
+- express = http 模块 + 中间件 + 路由
+
+### 中间件和洋葱圈模型（Express 和 Koa）
+
+![](./img/middleware-eggjs.png)
+
+- 洋葱内的每一层都表示一个独立的中间件，用于实现不同的功能，比如异常处理、缓存处理等。
+- 每次请求都会从左侧开始一层层地经过每层的中间件，当进入到最里层的中间件之后，就会从最里层的中间件开始逐层返回。
+- 因此对于每层的中间件来说，在一个 请求和响应 周期中，都有两个时机点来添加不同的处理逻辑。
+- 洋葱圈模型的应用：koa2、umi-request
+- 中间件一般是通用的功能代码，与业务代码无关，比如设置响应时间、设置统一的响应内容
+- express 是 next 机制
+- 示例代码：获取执行耗费的时间，前置处理器和后置处理器分别放到 await next() 语句的前后来完成。
+
+  ```js
+  const Koa = require("koa");
+  const app = new Koa();
+
+  app.use(async (ctx, next) => {
+    const start = Date.now();
+    await next();
+    const ms = Date.now() - start;
+    console.log(`${ctx.method} ${ctx.url} - ${ms}ms`);
+  });
+  ```
+
+```
+
+### 内存泄漏
+
+- 同 V8 的内存泄漏处理
+- 检测工具
+  - node-heapdump 获取内存快照对比
+  - Easy-Monitor 可视化内存泄漏检查工具
+
+### 跨域设置
+
+- 设置 CORS 的 header 即可`res.header("Access-Control-Allow-xx","xx");`
+
 ## 前沿
 
 - [2020 大前端发展](https://mp.weixin.qq.com/s/b7PlbHZS6EY5kGpALpzMLA)
@@ -110,3 +182,4 @@
   - Node.js 14.5.0 2020-06-30
   - Node.js 11.0.0 2018-10-23
   - node10 和 node11 事件循环有差异。
+```

@@ -58,7 +58,7 @@ module.exports = {
             ["performance.md", "性能优化"],
             ["design-pattern.md", "设计模式和架构"],
             ["refactor.md", "代码重构之道"],
-            ["nodejs.md", "前沿与其他"],
+            ["nodejs.md", "node与前沿"],
           ],
         },
         {
