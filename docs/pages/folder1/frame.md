@@ -925,6 +925,48 @@ Vue.use(Vuex);
 
   - weex 中因为每个页面是独立入口，只能每个页面去引入注册 store 使用。
 
+- Vuex：热更新
+
+  - 让开发过程中，新增了一些 mutation 方法时，页面不会刷新，导致状态丢失
+  - 对于 mutation 和模块，你需要使用 store.hotUpdate() 方法：
+
+    ```js
+    // store.js
+    import Vue from 'vue'
+    import Vuex from 'vuex'
+    import mutations from './mutations'
+    import moduleA from './modules/a'
+
+    Vue.use(Vuex)
+
+    const state = { ... }
+
+    const store = new Vuex.Store({
+      state,
+      mutations,
+      modules: {
+        a: moduleA
+      }
+    })
+
+    if (module.hot) {
+      // 使 action 和 mutation 成为可热重载模块
+      module.hot.accept(['./mutations', './modules/a'], () => {
+        // 获取更新后的模块
+        // 因为 babel 6 的模块编译格式问题，这里需要加上 `.default`
+        const newMutations = require('./mutations').default
+        const newModuleA = require('./modules/a').default
+        // 加载新模块
+        store.hotUpdate({
+          mutations: newMutations,
+          modules: {
+            a: newModuleA
+          }
+        })
+      })
+    }
+    ```
+
 - 原理：核心就是与 Vue 本身结合，利用响应式机制，实现 store 的状态响应式。
 
   - 混入每个 vm 实例：`Vue.use(Vuex)`安装插件，内部调用 Vuex 插件提供的 install 方法。`Vue.mixin({ beforeCreate: vuexInit });` 先将 vuexInit 混入每个实例的 beforeCreate 钩子，vuexInit 方法内部判断如果是根节点，则`options.store`赋值给 `this.$store`，否则从父节点的 `$store` 中获取。
@@ -1525,6 +1567,22 @@ setup 是 Composition API 的入口函数，是在 beforeCreate 声明周期函�
     </div>
   </second-hand-house>
   ```
+
+## Vue 动态路由方案
+
+- 整体思路
+  - 登录：当用户填写完账号和密码后向服务端验证是否正确，验证通过之后，服务端会返回一个 token，拿到 token 之后（我会将这个 token 存贮到 cookie 中，保证刷新页面后能记住用户登录状态），前端会根据 token 再去拉取一个 user_info 的接口来获取用户的详细信息（如用户权限，用户名等等信息）
+  - 权限验证：通过 token 获取用户对应的 role，动态根据用户的 role 算出其对应有权限的路由，通过 router.addRoutes 动态挂载这些路由。
+    - 设置一个 tree 空间给每个页面动态配置权限，将这份路由表保存到后端
+    - 当用户登录后得到 roles，前端根据 roles 去向后端请求可访问的路由表，
+    - 之后就是 router.addRoutes 动态挂载到 router 上
+- 具体实现
+  - router 里实例化不需要权限的公用页面
+  - 设置一个 tree 空间给每个页面动态配置权限，通过 meta 标签来标示改页面能访问的权限，`meta: { role: ['admin','super_editor'] }`，将这份路由表保存到后端
+  - 在路由钩子 router.beforeEach 里判断是否有 token，没有则去登录页
+  - 有 token 则获取用户信息比如 roles，拿到权限路由表
+  - 通过用户的权限和我们配置的每一个页面所需要的权限做匹配，最后返回一个该用户能够访问路由有哪些，
+  - 通过 addRoutes 将可访问路由，动态添加到路由表里，没权限的默认去 404 页
 
 ## weex 架构 ✨
 

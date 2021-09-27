@@ -406,11 +406,12 @@ module.exports = {
   - 速度：插件 speed-measure-webpack-plugin 查看 loader 和 plugin 的耗时
 - 优化总结
   - 利用缓存：cache-loader 放在其他 loader 前面、loader/plugin 开启 自身的 cache 配置（如 babel-loader/terser-webpack-plugin 默认开启 ）、hard-source-webpack-plugin 提供二次缓存加速效果
-  - 利用多进程：thread-loader 放在耗时的 loader 前面、TerserWebpackPlugin 默认开启多进程
+  - 利用多进程：thread-loader 放在耗时的 loader 前面、TerserWebpackPlugin 默认开启多进程（也不要开太多 worker，有一定启动开销和通信开销）
   - 体积优化：Tree-Shaking 基于 ES6 的静态检测删除无用代码、SplitChunksPlugin 拆包 cacheGroups 配置、Externals 基础包用 CDN 引入
   - Dll 打包：先 DllPlugin 预编译，再用 DllReferencePlugin 加载模块。避免反复编译不常变更的第三方库
   - 优化搜索时间：loader 的 test 和 include/exclude（比如 babel-loader 排除 node_modules）、 resolve 的 module 模块搜索目录/alias 别名/extensions 后缀
   - 提高配置：升级 Webpack 和 Node.js 和机器
+  - vue：关闭生成 sourcemap
 - 提高热更新速度
   - 提高热更新速度，上百页 2000ms 内搞定，10 几页面区别不大
   ```js
@@ -744,12 +745,12 @@ module.exports = {
 - 文件指纹是打包后输出的文件名的后缀。
 
   - Hash：和整个项目的构建相关，只要项目文件有修改，整个项目构建的 hash 值就会更改
-  - Chunkhash：和 Webpack 打包的 chunk 有关，不同的 entry 会生出不同的 chunkhash
+  - Chunkhash：和 Webpack 打包的 chunk 有关，不同的 entry 会生出不同的 chunkhash，有文件改动就会影响到对应的 chunk
   - Contenthash：根据文件内容来定义 hash，文件内容不变，则 contenthash 不变
 
-- 指纹设置
+- vue-cli 的指纹默认设置
   - JS：设置 output 的 filename，用 chunkhash。
-  - CSS：设置 MiniCssExtractPlugin 的 filename，使用 contenthash。
+  - CSS：设置 MiniCssExtractPlugin 的 filename，使用 contenthash，避免和 js 使用共同的 chunkhash，导致改动其中一个，影响到两个。
   - 图片：设置 file-loader 的 name，使用 hash。
 
 ```js
