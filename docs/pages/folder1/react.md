@@ -1064,6 +1064,10 @@ React 异常捕获：使用错误边界组件包裹
 
 ### ✨React 性能优化
 
+- 三种情况导致重绘
+  - state 变更
+  - 父组件重渲染
+  - 依赖的 context 变更
 - 三大主要手段
 
   - shouldComponentUpdate（针对类组件）
@@ -1092,7 +1096,7 @@ React 异常捕获：使用错误边界组件包裹
 
   - useCallback 包裹回调，react.memo 可以判断出 callback 函数没改变
   - 合并 state，多个 state 合并为一个
-  - 缓存数据不放在 state 中，跟视图相关的菜放在 state 中，避免不必要的渲染。
+  - 缓存数据不放在 state 中，跟视图相关的才放在 state 中，避免不必要的渲染。
   - 循环的 key 写法，不要用 index，要用唯一 id
   - 懒加载：Suspense 和 lazy 可以实现 dynamic import 懒加载效果
 
@@ -1354,7 +1358,7 @@ function DemoFunction(props) {
   - useContext ：共享钩子，在组件之间共享状态，可以解决 react 逐层通过 props 传递数据
 - 额外的 Hook
   - useReducer: action 钩子，提供了状态管理，其基本原理是通过用户在页面上发起的 action，从而通过 reduce 方法来改变 state，从而实现页面和状- 态的通信，使用很像 redux
-  - useCallBack：把内联回调函数及依赖项数组作为参数传入 useCallback，它将返回该回调函数的 memoized 版本，该回调函数仅在某个依赖项改变时- 才会更新
+  - useCallBack：把内联回调函数及依赖项数组作为参数传入 useCallback，它将返回该回调函数的 memoized 版本，该回调函数仅在某个依赖项改变时才会更新
   - useMemo：把"创建"函数和依赖项数组作为参数传入 useMemo，它仅会在某个依赖项改变时重新计算， 可以作为性能优化的手段
   - useRef：获取组件的实例，返回一个可变的 ref 对象，返回的 ref 对象在组件的整个生命周期内保持不变
   - useLayoutEffect： 它会在所有 DOM 变更后同步调用 effect
@@ -1365,6 +1369,7 @@ function DemoFunction(props) {
   - 为函数组件引入状态，state 类似类组件的 state 中的某个属性，对应一个单独状态，可以存储任何类型的值
   - 初始化`const [state, setState] = useState(initialState);`
   - 触发更新和渲染`setState(newState)`
+  - 入参是函数的情况：初始状态需要复杂计算时，初始状态是复杂对象时
 - useEffect()
 
   - 两个参数：回调函数和依赖数组
@@ -1391,6 +1396,44 @@ function DemoFunction(props) {
         // 业务逻辑
       }, [num1, num2, num3]);
       ```
+
+- useContext（适合复杂嵌套透传场景）
+  - 第一步：使用 createContext 声明一个 Context
+  - 第二步：将 Provider 包在顶层
+  - 第三步：通过 useContext 获取透传数据
+- useMemo
+  - 缓存一些耗时计算
+  - 保证引用不变
+- useCallback（用 useMemo 可以代替 useCallback）
+  - 简化版的 useMemo，方便缓存函数的引用
+
+### useState 和 useRef 如何选择维护状态
+
+- 维护 UI 状态，使用 useState
+- 值更新不需要重绘，使用 useRef
+- 不变更的值，用 useState，不返回变更函数
+
+### 使用 React.memo 解决 context 引起的一部分数据的经常变更问题
+
+- 增加多一层组件，将单纯依赖的数据用 useMemo 包裹起来，通过 props 传给真正渲染的组件
+- 真正渲染的组件再用 React.memo 包裹一次
+
+```js
+import { useMemo, useContext } from "react";
+import { SomeContext } from "./SomeContext";
+
+function PickContextData(props) {
+  const ctx = useContext(SomeContext);
+  const someDataFromContext = useMemo(() => {
+    return ctx.data;
+  }, [ctx.data]);
+  return <RenderComponent data={someDataFromContext} {...props} />;
+}
+
+const RenderComponent = React.memo((props) => {
+  // 略
+});
+```
 
 ### Hook 链表原理：为什么不要在循环、条件或嵌套函数中调⽤ Hook
 

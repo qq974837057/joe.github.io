@@ -588,7 +588,13 @@ Object.getPrototypeOf(obj) === proto; // true
   - `concat`(不改变原数组，浅拷贝)
 - 转字符串
   - `join`(不改变原数组，可传入连接符)
-- 迭代方法 - `forEach((value元素,index索引,arr) => {})`：数组每一项做一件事，回调函数返回 undefined 值 - `map`：每项通过某种计算返回值 回调函数每次的返回值 最后组成一个新数组，如果不想返回新数组，最好推荐 forEach 或者 for-of 替代。 - `filter`：符合条件的项生成新数组 - `reduce( fn(pre, next) {} )`：前后值通过计算，累计返回最后的值 - `every`：每项都符合条件返回 true - `some`：某项符合条件就 true
+- 迭代方法  
+  - `forEach((value元素,index索引,arr) => {})`：数组每一项做一件事，回调函数返回 undefined 值 
+  - `map`：每项通过某种计算返回值 回调函数每次的返回值 最后组成一个新数组，如果不想返回新数组，最好推荐 forEach 或者 for-of 替代。 
+  - `filter`：符合条件的项生成新数组 
+  - `reduce( fn(pre, next) {} )`：前后值通过计算，累计返回最后的值 
+  - `every`：每项都符合条件返回 true 
+  - `some`：某项符合条件就 true
   ![JS-array-1](./img/JS-array-1.png)
 
 - 去重
