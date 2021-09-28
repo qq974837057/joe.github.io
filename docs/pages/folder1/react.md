@@ -57,6 +57,10 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
   - **第三是使用双缓存机制，用两个 fiber 树，一个是屏幕上显示内容对应的 Fiber 树，叫 current Fiber 树，另一个因为数据变化重新在内存里构建的新 Fiber 树，叫 workInProgress Fiber 树，通过 alternate 属性(指针) 建立连接。实现节点复用，每个节点的 alternate 属性指向上一棵树对应的节点。React 根节点用 current 指针指向当前的 current Fiber 树，当 workInProgress 树构建完成交给 renderer 渲染到了页面上后，此时将 current 指向新的 workInProgress 树，完成晋升变成 current Fiber 树**。
   - **第四是副作用链的设计，每个 Fiber 都有自己的 effectList，存放待更新的副作用 DOM 操作类型。在 completeUnitOfWork 函数，顺序是从叶子节点自底向上，将当前节点的副作用链插入到父节点的副作用链中。最后在 组件根节点 rootFiber 上，拿到存储当前 Fiber 树的所有副作用集合。方便 commit 阶段对它们进行更新。**
 
+- react-17
+  - 实现多版本共存，可嵌套不同版本的 react，将事件委托挂载到渲染树的根 DOM 容器，之前是在 document 上
+  - 实现新的优先级算法 lanes 车道
+
 #### 核心流程和设计
 
 - 核心
@@ -74,10 +78,13 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
 - 时间分片
   - React 会根据浏览器的帧率，默认是 5ms，计算出时间切⽚的⼤⼩，并计算出每⼀个切⽚的到期时间（当前时间+切片时间长度）。
   - 在 循环创建 Fiber 节点的函数 workLoopConcurrent 中，while 循环每次执⾏前，会询问当前时间切⽚是否到期 shouldYield（当前时间大于切片到期时间），若已到期，则中断，结束循环，交出主线程的控制权，避免长时间占用主线程。（在同步渲染模式下，workLoopSync 没有这个判断，会循环调用，直到节点 workInProgress 为空）
-- 任务优先级调度
+
+> 优先级有两种，一种是任务优先级，一种是 Fiber 优先级
+
+- Scheduler 任务优先级调度
   - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务。本质是模拟 requestIdleCallback 这个 API，让任务在一帧的空余时间内执行。
   - React 根据不同场景赋予任务不同优先级，同一时间可能产生不同的任务，放入 taskQueue 队列中，这个队列采用了小顶堆的数据结构，按照任务的过期时间从小到大排列，可以很快找到最早过期或是最高级的任务。
-  - 过期时间越小，也就是 timeout 越小，代表优先级越高`expirationTime = startTime + timeout`
+  - 过期时间越小，也就是 timeout 越小，代表优先级越高`expirationTime = startTime + timeout` startTime 是当前时间
   - 五种优先级：
   - ImmediatePriority 99 IMMEDIATE_PRIORITY_TIMEOUT=-1 立即执行的优先级，优先级最高
   - UserBlockingPriority 98 USER_BLOCKING_PRIORITY=250：用户阻塞级别
@@ -87,6 +94,14 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
   - 举例：生命周期方法优先级最高，是用户输入也属于同步执行的。一些交互事件是高优先级的，数据请求那些就是低优先级的。
 - 一帧的顺序
   ![](./img/requestIdle.png)
+- Fiber 的 update 优先级（在一棵 Fiber 树里，哪些 Fiber 以及 哪些 Update 对象，是高优先级的）
+  - React16 的 expirationTimes 模型以某个优先级作为标准，只能区分是否>=expirationTimes 决定节点是否更新，导致难以从一批任务抽出单个任务。
+  - React17 的 lanes 模型可以指定一个连续的优先级区间**lanes**，并且动态的向区间中增减优先级，可以处理更细粒度的更新。比如触发一个更新的优先级，拿它去和 lanes 对比，赛道被占用就下降一个优先级。
+    - 以前使用 expirationTime 表示的字段，都改为了 lane。Lane 和 Lanes 就是单数和复数的关系, 代表单个任务的定义为 Lane ，代表多个任务的定义为 Lanes，表示批的概念 ，代表优先级范围。
+    - Lane 的类型，被定义为二进制变量，使用一个 31 位的二进制代表 31 种可能性，这样，我们在做优先级计算的时候，用的都是位运算，计算速度也更快，比如按位与对比 a 和 b 是否有交集(0)，按位或将 a 和 b 进行合并。
+    - React 一共定义了 18 种 Lane/Lanes 变量 ，每一个变量占有 1 个或多个比特位，每一种 Lane/Lanes 都有对应的优先级，越低优先级的 lanes 占用的位越多。
+    - 点击事件回调中触发 this.setState 产生的 update 会获得 `InputDiscreteLanePriority` = 14。同步的 update 会获得 `SyncLanePriority` = 17（更高）。
+    - NoLane、SyncLane、
 
 ### React 3 种启动方式
 
