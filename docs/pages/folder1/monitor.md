@@ -248,6 +248,7 @@ window.addEventListener("unhandledrejection", function (e) {
 
 常见错误(埋点)上报方式有：
 
+- `navigator.sendBeacon(url, data);`通过 HTTP 将少量数据**异步传输**到 Web 服务器
 - 动态创建 img 标签的形式（简单常用 1x1 的透明 GIF）
   - 使用
     ```js

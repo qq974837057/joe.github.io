@@ -9,11 +9,12 @@
   - Tree-Shaking（module：false、sideEffect：false）
   - gzip 压缩（nginx 设置压缩比，也可前端使用插件 compression-webpack-plugin）
 - 懒加载
-  - 图片懒加载
+  - 图片懒加载(getBoundingClientRect 检测位置)
   - 路由懒加载
 - 图片优化
   - 小 icon 使用 url-loader 转为 base64
   - 适当选择 jpg、png、svg
+  - 响应式图片倍数
 
 ### 运行时
 
@@ -1041,3 +1042,17 @@ self.importScripts()：加载 JS 脚本。
     plugins: [new ExtractTextPlugin("style.css")],
   };
   ```
+
+## H5 的优化
+
+[腾讯企鹅辅导 H5 优化](https://juejin.cn/post/6994383328182796295#heading-21)
+
+- 模拟设备
+
+  - Web 端通过 performance 模拟移动端，设置慢倍速， CPU 为 4x slowdown 或 6x slowdown
+  - 模拟弱网情况 slow 3g
+  - 使用代理 whistle，在手机端跑本地代码，看看优化效果
+
+- 分析
+  - 查看 FCP 指标和 long task
+  - lighthouse 分析，可以看 TTI 可交互事件，LCP 最大文本块内容展示在页面中的时间
