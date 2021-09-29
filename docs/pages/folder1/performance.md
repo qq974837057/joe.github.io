@@ -1049,6 +1049,7 @@ self.importScripts()：加载 JS 脚本。
 
 - 模拟设备
 
+  - 安装 vConsole
   - Web 端通过 performance 模拟移动端，设置慢倍速， CPU 为 4x slowdown 或 6x slowdown
   - 模拟弱网情况 slow 3g
   - 使用代理 whistle，在手机端跑本地代码，看看优化效果
