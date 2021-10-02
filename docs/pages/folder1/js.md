@@ -588,14 +588,15 @@ Object.getPrototypeOf(obj) === proto; // true
   - `concat`(不改变原数组，浅拷贝)
 - 转字符串
   - `join`(不改变原数组，可传入连接符)
-- 迭代方法  
-  - `forEach((value元素,index索引,arr) => {})`：数组每一项做一件事，回调函数返回 undefined 值 
-  - `map`：每项通过某种计算返回值 回调函数每次的返回值 最后组成一个新数组，如果不想返回新数组，最好推荐 forEach 或者 for-of 替代。 
-  - `filter`：符合条件的项生成新数组 
-  - `reduce( fn(pre, next) {} )`：前后值通过计算，累计返回最后的值 
-  - `every`：每项都符合条件返回 true 
+- 迭代方法
+
+  - `forEach((value元素,index索引,arr) => {})`：数组每一项做一件事，回调函数返回 undefined 值
+  - `map`：每项通过某种计算返回值 回调函数每次的返回值 最后组成一个新数组，如果不想返回新数组，最好推荐 forEach 或者 for-of 替代。
+  - `filter`：符合条件的项生成新数组
+  - `reduce( fn(pre, next) {} )`：前后值通过计算，累计返回最后的值
+  - `every`：每项都符合条件返回 true
   - `some`：某项符合条件就 true
-  ![JS-array-1](./img/JS-array-1.png)
+    ![JS-array-1](./img/JS-array-1.png)
 
 - 去重
   - `[...new Set(arr)]`
@@ -1384,13 +1385,16 @@ function foo() {
 
   - 浏览器的微任务 API：**MutationObserver**
   - 浏览器的宏任务 API：**rAF(requestAnimationFrame)**、setTimeout、setInterval
-  - setImmediate 相当于 setTimeout(fn, 0);
-  - 总的来说：宿主环境提供的方法是宏任务，比如 setTimeout、setInterval、requestAnimationFrame、ajax 中的回调函数。JS 引擎自身提供的是微任务，例如 Promise。
+  - 如果同时出现这几个宏任务，按此顺序打印，requestAnimationFrame > setTimeout > requestIdleCallback
+  - async/await 基于 promise，await 前面直接执行 ，await 后面只有调用 resolve 后，或者是同步代码，会被包裹为 resolve 的 promise，才会将 promise.then 加入微任务队列， await 后面相当于 then 的回调。
+  - promise：new Promise 除了 resolve 其他都立即执行，then 的回调函数遇到 resolve 后分发到微任务 Event Queue。
+  - 遇到 resolve 关键字 后，不管嵌套多少 then，将最近的 then 加入微任务，然后继续执行其他同步代码。因为 then 链是等上一个执行完才能将下一个 then 链加入微任务的。
+
+- 总的来说：宿主环境提供的方法是宏任务，比如 setTimeout、setInterval、requestAnimationFrame、ajax 中的回调函数。JS 引擎自身提供的是微任务，例如 Promise。
+
   - setTimeout：经过指定时间，将回调函数置入 Event Queue，等待主线程空闲时来执行。`setTimeout(fn, 0)`表示立即加入宏任务队列，当主线程同步任务执行完后，执行完微任务队列，立即执行。即使主线程啥也没有，规范也是最低 4 毫秒。（多个宏任务 setTimeout 记得看时间长短排序）
   - setInterval：每隔指定的时间将注册的函数置入 Event Queue。比如使用定时器每隔 300ms 循环执行一个 promise 请求，如果 promise 有响应，就关闭定时器，如果 promise 响应时间太长，定时器不断将请求加入任务队列，等到 promise.then 返回数据，就会清除计时器，不再往队列里添加，但此时任务队列的多个请求会依次执行完。
-  - promise：new Promise 立即执行，then 的回调函数遇到 resolve 后分发到微任务 Event Queue。
-  - 遇到 resolve 关键字 后，不管嵌套多少 then，将最近的 then 加入微任务，然后继续执行其他同步代码。因为 then 链是等上一个执行完才能将下一个 then 链加入微任务的。
-  - async/await 基于 promise，await 前面直接执行 ，await 后面只有调用 resolve 后，才会将 promise.then 加入微任务队列，然后等promise.then调用完成，再调用await后面的其他内容。
+  - setImmediate 相当于 setTimeout(fn, 0);
 
 - 为什么需要微任务
 
@@ -1410,7 +1414,36 @@ new Promise((resolve, reject) => {
 console.log(6);
 ```
 
-- 示例代码 2：打印顺序 2 4 7 5 3 6 async2 的结果 1
+- 示例代码 2 ：打印顺序 1 2 4 3
+
+```js
+new Promise((resolve) => {
+  console.log(1);
+  resolve();
+  console.log(2);
+}).then(() => {
+  console.log(3);
+});
+console.log(4);
+```
+
+- 示例代码 3 ：打印顺序 2 4 3 1
+
+```js
+setTimeout(() => console.log(1));
+
+async function test() {
+  console.log(2);
+  await Promise.resolve();
+  console.log(3);
+}
+
+test();
+
+console.log(4);
+```
+
+- 示例代码 3：打印顺序 2 4 7 5 3 6 async2 的结果 1
 
   ```js
   setTimeout(function () {
@@ -1442,6 +1475,37 @@ console.log(6);
     console.log("8");
   });
   ```
+
+- 示例 4：打印顺序 4 6 7 8 10 5 9 2 1 3
+
+```js
+setTimeout(function () {
+  console.log(1);
+});
+window.requestAnimationFrame(function () {
+  console.log(2);
+});
+window.requestIdleCallback(function () {
+  console.log(3);
+});
+async function a1() {
+  console.log(4);
+  await a2();
+  console.log(5);
+}
+async function a2() {
+  console.log(6);
+}
+a1();
+new Promise((resolve) => {
+  console.log(7);
+  resolve();
+  console.log(8);
+}).then(() => {
+  console.log(9);
+});
+console.log(10);
+```
 
 - setTimeout 和 requestAnimationFrame(rAF)的区别
   - setTimeout 根据我们设定延时决定函数执行时机，由于事件队列的原因，实际执行时间不一致，或者与屏幕刷新间隔不同，容易出现丢帧。
