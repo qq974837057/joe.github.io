@@ -842,7 +842,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 ### ✨ 常用 Hooks 有哪些
 
 - 基础 Hook
-  - useState : 状态钩子，为函数组件提供内部状态
+  - useState : 状态钩子，为函数组件提供内部状态。
   - useEffect ：副作用钩子，提供了类似于 componentDidMount 等生命周期钩子的功能
   - useContext ：共享钩子，在组件之间共享状态，可以解决 react 逐层通过 props 传递数据
 - 额外的 Hook
@@ -930,13 +930,34 @@ const RenderComponent = React.memo((props) => {
 - 为什么 useState 要使用数组而不是对象
   - 解构赋值可以按顺序自定义命名
   - 如果返回对象，用来解构，需要保持同名，或者修改为别名，比较麻烦
-- useState 的原理，做了啥
-  - 将 hook 对象追加进链表尾部，hook 是一个对象，以单向链表相互串联。里面根据初始 state 创建一个记忆 state，还有一个 dispatch 函数，并返回。总结：mountState（⾸次渲染）构建链表并渲染；updateState 依次遍历链表并渲染。
 - 一个父组件更新了，那么这个子组件如果没有更新，会不会触发 rerender?子组件会不会重复触发 useState 的初始化？
   - 子组件会重新渲染，不会触发子组件的 useState 初始化。因为源码里判断一个 fiber 处于 mount 还是 update 阶段，是根据 fiberNode 的 alternate 是否存在来判断的。
 - 如果我 useState 的回调函数里还是 设置了相同的变量，会不会触发更新？
   - 不会，因为 hooks 算出来的 updatePayload 是相同的。
   - PS: useState 不会，但是 setState 会
+
+### hooks 源码解析
+
+- 挂载时和更新时的 hook 函数是区分开的。每个 hook 第一步都是获取当前 hook 对象 workInProgressHook ，里面存放一些记忆值 memoizedState，queue 更新值队列，对象，函数，next 指针等。hook 是单向链表串联的。
+- useState 其实是预置了 reducer 的 useReducer，内部也是调用 updateReducer，这个 reducer 只是判断函数就执行函数，否则返回值。
+  - mountState：（⾸次）构建链表，根据传入的初始值 initialState，创建一个记忆 memoizedState
+  - updateState：（更新）遍历链表，基于上一个 state，根据 queue 队列中的环形链表去更新每一步的 state 值（存在多个 updateState 调用的情况），并返回 hook.memoizedState 和一个 dispatch 函数。
+- useEffect
+  - mountEffect 保存传入的副作用函数 create 和依赖项
+  - `hook.memoizedState = {create, nextDeps}`
+  - updateEffect 根据情况是否执行 create 函数
+- useRef
+  - mountRef 创建一个对象，里面有 current 属性，存放 initialValue
+  - `hook.memoizedState = ref`（ref 其实就是`{current:initialValue}`）
+  - updateRef 直接返回对象 hook.memoizedState
+- useMemo（可以用来实现 useCallback）
+  - mountMemo 会执行一遍你传入的函数，缓存函数计算出来的值
+  - `hook.memoizedState = [nextValue, nextDeps]`
+  - updateMemo 用 Object.is 浅比较前后依赖项 deps 的值，一致则返回之前的 value 值。如果不一致，则再次执行传入的函数，获取新的值。
+- useCallback
+  - mountCallback 不会执行你传入的函数，缓存你的函数
+  - `hook.memoizedState = [callback, nextDeps]`
+  - updateCallback 用 Object.is 浅比较前后依赖项 deps 的值，一致则返回之前缓存的 callback 函数。如果不一致，并返回传入的 callback 函数。
 
 ### ✨React Hook 的使用限制有哪些？React Hooks 在平时开发中需要注意的问题和原因
 
@@ -949,8 +970,8 @@ const RenderComponent = React.memo((props) => {
 
 - 不同点
 
-  - useLayoutEffect 会在 DOM 更新完成后同步调用，会在绘制之前完成，阻塞浏览器绘制。主要用于处理 DOM 操作、避免页面闪烁的问题
-  - 而 useEffect 是异步调用的，不阻塞浏览器更新屏幕。
+  - useLayoutEffect 会在 DOM 更新完成后**同步调用**，会在绘制之前完成，阻塞浏览器绘制。主要用于处理 DOM 操作、避免页面闪烁的问题
+  - 而 useEffect 是**异步调用**的，不阻塞浏览器更新屏幕。
   - useLayoutEffect 总是比 useEffect 先执行。
 
 - 相同点
