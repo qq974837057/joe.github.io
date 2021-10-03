@@ -25,6 +25,22 @@
 - 发布阶段：预发布，灰度发布，正式发布，迭代复盘
   ![](./img/development-process-1.png)
 
+## 项目分支管理
+
+- 基于环境分支
+  - 测试、预发布、灰度、master
+  - 环境之间不可合并代码
+- 开发流程
+  - 基于 master 创建功能分支
+  - 完成功能后，将功能分支合并并推送到测试、预发分支、阿里云触发构建
+  - 测试完成，上灰度和正式，通过打 tag 触发构建
+- git 命令
+  - 基于 master 进行拉取最新代码，`git pull`
+  - 切换到新功能分支，`git checkout -b dev/vX.X.X`
+  - 添加到暂存，`git add .`
+  - 提交代码到本地仓库，`git commit -m 'msg'`
+  - 推送到远端，`git push`
+
 ## 提交规范(git cz)
 
 - [掘金参考](https://juejin.im/post/5afc5242f265da0b7f44bee4#heading-4)
