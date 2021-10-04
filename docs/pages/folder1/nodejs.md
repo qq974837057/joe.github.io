@@ -57,8 +57,6 @@
   });
   ```
 
-```
-
 ### 内存泄漏
 
 - 同 V8 的内存泄漏处理
@@ -73,6 +71,38 @@
 ## 前沿
 
 - [2020 大前端发展](https://mp.weixin.qq.com/s/b7PlbHZS6EY5kGpALpzMLA)
+
+### service worker
+
+- 参考[https://mp.weixin.qq.com/s/vI2bxaFsFSB5rGC4Bkr8vQ]
+- 概念
+  - service worker 也是一种 web worker，额外拥有持久离线缓存的能力。
+  - 宿主环境会提供单独的线程来执行其脚本，解决 js 中耗时间的运算过程带来的性能问题。
+  - 可以在缓存面板里查到对应的缓存
+- 特点
+  - sw 监听 fetch 事件 拦截代理请求和返回，用 cacheStorage 缓存文件
+  - 独立于 JS 引擎的线程，在后台运行，不影响页面渲染
+  - 被 install 后永远存在，除非手动卸载 unregister()
+  - 不能访问 window 和 dom
+  - 需要 https 才能使用
+- 过程
+
+  - 注册`navigator.serviceWorker.register('./sw.js');`
+  - 安装 install
+  - 激活 activate
+  - 监听 fetch 事件
+
+- 谷歌出的工具 Workbox
+  - 几种缓存策略
+    - staleWhileRevalidate（安全可靠，一般用于静态资源）：有对应的 Cache 缓存结果就直接返回，在返回 Cache 缓存结果的同时会在后台发起网络请求拿到请求结果并更新 Cache 缓存
+    - networkFirst（一般用于 html）：优先尝试拿到网络请求的返回结果，如果拿到网络请求的结果，就将结果返回给客户端并且写入 Cache 缓存。如果网络请求失败，那最后被缓存的 Cache 缓存结果就会被返回到客户端
+    - cacheFirst（一般用于图片）：直接从 Cache 缓存中取得结果，如果 Cache 缓存中没有结果，那就会发起网络请求，拿到网络请求结果并将结果更新至 Cache 缓存
+    - networkOnly： 强制正常网络请求
+    - cacheOnly： 强制使用 cache 缓存
+  - Workbox 原理
+    - 通过 proxy 对全局对象 workbox 代理，如果找不到对应的模块，通过 importScripts 主动加载
+- 兼容性
+  - 除了 IE，支持度挺高
 
 ### PWA：渐进式网页应用
 
@@ -182,4 +212,7 @@
   - Node.js 14.5.0 2020-06-30
   - Node.js 11.0.0 2018-10-23
   - node10 和 node11 事件循环有差异。
+
+```
+
 ```

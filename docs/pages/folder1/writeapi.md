@@ -1192,14 +1192,14 @@ module.exports = Promise;
 ## AJAX 的 promise 版
 
 ```js
-var newAjax = function (url, data) {
+const newAjax = function (url, data) {
   return new Promise(function (resolve, reject) {
-    var xhr = new XMLHttpRequest();
+    let xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
     xhr.send(data);
     xhr.onreadystatechange = function () {
       if (xhr.readyState === 4 && xhr.status === 200) {
-        var json = JSON.parse(xhr.responseText);
+        const json = JSON.parse(xhr.responseText);
         resolve(json);
       } else if (xhr.readyState === 4 && xhr.status !== 200) {
         reject("Error: " + xhr.status);
