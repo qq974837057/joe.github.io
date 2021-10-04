@@ -151,3 +151,20 @@ module.exports = {
   ![](./img/build-ci-4.png)
 
   ![](./img/build-ci-5.png)
+
+## Jenkins
+
+- 概念
+  - 开源的持续集成、交付、部署的平台，基于 java 语言开发
+  - 支持 CI、CD
+  - 支持丰富插件：如 git，docker 等
+- 使用
+  - 安装 JDK8、Git、Jenkins
+  - 安装 Jenkins 插件：git、gitlab、github、nodejs、Publish Over SSH
+  - 配置 Webhook：管理前端项目的钩子，填写推送地址
+  - 新建任务：Jenkins 新建任务，进行配置（地址和分支、构建触发器、构建环境、执行构建的 shell 也就是 npm install 那些）
+  - 发布远程服务器（使用 publish over ssh 插件），配置 ip 地址，账号密码，目录地址
+- 回滚
+  - 通过打 tag 之后，配置参数化构建
+  - 通过选择 Git 参数，设置为 tag
+  - 立即构建转为 参数构建，可以通过选 tag 执行对应版本的构建，也方便做回滚操作
