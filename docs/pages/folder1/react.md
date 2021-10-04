@@ -938,10 +938,12 @@ const RenderComponent = React.memo((props) => {
 
 ### hooks 源码解析
 
-- 挂载时和更新时的 hook 函数是区分开的。每个 hook 第一步都是获取当前 hook 对象 workInProgressHook ，里面存放一些记忆值 memoizedState，queue 更新值队列，对象，函数，next 指针等。hook 是单向链表串联的。
+- 前置知识
+  - 每个组件是一个 fiber 节点，里面有 memoizedState 存放这个组件里面的所有 hook 对象，是单向链表
+  - 挂载时和更新时的 hook 函数是区分开的。每个 hook 第一步都是获取当前 hook 对象 workInProgressHook ，里面存放一些记忆值 memoizedState，queue 更新值队列，对象，函数，next 指针等。
 - useState 其实是预置了 reducer 的 useReducer，内部也是调用 updateReducer，这个 reducer 只是判断函数就执行函数，否则返回值。
   - mountState：（⾸次）构建链表，根据传入的初始值 initialState，创建一个记忆 memoizedState
-  - updateState：（更新）遍历链表，基于上一个 state，根据 queue 队列中的环形链表去更新每一步的 state 值（存在多个 updateState 调用的情况），并返回 hook.memoizedState 和一个 dispatch 函数。
+  - updateState：（更新）遍历链表，基于上一个 state，根据 queue 队列中的环形链表（方便优先级操作）去更新每一步的 state 值（存在多个 updateState 调用的情况），并返回 hook.memoizedState 和一个 dispatch 函数（用于触发更新）。
 - useEffect
   - mountEffect 保存传入的副作用函数 create 和依赖项
   - `hook.memoizedState = {create, nextDeps}`
