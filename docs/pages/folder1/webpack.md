@@ -790,6 +790,7 @@ module.exports = {
 
 ## vite
 
+- [vite 多久后能干掉 webpack？- 尤雨溪的回答](https://www.zhihu.com/question/477139054/answer/2156019180)
 - Vite 核心
   - 源码部分：是基于浏览器原生的 ES Module，在浏览器请求源码时进行转换
   - 依赖部分：使用 esbuild 对 ts、jsx、js 代码进行转换
