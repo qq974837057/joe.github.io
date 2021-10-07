@@ -1,7 +1,5 @@
 ## 核心要点汇总
 
-## 一、组件基础
-
 ### ✨ 全流程总结
 
 - 整体结构
@@ -105,7 +103,7 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
     - 点击事件回调中触发 this.setState 产生的 update 会获得 `InputDiscreteLanePriority` = 14。同步的 update 会获得 `SyncLanePriority` = 17（更高）。
     - NoLane、SyncLane、
 
-### React 3 种启动方式
+### ✨React 3 种启动方式
 
 > 主要是 fiber 节点的 mode 属性的不同，决定着这个⼯作流【初始化 → render → commit 】是⼀⽓呵成（同步）的，还是分⽚执⾏（异步）的。Fiber 架构在 React 中是⼀种同时兼容了同步渲染与异步渲染的设计。
 
@@ -141,12 +139,6 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
 - 原理
   - 注册：源码上使用原生 JS 的 `addEventListener(eventType,listener)`来进行监听，listener 是注册到 document 的统一事件分发函数，里面调用原生 JS 的 `dispatchEvent`
   - 触发：事件触发，冒泡到 document->执行 dispatchEvent->创建事件对应的合成对象，收集节点的回调和节点实例，作为合成对象的两个属性，`_dispatchListeners` 和`_dispatchInstances`，分别存放捕获-目标-冒泡这个三个阶段所涉及的回调集合和节点实例集合，按顺序执行即可。
-
-### React 事件和 HTML 原生事件的区别
-
-- 【事件名小驼峰】react 事件命令采用**小驼峰式**，原生事件是纯小写
-- 【事件方法函数】使用 JSX 语法时，需要**传入一个函数**作为事件处理函数，原生事件是一个字符串
-- 【阻止默认行为】不能通过 `return false` 来阻止默认行为。必须明确调用 `e.preventDefault()`阻止默认行为
 
 ### ✨HOC 高阶组件是什么，和普通组件有什么区别
 
@@ -185,116 +177,6 @@ const BlogPostWithSubscription = withSubscription(BlogPost,
   (DataSource, props) => DataSource.getBlogPost(props.id));
 
 ```
-
-### React 高阶组件、Render props、hooks 有什么区别，为什么要不断迭代
-
-- Render props
-  - 概念：组件有一个 props，它是一个返回 React 元素的 render 函数
-  - 优点：代码复用，数据共享
-  - 缺点：无法在 return 语句外访问数据、嵌套写法不够优雅
-
-```js
-// DataProvider组件内部的渲染逻辑如下
-class DataProvider extends React.Components {
-  state = {
-    name: "Tom",
-  };
-
-  render() {
-    return (
-      <div>
-        <p>共享数据组件自己内部的渲染逻辑</p>
-        {this.props.render(this.state)}
-      </div>
-    );
-  }
-}
-
-// 调用方式
-<DataProvider render={(data) => <h1>Hello {data.name}</h1>} />;
-```
-
-- 自定义 hook
-  - 概念：使用 React16.8 的 Hook API，写自定义 hook，复用代码逻辑
-  - 优点：使用简介直观；解决了 prop 的重名问题；解决 render props 嵌套的问题；
-  - 缺点：只能在顶层使用，不能在分支语句中使用
-
-```js
-// 自定义一个获取订阅数据的hook
-function useSubscription() {
-  const data = DataSource.getComments();
-  return [data];
-}
-//
-function CommentList(props) {
-  const {data} = props;
-  const [subData] = useSubscription();
-    ...
-}
-// 使用
-<CommentList data='hello' />
-
-```
-
-- 总结
-  - 都是为了解决代码逻辑复用的问题
-  - HOC 和 render props 有一些缺点
-  - Hooks 的代码逻辑复用更简介清晰，也避免了 HOC 和 render props 的问题
-
-### React 中什么是受控组件和非控组件？
-
-- 受控组件（推荐使用）
-  - `<input type="text">, <textarea> 和 <select>` 之类的标签它们都接受一个 value 属性，当表单的状态发生变化，就会触发 onChange 事件，更新组件的 state。`this.setState({value: event.target.value});`
-  - 缺点：如果多个输入框，每个都要写事件处理函数，比较繁琐
-  ```jsx
-  <input
-    type="text"
-    value="{this.state.value}"
-    onChange="{this.handleChange}"
-  />
-  ```
-- 非受控组件
-  - 概念：一个表单组件没有 value props（单选和复选按钮对应的是 checked props）时，就可以称为非受控组件
-  - 在非受控组件中，可以使用一个 ref 来从 DOM 获得表单值。而不是为每个状态更新编写一个事件处理程序
-
-```js
-class NameForm extends React.Component {
-  constructor(props) {
-    super(props);
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.input = React.createRef();
-  }
-
-  handleSubmit(event) {
-    alert("A name was submitted: " + this.input.current.value);
-    event.preventDefault();
-  }
-
-  render() {
-    return (
-      <form onSubmit={this.handleSubmit}>
-        <label>
-          Name:
-          <input type="text" ref={this.input} />
-        </label>
-        <input type="submit" value="Submit" />
-      </form>
-    );
-  }
-}
-```
-
-- 总结
-  - React 推荐使用受控组件，与 state 有关
-  - 想快速编写代码，减少代码量使用非受控组件，与组件 state 无关
-
-### 对 React context 的理解
-
-- 概念
-  - 组件层级太多，不想逐层传递 props 数据，可以用 context 实现跨层级数据传递
-  - 组件上的 context 由父节点的所有 context 对象组合成的，所以可以访问到父组件链上的所有节点 context 属性
-
-## 二、数据管理
 
 ### ✨React setState 源码调用的原理
 
@@ -369,48 +251,6 @@ handleSomething() {
 }
 ```
 
-### 在 React 中组件的 this.state 和 setState 有什么区别？
-
-- this.state 通常是用来初始化 state 的，this.setState 是用来修改 state 值的。
-- 如果初始化了 state 之后再使用 this.state，之前的 state 会被覆盖掉，如果使用 this.setState，只会替换掉相应的 state 值。
-- 所以，如果想要修改 state 的值，就需要使用 setState，而不能直接修改 state，直接修改 state 之后页面是不会更新的。
-
-### React 组件的 state 和 props 有什么区别？
-
-- state
-
-  - 主要用于组件自身的状态，通过 this.setState 修改，修改 state 会导致组件重新渲染
-
-- props
-  - 主要用于父组件向子组件传递数据，是可读，不可变的。只能通过外部传入新的 props，将新的 props 更新到 state，实现子组件渲染。
-
-### React 中的 props 为什么是只读的？
-
-- 原则上只能是从父组件流向子组件，保证相同的输入，显示内容一致
-
-### 在 React 中组件的 props 改变时更新组件的有哪些方法？
-
-- getDerivedStateFromProps
-  - 使用：通过参数提供的 nextProps 以及 prevState 来进行判断，根据新传入的 props 来映射到 state
-  - 如果 props 传入的内容不需要影响到你的 state，那么就需要返回一个 null，表示不对 state 进行操作
-
-```js
-static getDerivedStateFromProps(nextProps, prevState) {
-    const {type} = nextProps;
-    // 当传入的type发生变化的时候，更新state
-    if (type !== prevState.type) {
-        return {
-            type,
-        };
-    }
-    // 否则，对于state不进行任何操作
-    return null;
-}
-
-```
-
-## 三、生命周期
-
 ### ✨React 的生命周期有哪些？
 
 ![](./img/react-16-life.png)
@@ -447,72 +287,10 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
 - pre-commit 阶段：还没最终更新到真实 DOM，但可以读取 DOM。
 - commit 阶段：真正完成真实 DOM 更新，可以使⽤ DOM，运⾏副作⽤。
 
-### ✨React 新增/废弃了哪些生命周期？为什么？
-
-- 新增
-  - getDerivedStateFromProps
-  - getSnapshotBeforeUpdate
-  - getDerivedStateFromError
-- 废弃 will 之类的
-  - componentWillMount
-  - componentWillReceiveProps
-  - componentWillUpdate
-
-废弃这三个函数的原因：fiber 的出现，高优先级任务会打断当前任务，导致被执行多次。而且避免开发者滥用生命周期，导致不好维护。
-
-- componentWillMount：初始化可以在 constructor 里操作，还有有些开发者会把异步请求放这里，其实错误，并不能提高获取结果的速度，放在 componentDidMount 就可以。
-- componentWillReceiveProps：可用 getDerivedStateFromProps 代替，只能根据新 props 对比前 state，来派生新的 state，不能访问 this，写不出副作用的代码
-- componentWillUpdate：可用 getSnapshotBeforeUpdate 替换，获取 render 前的 DOM 元素状态，保证和 componentDidUpdate 的状态保持一致
-
-### React 16.X 中 props 改变后在哪个生命周期中处理
-
-getDerivedStateFromProps
-
-- 根据新的 props 和组件自身的旧 state 来映射新 state
-- 如果 props 不影响 state，则返回 null
-
-```js
-static getDerivedStateFromProps(nextProps, prevState) {
-    const {type} = nextProps;
-    // 当传入的type发生变化的时候，更新state
-    if (type !== prevState.type) {
-        return {
-            type,
-        };
-    }
-    // 否则，对于state不进行任何操作
-    return null;
-}
-
-```
-
-### React 性能优化在哪个生命周期？它优化的原理是什么？
-
-- 两种情况导致不必要的重新渲染影响性能。
-  - setState 函数设置同个变量，是会触发重新渲染的。`this.setState({number: this.state.number})`
-  - 父组件 render 会导致子组件重新渲染，有时候子组件不需要更新
-- 可进行优化的生命周期：shouldComponentUpdate
-
-  - 拿当前 props 中值和下一次 props 中的值进行对比，数据相等时，返回 false，反之返回 true。
-  - 是浅比较
-
-  ```js
-  shouldComponentUpdate(nextProps) {
-      if (this.props.num === nextProps.num) {
-          return false
-      }
-      return true;
-  }
-  ```
-
 ### ✨React 中发起网络请求应该在哪个生命周期中进行？为什么？
 
 - 异步请求，最好放在 componentDidMount 中去操作，componentDidMount 方法中的代码，是在组件已经完全挂载到网页上才会调用被执行，所以可以保证数据的加载。此外，在这方法中调用 setState 方法，会触发重新渲染。
 - react16.0 以后，componentWillMount 可能会因为中断任务被执行多次。
-
-## 四、组件通信
-
-> React 的数据流是单向的
 
 ### ✨ 组件通信的方式有哪些
 
@@ -543,120 +321,6 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 没有任何关系的组件
   - 发布订阅模式 EventEmitter
   - redux 全局状态管理
-
-### 如何解决 props 层级过深的问题
-
-- 使用 Context API：提供一种组件之间的状态共享，而不必通过显式组件树逐层传递 props
-- 使用 Redux 等状态库
-
-## 五、路由
-
-### React-Router 的实现原理是什么？
-
-- 基于 hash
-- 基于 H5 的 history API
-
-### ✨React-Router 的路由有几种模式？
-
-- React-Router 支持使用 HashRouter 和 BrowserRouter 两种路由规则
-- BrowserRouter
-
-  - basename 路由的基准 URL
-
-  ```js
-  // 相当于<a href="/calendar/today" />
-  <BrowserRouter basename="/calendar">
-    <Link to="/today" />
-  </BrowserRouter>
-  // 使用确认函数，内部是window.confirm
-  <BrowserRouter getUserConfirmation={getConfirmation} />
-  ```
-
-- HashRouter
-  - hashType
-    - slash - 后面跟一个斜杠，例如 #/ 和 #/sunshine/lollipops；
-    - noslash - 后面没有斜杠，例如 # 和 #sunshine/lollipops；
-    - hashbang - Google 风格的 ajax crawlable，例如 #!/ 和 #!/sunshine/lollipops。
-
-```js
-<HashRouter basename={string} getUserConfirmation={func} hashType={string} />
-```
-
-### 如何配置 React-Router 实现路由切换
-
-- Route 组件
-
-  - 比较 path 属性和当前地址的 pathname
-  - 匹配到了渲染内容，匹配不到渲染 null
-  - 没配置 path 属性始终被匹配
-
-  ```js
-  // when location = { pathname: '/about' }
-  <Route path='/about' component={About}/> // renders <About/>
-  <Route path='/contact' component={Contact}/> // renders null
-  <Route component={Always}/> // renders <Always/>
-
-  ```
-
-- Route 组件 + Switch 组件
-
-  - Switch 包裹多个 Route 组件，遍历它们，找到匹配的第一个元素。不加 Switch 的话可能会匹配多个，然后同时展示
-  - 搭配 exact 实现精准匹配
-  - Switch 除了 Route 和 Redirect ，不能放其他元素。
-
-  ```js
-  import { Switch, Route } from "react-router-dom";
-
-  <Switch>
-    <Route exact path="/" component={Home}></Route>
-    <Route exact path="/login" component={Login}></Route>
-  </Switch>;
-  ```
-
-- Link、NavLink、Redirect 组件
-
-  - Link 组件会渲染成`<a>`标签，创建一个链接，to 属性表示将跳转的路由地址
-
-  ```js
-  <Link to="/">Home</Link>
-  // <a href='/'>Home</a>
-  ```
-
-### React-Router 如何获取 URL 的参数和历史对象？
-
-- 获取 URL 参数
-  - ？传值：`/admin?id=xxx`
-    - `this.props.location.search` 可以获取字符串`'?id=xxx'`
-  - 动态路由传值：`path='/admin/:id'`
-    - `this.props.match.params.id` 获取 id 的值
-  - query 或 state：在 Link 组件的 to 属性中可以传递`{pathname:'/admin',query:'111',state:'111'}`
-    - `this.props.location.state` 或 `this.props.location.query`
-- 获取历史对象 history
-
-  - useHistory
-  - this.props.history
-
-  ```js
-  import { useHistory } from "react-router-dom";
-  let history = useHistory();
-  // or
-  let history = this.props.history;
-  ```
-
-### React-router 的使用
-
-- 设置重定向，使用 RedirectAPI 放最后，且搭配 Switch 包裹
-  ![](./img/react-router-1.png)
-
-### React-router 的源码
-
-- react-router 库：⽀持使⽤ hash（对应 HashRouter）和 browser（对应 BrowserRouter） 两种路由规则。
-- history 库 ：提供核心的 API，HashRouter 调 ⽤ 了 createHashHistory ， BrowserRouter 调 ⽤ 了 createBrowserHistory，这两个 history 的实例化⽅法均来源于 history 这个独⽴的代码库
-- react-router-dom 库：在 react-router 的核心基础上，添加了用于跳转的 Link 组件，和 histoy 模式下的 BrowserRouter 和 hash 模式下的 HashRouter 组件等
-- 流程图
-  ![](./img/react-router-2.png)
-
-## 六、Redux
 
 ### ✨Redux 原理及工作流程
 
@@ -777,12 +441,6 @@ static getDerivedStateFromProps(nextProps, prevState) {
   );
   ```
 
-### Redux 中异步的请求怎么处理
-
-- 使用 redux 的异步中间件：主流有两种
-  - redux-thunk
-  - redux-saga
-
 ### ✨Redux 的中间件
 
 - Redux 的中间件主要用于改变数据流，做一些"副作用"的操作，如异步请求、打印日志等，主要是 applyMiddleware 这个方法。通过在创建 store 时将 applyMiddleware()的返回值 作为参数传入的。
@@ -802,14 +460,14 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 和 Flux 有何不同
   - Store 数目：Flux 可以多个，Redux 只有一个
 
-### Redux 和 Mobx 有什么区别
+### ✨Redux 和 Mobx 有什么区别
 
 - redux 数据存在单一的 store 中，适用于单个全局状态管理。mobx 数据存在多个分散的 store 中，适用于多个全局状态
 - redux 状态是不能直接修改的，需要通过 dispatch 来派发 action。mobx 是可以直接修改的
 - redux 保存数据后手动处理变化后的操作，mobx 用 observable 保存数据，数据变化自动处理响应操作
   - 结合 react-redux 可实现自动变更，mobx 使用 mobx-react-lite，自定义 hook 获取 store 的实例，用 observer 将组件包裹起来完成监测，数据变动会更新
 
-### 项目使用哪种方案
+### ✨ 项目使用哪种方案
 
 - 简单场景：使用组件通信
 - 中等场景：优先考虑使用 React 提供的 API 进行管理，如 React.createContext 和 useContext
@@ -826,8 +484,6 @@ static getDerivedStateFromProps(nextProps, prevState) {
     - 常用于中台项目的全局共享数据
     - 就是一个普通的自定义 hooks，但 @umijs/plugin-model 把其中的状态变成了『全局状态』，多个组件中使用该 model 时，拿到的同一份状态。
     - `const { user, fetchUser } = useModel('user', model => ({ user: model.user, fetchUser: model.fetchUser }));`
-
-## 七、Hooks
 
 ### ✨ 对 React Hook 的理解，为什么需要它，解决了什么问题
 
@@ -899,13 +555,13 @@ static getDerivedStateFromProps(nextProps, prevState) {
   - useCallback（用 useMemo 可以代替 useCallback）
   - 简化版的 useMemo，方便缓存函数的引用
 
-### useState 和 useRef 如何选择维护状态
+### ✨useState 和 useRef 如何选择维护状态
 
 - 维护 UI 状态，使用 useState
 - 值更新不需要重绘，使用 useRef
 - 不变更的值，用 useState，不返回变更函数
 
-### 使用 React.memo 解决 context 引起的一部分数据的经常变更问题
+### ✨ 使用 React.memo 解决 context 引起的一部分数据的经常变更问题
 
 - 增加多一层组件，将单纯依赖的数据用 useMemo 包裹起来，通过 props 传给真正渲染的组件
 - 真正渲染的组件再用 React.memo 包裹一次
@@ -938,7 +594,7 @@ const RenderComponent = React.memo((props) => {
   - 不会，因为 hooks 算出来的 updatePayload 是相同的。
   - PS: useState 不会，但是 setState 会
 
-### hooks 源码解析
+### ✨hooks 源码解析
 
 - 前置知识
   - 每个组件是一个 fiber 节点，里面有 memoizedState 存放这个组件里面的所有 hook 对象，是单向链表
@@ -993,7 +649,7 @@ const RenderComponent = React.memo((props) => {
 - componentDidUpdate -> `useEffect(callBack, [num1,num2])`
 - componentWillUnmount -> `useEffect` 返回的函数
 
-### 函数组件的闭包问题：Hooks 的 capture values
+### ✨ 函数组件的闭包问题：Hooks 的 capture values
 
 - 本质：**非 useRef 相关的 Hooks API，本质上都形成了闭包，闭包有自己独立的状态**
 - capture values：每次 Render 的内容都会形成一个快照并保留下来，每个 Render 状态都拥有自己固定不变的 Props 与 State。
@@ -1044,6 +700,411 @@ const App = () => {
 - 还可以使用 setState()的函数形式，获取最新的 state
 - 还可以 useEffect 诚实的写上我们所依赖元素，让它重新执行
 
+### ✨Diff 算法原理
+
+- 调和指的是让虚拟 DOM 映射到真实 DOM 上，分别有 React 15 栈调和、React16 的 Fiber 调和
+- Diff 算法属于调和 Reconciler 里的一个环节：更新过程调用 Diff 算法
+- React 的 Diff 的三个策略
+  - 树层面：两个虚拟 DOM 树的分层递归对比：降低 diff 算法时间复杂度，O(n^3)->O(n)
+  - 组件层面：类型一致的节点才 Diff，不同组件类型直接替换，不进行 diff，减少冗余递归操作
+  - 节点层面：节点 key 属性的设置，使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
+
+### ✨React 性能优化
+
+- 三种情况导致重绘
+  - state 变更
+  - 父组件重渲染
+  - 依赖的 context 变更
+- 三大主要手段
+
+  - shouldComponentUpdate（针对类组件）
+  - PureComponent 和 Immutable.js（针对类组件）
+  - React.memo 和 useMemo（针对函数组件）
+
+- shouldComponentUpdate：根据返回值 true 则执行 render，false 则不 render
+
+  ```js
+  shouldComponentUpdate(nextProps, nextState) {
+    /* 当 props 发生改变的时候，重新更新组件 */
+    return nextProps.data1 !== this.props.data1
+  }
+
+  ```
+
+- PureComponent + Immutable.js
+  - PureComponent 内置了一个功能，在 shouldComponentUpdate 中对组件更新前后的 props 和 state 进⾏浅⽐较，并根据浅⽐较的结果，决定是否需要继续更新流程。`export default class ChildA extends React.PureComponent`
+  - “浅⽐较”将针对值类型数据对⽐其值是否相等，⽽针对数组、对象等引⽤类型的数据则对⽐其引⽤是否相等。在 PureComponent 对引用类型可能会判断失误，比如引用没变，但是内部属性值变了，不会导致重渲染。
+  - 使用不可变值的库 Immutable.js，创建一个 Map 对象，调用其 api 如 set 修改内容，会返回一个新的对象，搭配 PureComponent，判断数据变更了，就会执行渲染，避免误判的情况。
+- React.memo 和 useMemo 包裹组件
+  - React.memo 接收两个参数，一个是目标组件，一个是可选的 props 的对比逻辑（类似 shouldComponentUpdate 内的逻辑），如果不传，默认进行 props 的浅比较。
+  - useMemo 控制是否需要重复执行某段逻辑（组件内的某个小函数组件），React.memo 控制是否重渲染某个组件
+  - useMemo `const memoizedValue = useMemo(() => compute(a, b), [a, b]);` 如果依赖没变，那么会复用该记忆值，依赖改变，重新计算。
+- 其他
+
+  - useCallback 包裹回调，react.memo 可以判断出 callback 函数没改变
+  - 合并 state，多个 state 合并为一个
+  - 缓存数据不放在 state 中，跟视图相关的才放在 state 中，避免不必要的渲染。
+  - 循环的 key 写法，不要用 index，要用唯一 id
+  - 懒加载：Suspense 和 lazy 可以实现 dynamic import 懒加载效果
+
+  ```js
+  const LazyComponent = React.lazy(() => import("./LazyComponent"));
+
+  function demo() {
+    return (
+      <div>
+        <Suspense fallback={<div>Loading...</div>}>
+          <LazyComponent />
+        </Suspense>
+      </div>
+    );
+  }
+  ```
+
+### ✨React-Router 的路由有几种模式？
+
+- React-Router 支持使用 HashRouter 和 BrowserRouter 两种路由规则
+- BrowserRouter
+
+  - basename 路由的基准 URL
+
+  ```js
+  // 相当于<a href="/calendar/today" />
+  <BrowserRouter basename="/calendar">
+    <Link to="/today" />
+  </BrowserRouter>
+  // 使用确认函数，内部是window.confirm
+  <BrowserRouter getUserConfirmation={getConfirmation} />
+  ```
+
+- HashRouter
+  - hashType
+    - slash - 后面跟一个斜杠，例如 #/ 和 #/sunshine/lollipops；
+    - noslash - 后面没有斜杠，例如 # 和 #sunshine/lollipops；
+    - hashbang - Google 风格的 ajax crawlable，例如 #!/ 和 #!/sunshine/lollipops。
+
+```js
+<HashRouter basename={string} getUserConfirmation={func} hashType={string} />
+```
+
+### ✨React-router 的源码
+
+- react-router 库：⽀持使⽤ hash（对应 HashRouter）和 browser（对应 BrowserRouter） 两种路由规则。
+- history 库 ：提供核心的 API，HashRouter 调 ⽤ 了 createHashHistory ， BrowserRouter 调 ⽤ 了 createBrowserHistory，这两个 history 的实例化⽅法均来源于 history 这个独⽴的代码库
+- react-router-dom 库：在 react-router 的核心基础上，添加了用于跳转的 Link 组件，和 histoy 模式下的 BrowserRouter 和 hash 模式下的 HashRouter 组件等
+- 流程图
+  ![](./img/react-router-2.png)
+
+## 一、组件基础
+
+### React 事件和 HTML 原生事件的区别
+
+- 【事件名小驼峰】react 事件命令采用**小驼峰式**，原生事件是纯小写
+- 【事件方法函数】使用 JSX 语法时，需要**传入一个函数**作为事件处理函数，原生事件是一个字符串
+- 【阻止默认行为】不能通过 `return false` 来阻止默认行为。必须明确调用 `e.preventDefault()`阻止默认行为
+
+### React 高阶组件、Render props、hooks 有什么区别，为什么要不断迭代
+
+- Render props
+  - 概念：组件有一个 props，它是一个返回 React 元素的 render 函数
+  - 优点：代码复用，数据共享
+  - 缺点：无法在 return 语句外访问数据、嵌套写法不够优雅
+
+```js
+// DataProvider组件内部的渲染逻辑如下
+class DataProvider extends React.Components {
+  state = {
+    name: "Tom",
+  };
+
+  render() {
+    return (
+      <div>
+        <p>共享数据组件自己内部的渲染逻辑</p>
+        {this.props.render(this.state)}
+      </div>
+    );
+  }
+}
+
+// 调用方式
+<DataProvider render={(data) => <h1>Hello {data.name}</h1>} />;
+```
+
+- 自定义 hook
+  - 概念：使用 React16.8 的 Hook API，写自定义 hook，复用代码逻辑
+  - 优点：使用简介直观；解决了 prop 的重名问题；解决 render props 嵌套的问题；
+  - 缺点：只能在顶层使用，不能在分支语句中使用
+
+```js
+// 自定义一个获取订阅数据的hook
+function useSubscription() {
+  const data = DataSource.getComments();
+  return [data];
+}
+//
+function CommentList(props) {
+  const {data} = props;
+  const [subData] = useSubscription();
+    ...
+}
+// 使用
+<CommentList data='hello' />
+
+```
+
+- 总结
+  - 都是为了解决代码逻辑复用的问题
+  - HOC 和 render props 有一些缺点
+  - Hooks 的代码逻辑复用更简介清晰，也避免了 HOC 和 render props 的问题
+
+### React 中什么是受控组件和非控组件？
+
+- 受控组件（推荐使用）
+  - `<input type="text">, <textarea> 和 <select>` 之类的标签它们都接受一个 value 属性，当表单的状态发生变化，就会触发 onChange 事件，更新组件的 state。`this.setState({value: event.target.value});`
+  - 缺点：如果多个输入框，每个都要写事件处理函数，比较繁琐
+  ```jsx
+  <input
+    type="text"
+    value="{this.state.value}"
+    onChange="{this.handleChange}"
+  />
+  ```
+- 非受控组件
+  - 概念：一个表单组件没有 value props（单选和复选按钮对应的是 checked props）时，就可以称为非受控组件
+  - 在非受控组件中，可以使用一个 ref 来从 DOM 获得表单值。而不是为每个状态更新编写一个事件处理程序
+
+```js
+class NameForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.input = React.createRef();
+  }
+
+  handleSubmit(event) {
+    alert("A name was submitted: " + this.input.current.value);
+    event.preventDefault();
+  }
+
+  render() {
+    return (
+      <form onSubmit={this.handleSubmit}>
+        <label>
+          Name:
+          <input type="text" ref={this.input} />
+        </label>
+        <input type="submit" value="Submit" />
+      </form>
+    );
+  }
+}
+```
+
+- 总结
+  - React 推荐使用受控组件，与 state 有关
+  - 想快速编写代码，减少代码量使用非受控组件，与组件 state 无关
+
+### 对 React context 的理解
+
+- 概念
+  - 组件层级太多，不想逐层传递 props 数据，可以用 context 实现跨层级数据传递
+  - 组件上的 context 由父节点的所有 context 对象组合成的，所以可以访问到父组件链上的所有节点 context 属性
+
+## 二、数据管理
+
+### 在 React 中组件的 this.state 和 setState 有什么区别？
+
+- this.state 通常是用来初始化 state 的，this.setState 是用来修改 state 值的。
+- 如果初始化了 state 之后再使用 this.state，之前的 state 会被覆盖掉，如果使用 this.setState，只会替换掉相应的 state 值。
+- 所以，如果想要修改 state 的值，就需要使用 setState，而不能直接修改 state，直接修改 state 之后页面是不会更新的。
+
+### React 组件的 state 和 props 有什么区别？
+
+- state
+
+  - 主要用于组件自身的状态，通过 this.setState 修改，修改 state 会导致组件重新渲染
+
+- props
+  - 主要用于父组件向子组件传递数据，是可读，不可变的。只能通过外部传入新的 props，将新的 props 更新到 state，实现子组件渲染。
+
+### React 中的 props 为什么是只读的？
+
+- 原则上只能是从父组件流向子组件，保证相同的输入，显示内容一致
+
+### 在 React 中组件的 props 改变时更新组件的有哪些方法？
+
+- getDerivedStateFromProps
+  - 使用：通过参数提供的 nextProps 以及 prevState 来进行判断，根据新传入的 props 来映射到 state
+  - 如果 props 传入的内容不需要影响到你的 state，那么就需要返回一个 null，表示不对 state 进行操作
+
+```js
+static getDerivedStateFromProps(nextProps, prevState) {
+    const {type} = nextProps;
+    // 当传入的type发生变化的时候，更新state
+    if (type !== prevState.type) {
+        return {
+            type,
+        };
+    }
+    // 否则，对于state不进行任何操作
+    return null;
+}
+
+```
+
+## 三、生命周期
+
+### React 新增/废弃了哪些生命周期？为什么？
+
+- 新增
+  - getDerivedStateFromProps
+  - getSnapshotBeforeUpdate
+  - getDerivedStateFromError
+- 废弃 will 之类的
+  - componentWillMount
+  - componentWillReceiveProps
+  - componentWillUpdate
+
+废弃这三个函数的原因：fiber 的出现，高优先级任务会打断当前任务，导致被执行多次。而且避免开发者滥用生命周期，导致不好维护。
+
+- componentWillMount：初始化可以在 constructor 里操作，还有有些开发者会把异步请求放这里，其实错误，并不能提高获取结果的速度，放在 componentDidMount 就可以。
+- componentWillReceiveProps：可用 getDerivedStateFromProps 代替，只能根据新 props 对比前 state，来派生新的 state，不能访问 this，写不出副作用的代码
+- componentWillUpdate：可用 getSnapshotBeforeUpdate 替换，获取 render 前的 DOM 元素状态，保证和 componentDidUpdate 的状态保持一致
+
+### React 16.X 中 props 改变后在哪个生命周期中处理
+
+getDerivedStateFromProps
+
+- 根据新的 props 和组件自身的旧 state 来映射新 state
+- 如果 props 不影响 state，则返回 null
+
+```js
+static getDerivedStateFromProps(nextProps, prevState) {
+    const {type} = nextProps;
+    // 当传入的type发生变化的时候，更新state
+    if (type !== prevState.type) {
+        return {
+            type,
+        };
+    }
+    // 否则，对于state不进行任何操作
+    return null;
+}
+
+```
+
+### React 性能优化在哪个生命周期？它优化的原理是什么？
+
+- 两种情况导致不必要的重新渲染影响性能。
+  - setState 函数设置同个变量，是会触发重新渲染的。`this.setState({number: this.state.number})`
+  - 父组件 render 会导致子组件重新渲染，有时候子组件不需要更新
+- 可进行优化的生命周期：shouldComponentUpdate
+
+  - 拿当前 props 中值和下一次 props 中的值进行对比，数据相等时，返回 false，反之返回 true。
+  - 是浅比较
+
+  ```js
+  shouldComponentUpdate(nextProps) {
+      if (this.props.num === nextProps.num) {
+          return false
+      }
+      return true;
+  }
+  ```
+
+## 四、组件通信
+
+> React 的数据流是单向的
+
+### 如何解决 props 层级过深的问题
+
+- 使用 Context API：提供一种组件之间的状态共享，而不必通过显式组件树逐层传递 props
+- 使用 Redux 等状态库
+
+## 五、路由
+
+### React-Router 的实现原理是什么？
+
+- 基于 hash
+- 基于 H5 的 history API
+
+### 如何配置 React-Router 实现路由切换
+
+- Route 组件
+
+  - 比较 path 属性和当前地址的 pathname
+  - 匹配到了渲染内容，匹配不到渲染 null
+  - 没配置 path 属性始终被匹配
+
+  ```js
+  // when location = { pathname: '/about' }
+  <Route path='/about' component={About}/> // renders <About/>
+  <Route path='/contact' component={Contact}/> // renders null
+  <Route component={Always}/> // renders <Always/>
+
+  ```
+
+- Route 组件 + Switch 组件
+
+  - Switch 包裹多个 Route 组件，遍历它们，找到匹配的第一个元素。不加 Switch 的话可能会匹配多个，然后同时展示
+  - 搭配 exact 实现精准匹配
+  - Switch 除了 Route 和 Redirect ，不能放其他元素。
+
+  ```js
+  import { Switch, Route } from "react-router-dom";
+
+  <Switch>
+    <Route exact path="/" component={Home}></Route>
+    <Route exact path="/login" component={Login}></Route>
+  </Switch>;
+  ```
+
+- Link、NavLink、Redirect 组件
+
+  - Link 组件会渲染成`<a>`标签，创建一个链接，to 属性表示将跳转的路由地址
+
+  ```js
+  <Link to="/">Home</Link>
+  // <a href='/'>Home</a>
+  ```
+
+### React-Router 如何获取 URL 的参数和历史对象？
+
+- 获取 URL 参数
+  - ？传值：`/admin?id=xxx`
+    - `this.props.location.search` 可以获取字符串`'?id=xxx'`
+  - 动态路由传值：`path='/admin/:id'`
+    - `this.props.match.params.id` 获取 id 的值
+  - query 或 state：在 Link 组件的 to 属性中可以传递`{pathname:'/admin',query:'111',state:'111'}`
+    - `this.props.location.state` 或 `this.props.location.query`
+- 获取历史对象 history
+
+  - useHistory
+  - this.props.history
+
+  ```js
+  import { useHistory } from "react-router-dom";
+  let history = useHistory();
+  // or
+  let history = this.props.history;
+  ```
+
+### React-router 的使用
+
+- 设置重定向，使用 RedirectAPI 放最后，且搭配 Switch 包裹
+  ![](./img/react-router-1.png)
+
+## 六、Redux
+
+### Redux 中异步的请求怎么处理
+
+- 使用 redux 的异步中间件：主流有两种
+  - redux-thunk
+  - redux-saga
+
+## 七、Hooks
+
 ### 创建自定义 Hooks
 
 - 定义一个 hook 函数，并返回一个数组（内部可以调用 react 其他 hooks）
@@ -1062,15 +1123,6 @@ const App = () => {
 - 【Why】虚拟 DOM 的价值
   - 更好的研发体验和效率：数据驱动视图，函数式 UI 编程，同时性能还不错
   - 跨平台：多出中间一层描述性的虚拟 DOM，可以对接不同平台的渲染逻辑，实现多端运行。
-
-### ✨Diff 算法原理
-
-- 调和指的是让虚拟 DOM 映射到真实 DOM 上，分别有 React 15 栈调和、React16 的 Fiber 调和
-- Diff 算法属于调和 Reconciler 里的一个环节：更新过程调用 Diff 算法
-- React 的 Diff 的三个策略
-  - 树层面：两个虚拟 DOM 树的分层递归对比：降低 diff 算法时间复杂度，O(n^3)->O(n)
-  - 组件层面：类型一致的节点才 Diff，不同组件类型直接替换，不进行 diff，减少冗余递归操作
-  - 节点层面：节点 key 属性的设置，使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
 
 ## 九、错误处理
 
@@ -1133,58 +1185,6 @@ React 异常捕获：使用错误边界组件包裹
   - 只有 class 组件才可以成为错误边界组件
 
 ## 十、其他
-
-### ✨React 性能优化
-
-- 三种情况导致重绘
-  - state 变更
-  - 父组件重渲染
-  - 依赖的 context 变更
-- 三大主要手段
-
-  - shouldComponentUpdate（针对类组件）
-  - PureComponent 和 Immutable.js（针对类组件）
-  - React.memo 和 useMemo（针对函数组件）
-
-- shouldComponentUpdate：根据返回值 true 则执行 render，false 则不 render
-
-  ```js
-  shouldComponentUpdate(nextProps, nextState) {
-    /* 当 props 发生改变的时候，重新更新组件 */
-    return nextProps.data1 !== this.props.data1
-  }
-
-  ```
-
-- PureComponent + Immutable.js
-  - PureComponent 内置了一个功能，在 shouldComponentUpdate 中对组件更新前后的 props 和 state 进⾏浅⽐较，并根据浅⽐较的结果，决定是否需要继续更新流程。`export default class ChildA extends React.PureComponent`
-  - “浅⽐较”将针对值类型数据对⽐其值是否相等，⽽针对数组、对象等引⽤类型的数据则对⽐其引⽤是否相等。在 PureComponent 对引用类型可能会判断失误，比如引用没变，但是内部属性值变了，不会导致重渲染。
-  - 使用不可变值的库 Immutable.js，创建一个 Map 对象，调用其 api 如 set 修改内容，会返回一个新的对象，搭配 PureComponent，判断数据变更了，就会执行渲染，避免误判的情况。
-- React.memo 和 useMemo 包裹组件
-  - React.memo 接收两个参数，一个是目标组件，一个是可选的 props 的对比逻辑（类似 shouldComponentUpdate 内的逻辑），如果不传，默认进行 props 的浅比较。
-  - useMemo 控制是否需要重复执行某段逻辑（组件内的某个小函数组件），React.memo 控制是否重渲染某个组件
-  - useMemo `const memoizedValue = useMemo(() => compute(a, b), [a, b]);` 如果依赖没变，那么会复用该记忆值，依赖改变，重新计算。
-- 其他
-
-  - useCallback 包裹回调，react.memo 可以判断出 callback 函数没改变
-  - 合并 state，多个 state 合并为一个
-  - 缓存数据不放在 state 中，跟视图相关的才放在 state 中，避免不必要的渲染。
-  - 循环的 key 写法，不要用 index，要用唯一 id
-  - 懒加载：Suspense 和 lazy 可以实现 dynamic import 懒加载效果
-
-  ```js
-  const LazyComponent = React.lazy(() => import("./LazyComponent"));
-
-  function demo() {
-    return (
-      <div>
-        <Suspense fallback={<div>Loading...</div>}>
-          <LazyComponent />
-        </Suspense>
-      </div>
-    );
-  }
-  ```
 
 ### React 的状态提升是什么？使用场景有哪些？
 
