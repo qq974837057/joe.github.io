@@ -1,6 +1,8 @@
-## React 一、组件基础
+## 核心要点汇总
 
-### ✨ 流程总结
+## 一、组件基础
+
+### ✨ 全流程总结
 
 - 整体结构
   ![](./img/react-process-1.jpg)
@@ -292,7 +294,7 @@ class NameForm extends React.Component {
   - 组件层级太多，不想逐层传递 props 数据，可以用 context 实现跨层级数据传递
   - 组件上的 context 由父节点的所有 context 对象组合成的，所以可以访问到父组件链上的所有节点 context 属性
 
-## React 二、数据管理
+## 二、数据管理
 
 ### ✨React setState 源码调用的原理
 
@@ -407,7 +409,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 
 ```
 
-## React 三、生命周期
+## 三、生命周期
 
 ### ✨React 的生命周期有哪些？
 
@@ -508,7 +510,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 异步请求，最好放在 componentDidMount 中去操作，componentDidMount 方法中的代码，是在组件已经完全挂载到网页上才会调用被执行，所以可以保证数据的加载。此外，在这方法中调用 setState 方法，会触发重新渲染。
 - react16.0 以后，componentWillMount 可能会因为中断任务被执行多次。
 
-## React 四、组件通信
+## 四、组件通信
 
 > React 的数据流是单向的
 
@@ -547,7 +549,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 使用 Context API：提供一种组件之间的状态共享，而不必通过显式组件树逐层传递 props
 - 使用 Redux 等状态库
 
-## React 五、路由
+## 五、路由
 
 ### React-Router 的实现原理是什么？
 
@@ -654,7 +656,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
 - 流程图
   ![](./img/react-router-2.png)
 
-## React 六、Redux
+## 六、Redux
 
 ### ✨Redux 原理及工作流程
 
@@ -825,7 +827,7 @@ static getDerivedStateFromProps(nextProps, prevState) {
     - 就是一个普通的自定义 hooks，但 @umijs/plugin-model 把其中的状态变成了『全局状态』，多个组件中使用该 model 时，拿到的同一份状态。
     - `const { user, fetchUser } = useModel('user', model => ({ user: model.user, fetchUser: model.fetchUser }));`
 
-## React 七、Hooks
+## 七、Hooks
 
 ### ✨ 对 React Hook 的理解，为什么需要它，解决了什么问题
 
@@ -1047,7 +1049,7 @@ const App = () => {
 - 定义一个 hook 函数，并返回一个数组（内部可以调用 react 其他 hooks）
 - 从自定义的 hook 函数中取出对象的数据，做业务逻辑处理即可
 
-## React 八、虚拟 DOM
+## 八、虚拟 DOM
 
 ### 虚拟 DOM
 
@@ -1070,7 +1072,7 @@ const App = () => {
   - 组件层面：类型一致的节点才 Diff，不同组件类型直接替换，不进行 diff，减少冗余递归操作
   - 节点层面：节点 key 属性的设置，使尽可能重用同一层级的节点，有了唯一的标记，每次 diff 会找到对应元素 key，key 值一致可以重用该节点，而不会因为位置顺序不同，直接做删除重建处理。
 
-## React 九、错误处理
+## 九、错误处理
 
 React 异常捕获：使用错误边界组件包裹
 
@@ -1130,7 +1132,7 @@ React 异常捕获：使用错误边界组件包裹
   - 错误边界只针对 React 组件
   - 只有 class 组件才可以成为错误边界组件
 
-## React 十、其他
+## 十、其他
 
 ### ✨React 性能优化
 
