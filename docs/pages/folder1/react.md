@@ -146,14 +146,18 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
   - 是一个函数，接收组件为参数，返回新的组件。使用了装饰模式
 - 优缺点
   - 优点：逻辑复用，不影响被包裹组件的内部逻辑
-  - 缺点：HOC 传递给被包裹组件的 props 容易重名，导致被覆盖
+  - 缺点：
+    - 被包裹，导致 refs 属性不能透传，需要用 React.forwardRef 解决
+    - 静态方法不能给返回的类组件使用
+    - HOC 传递给被包裹组件的 props 容易重名，导致被覆盖
 - 作用
   - 代码复用，逻辑抽象
   - 根据条件渲染被包裹组件
   - 更改 被包裹组件 State 和 Props
 - 实际应用
   - 权限控制
-  - 渲染时间计算
+  - 渲染性能：时间计算
+  - react-redux ：connect 就是一个高阶组件，接收一个 component，并返回一个新的 component，处理了监听 store 和后续的处理
 
 ```js
 // hoc的定义
@@ -505,7 +509,7 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
   - useContext ：共享钩子，在组件之间共享状态，可以解决 react 逐层通过 props 传递数据
 - 额外的 Hook
 
-  - useReducer: action 钩子，提供了状态管理，其基本原理是通过用户在页面上发起的 action，从而通过 reduce 方法来改变 state，从而实现页面和状- 态的通信，**使用很像 redux**
+  - useReducer: action 钩子，提供了状态管理，其基本原理是通过用户在页面上发起的 action，从而通过 reduce 方法来改变 state，从而实现页面和状- 态的通信，**使用很像 redux**，但无法提供中间件功能
   - useCallBack：把内联回调函数及依赖项数组作为参数传入 useCallback，它将返回该回调函数的 memoized 版本，该回调函数仅在某个依赖项改变时才会更新
   - useMemo：把"创建"函数和依赖项数组作为参数传入 useMemo，它仅会在某个依赖项改变时重新计算， 可以作为性能优化的手段
   - useRef：获取组件的实例，返回一个可变的 ref 对象，返回的 ref 对象在组件的整个生命周期内保持不变
@@ -623,7 +627,6 @@ const RenderComponent = React.memo((props) => {
 
 - 不要在循环、条件或嵌套函数中调用 Hook，要在顶层使用
   - 会导致遍历 hooks 对象时，顺序不一致，发生数据错位
-- 使用 useState，不能使用 push 和 pop 等方式，需要用解构展开的方式
 - 只能在 React 的函数组件中调用 Hook
 
 ### ✨useEffect 与 useLayoutEffect 的区别
@@ -633,6 +636,7 @@ const RenderComponent = React.memo((props) => {
   - useLayoutEffect 会在 DOM 更新完成后**同步调用**，会在绘制之前完成，阻塞浏览器绘制。主要用于处理 DOM 操作、避免页面闪烁的问题
   - 而 useEffect 是**异步调用**的，不阻塞浏览器更新屏幕。
   - useLayoutEffect 总是比 useEffect 先执行。
+  - 大多数据情况下，effect 不需要同步地执行，个别情况下（例如测量布局），有单独的 useLayoutEffect hook 可使用，其 API 与 useEffect 相同
 
 - 相同点
   - 都是执行副作用
