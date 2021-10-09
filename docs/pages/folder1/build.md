@@ -4,14 +4,21 @@
   - 抽象语法树（abstract syntax code，AST）是源代码的抽象语法结构的树状表示，树上的每个节点都表示源代码中的一种结构，.
   - 之所以说是抽象的，抽象表示把 js 代码进行了结构化的转化，转化为一种数据结构。这种数据结构其实就是一个大的 json 对象
 - 应用
-  - JavaScript 引擎的编译
+
+  - JavaScript/TypeScript 的编译
+  - eslint
   - babel 将 ES6 转为 ES5
-  - UglifyJS 代码压缩、混淆
   - CSS 预处理器
   - ...
+  - UglifyJS 代码压缩、混淆
   - 根据注释生成可交互文档
   - 代码批量转换
   - ...
+
+- 遍历 AST 原理【遍历 key，深度优先】
+  - 前端领域的编译工具有挺多的，它们都是基于 AST，而操作 AST 就需要遍历来查找。
+  - 先给结论：编译工具的遍历实现思路只有一种，就是找到每种 AST 的可遍历的 keys，深度优先的遍历。
+  - eslint、babel、postcss、typescript compiler 这些编译工具的遍历 AST 的实现，有的用递归、有的用循环，有的是面向对象、有的是函数，有的是抽离 visitorKeys、有的是写死在代码里，但思路都是一样的。
 - 工具：[AST Explorer](https://astexplorer.net/)
   - 可以看代码转为 AST 结构
   - 可以通过 babel 和 jscodeshift 的自定义规则进行代码转换

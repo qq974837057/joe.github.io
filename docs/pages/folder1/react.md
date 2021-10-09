@@ -447,6 +447,11 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
 
 ### ✨Redux 的中间件
 
+- 基本概念
+  - 前端框架实现了数据到视图的绑定，我们只需要关心数据流就可以了。相比 context 的混乱的数据流，redux 的 view -> action -> store -> view 的单向数据流更清晰且容易管理。
+  - 前端代码中有很多异步过程，这些异步过程之间可能有串行、并行甚至更复杂的关系，放在组件里并不好管理，可以放在 redux 的中间件里。
+  - redux 的中间件就是对 dispatch 的层层包装，比如 redux-thunk 就是判断了下 action 是 function 就执行下，否则就是继续 dispatch
+  - redux-thunk 并没有提供多个异步过程管理的机制，复杂异步过程的管理还是得用 redux-saga 或者 redux-observable。
 - Redux 的中间件主要用于改变数据流，做一些"副作用"的操作，如异步请求、打印日志等，主要是 applyMiddleware 这个方法。通过在创建 store 时将 applyMiddleware()的返回值 作为参数传入的。
   - 未使用 redux: action-> reducer
   - 使用 redux: 自定义拦截，变成 action->middlewares->reducer
