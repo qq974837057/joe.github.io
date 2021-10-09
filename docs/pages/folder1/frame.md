@@ -1027,12 +1027,19 @@ Vue.use(Vuex);
 ## keep-alive ✨
 
 - keep-alive 是 Vue 内置的一个组件，keep-alive 可以实现组件缓存，当组件切换时不会对当前组件进行卸载，避免重新渲染 。
-- 提供两个属性 include/exclude：允许组件有条件的进行缓存。
-  - include 表示只有名称匹配的组件会被缓存，exclude 表示任何名称匹配的组件都不会被缓存 。
-  - exclude 的优先级比 include 高；
+- 提供两个属性 include/exclude：允许组件有条件的进行缓存，还有 max 属性，通过它可以设置最大缓存数
+  - include 表示只有名称匹配的组件会被缓存，exclude 表示任何名称匹配的组件都不会被缓存
+  - exclude 的优先级比 include 高
+  - 当缓存的实例超过设置的数 max 时，vue 会移除最久没有使用的组件缓存
 - 对应两个生命周期 activated/deactivated
   - 当组件被激活时，触发钩子函数 activated
   - 当组件被移除时，触发钩子函数 deactivated
+- 原理（空间换时间）
+  - keep-alive 在内部维护了一个 key 数组和一个缓存对象 cache
+  - key 数组记录目前缓存的组件 key 值，如果组件没有指定 key 值，会自动生成一个唯一的 key 值
+  - **cache 对象会以 key 值为键，vnode 为值，用于缓存组件对应的虚拟 DOM**
+  - 在 keep-alive 的渲染函数中，逻辑是判断当前渲染的 vnode 是否有对应的缓存，如果有，会从缓存中读取到对应的组件实例，如果没有就会把它缓存起来
+  - 当缓存的数量超过 max 设置的数值时，keep-alive 会移除 key 数组中的第一个元素
 
 ## 选项的 mixins 混入和 extends ✨
 

@@ -33,6 +33,12 @@
 - http 模块的使用`const http = require('http');const server = http.createServer(function(req,res){...}); server.listen(3000)`
 - express = http 模块 + 中间件 + 路由
 
+### web 框架的几个层次
+
+- web 框架都是基于 http、https 模块，但它提供的 api 过于原始，使用起来比较麻烦
+- 所以我们一般会用 express、koa 这类框架来简化，它提供了中间件机制来复用逻辑，提供了更多的 request、response 的 api
+- 对于企业级的复杂应用，还是会用 nestjs、eggjs 这类 MVC 框架，它们的底层是 express、koa，还提供了 Module、Controller、Service 等概念，可以很好的组织复杂的代码
+
 ### 中间件和洋葱圈模型（Express 和 Koa）
 
 ![](./img/middleware-eggjs.png)
