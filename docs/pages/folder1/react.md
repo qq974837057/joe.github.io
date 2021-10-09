@@ -453,8 +453,8 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
   - redux 的中间件就是对 dispatch 的层层包装，比如 redux-thunk 就是判断了下 action 是 function 就执行下，否则就是继续 dispatch
   - redux-thunk 并没有提供多个异步过程管理的机制，复杂异步过程的管理还是得用 redux-saga 或者 redux-observable。
 - Redux 的中间件主要用于改变数据流，做一些"副作用"的操作，如异步请求、打印日志等，主要是 applyMiddleware 这个方法。通过在创建 store 时将 applyMiddleware()的返回值 作为参数传入的。
-  - 未使用 redux: action-> reducer
-  - 使用 redux: 自定义拦截，变成 action->middlewares->reducer
+  - 未使用 redux: action -> reducer
+  - 使用 redux: 自定义拦截，变成 action -> middlewares -> reducer
   - applyMiddleware 会对 dispatch 进行改写，让他触发 reducer 之前，先执行 Redux 的中间件链式调用。
   - 使用 compose 组合函数，原理是数组的 reduce 方法。
 
