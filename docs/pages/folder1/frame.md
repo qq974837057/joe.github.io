@@ -8,7 +8,7 @@
 > 响应式系统：render -> touch -> getter -> Dep 依赖收集 Watcher；setter -> Dep.notify -> Watcher.update() -> patch()进行 diff -> DOM
 
 - 分为四个阶段：初始化、挂载编译、响应式、视图更新
-  - 1、初始化：new Vue():调用 init 函数初始化，包括生命周期、事件、props、data、methods、watch 等，还有重要就是 Object.defineProperty 设置 setter 和 getter 函数(同时将 this.data.test 代理成 this.test)，用于依赖收集和响应式。
+  - 1、初始化：new Vue():调用 init 函数初始化，包括生命周期、事件、props、data、methods、watch 等，还有数据劫持，通过 Object.defineProperty 设置 setter 和 getter 函数(同时将 this.data.test 代理成 this.test)，用于后续的依赖收集和响应式。
   - 2、编译挂载：初始化后调用$mount 挂载组件，有 template 的情况下，内部执行 compile()编译，包括 parse（解析 template 转成 AST） 、 optimize(标记静态节点、用于 diff 优化跳过静态节点) 与 generate（AST -> render function） 三个阶段，最终得到 render function，用来渲染 VNode，然后生成真实 DOM 显示在页面上。
   - 3、响应式：render function 被渲染，读取所需对象的值，触发 getter 函数，执行依赖收集，将订阅者 Watcher 添加 Dep 订阅器中。修改对象的值时触发 setter，通知 Dep 订阅器中的订阅者 Watcher，需要重新渲染视图，然后 Watcher 调用 update 进行更新。
   - 4、视图更新：数据变化触发 update 后，执行 render function 得到新的 VNode 节点，与旧的 VNode 一起传入 patch 进行比较，经过 diff 算法得到「 差异」，根据差异来修改对应的 DOM。
@@ -48,7 +48,7 @@
 
 - [React diff 知乎](https://zhuanlan.zhihu.com/p/20346379)
 
-> vue 和 diff 过程概述：通过 Watcher 的 update 产生新的虚拟 DOM 树，和旧虚拟 DOM 树一起传入 patch 函数，如果是 sameVnode，内容存在且不同，进行 updateChildren 更新子节点。旧层级和新层级各有两个头尾的指针变量 StartIdx 和 EndIdx，它们的 2 个变量相互比较，一共有 4 种比较方式：首首、尾尾、旧头新尾、旧尾新头，如果匹配上，指针对应的移动，如果 4 种比较都没匹配，如果设置了 key，就会用 key 进行比较。整个 diff 的过程中，两个下标往中间靠，一旦其中一个的 StartIdx>EndIdx 表明 oldCh 和 newCh 至少有一个已经遍历完了，就会结束比较，将剩下的节点删除或者添加上去。
+> vue 的 diff 过程概述：通过 Watcher 的 update 产生新的虚拟 DOM 树，和旧虚拟 DOM 树一起传入 patch 函数，如果是 sameVnode，内容存在且不同，进行 updateChildren 更新子节点。旧层级和新层级各有两个头尾的指针变量 StartIdx 和 EndIdx，它们的 2 个变量相互比较，一共有 4 种比较方式：首首、尾尾、旧头新尾、旧尾新头，如果匹配上，指针对应的移动，如果 4 种比较都没匹配，如果设置了 key，就会用 key 进行比较。整个 diff 的过程中，两个下标往中间靠，一旦其中一个的 StartIdx>EndIdx 表明 oldCh 和 newCh 至少有一个已经遍历完了，就会结束比较，将剩下的节点删除或者添加上去。
 
 - 过程：patch（判断子节点是否为 sameVnode）-> patchVnode（sameVnode 进行对比内容是否相同）-> updateChildren（更新子节点，使用双指针和 key 进行对比更新）
 - **patch(oldVnode,vnode,parentElm)函数：比对两个 VNode 节点，将「差异」更新到视图上，也就是以旧节点为基础，进行差异修改，增删一些 DOM 节点**。
@@ -299,10 +299,9 @@
 ## Vue 组件通信 ✨
 
 - [Vue 组件通信的方法如下:](https://juejin.im/post/5d267dcdf265da1b957081a3#heading-0)
-
+- 总结：父子通信用`props/$emit`、兄弟组件用事件总线 `EventBus`、跨级通信使用`provide/inject`和`$attrs/$listeners`、全局使用 `vuex`
 - props/$emit+v-on: 父子通信：通过props将数据自上而下传递，而通过$emit 和 v-on(@)来向上传递信息。
 
-- vuex: 是全局数据管理库，可以通过 vuex 管理全局的数据流
 - EventBus: 兄弟组件或跨级：事件总线：所有组件的共同事件中心，通过 EventBus 进行信息的发送和监听
   - 不适用多人协作和大项目，较难维护。
   - 组件没有同时显示不应该用 eventbus，一般需要先 on 再 emit。比如两个路由一个还没创建，所以监听不到。而应该使用 vuex。
@@ -334,6 +333,7 @@ EventBus.$off("test", {}); // 移除监听
 
   - 适合仅传递数据的跨级通信，用 vuex 是大材小用。
 
+- vuex: 是全局数据管理库，可以通过 vuex 管理全局的数据流
 - localStorage / sessionStorage
   - 数据和状态比较混乱，不好维护，不过可以结合 vuex, 实现数据的持久保存
   - window.localStorage.getItem(key)获取数据
@@ -1145,8 +1145,8 @@ new Profile().$mount("#mount-point");
 #### ✨Proxy 与 Object.defineProperty 的优劣对比?
 
 - 基于数据劫持的双向绑定有两种实现
-  - 一个是目前 Vue2 在用的 Object.defineProperty`const proxy = new Proxy(target, handler)`
-  - 另一个是 Vue3.0 加入的 ES2015 中新增的 Proxy
+  - 一个是目前 Vue2 在用的 Object.defineProperty
+  - 另一个是 Vue3.0 加入的 ES2015 中新增的 Proxy`const proxy = new Proxy(target, handler)`
 - Proxy 的优势
   - 可以直接监听对象(Object.defineProperty 遍历对象里面的属性，属性是对象还得深度遍历)
   - 可以直接监听数组的变化(Object.defineProperty 其实是可以监听数组的，只是尤大说性价比不高，数组元素比较多，容易影响性能)
