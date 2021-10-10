@@ -50,7 +50,7 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
     ![](./img/react-16-design.png)
   - Scheduler 负责时间切片和任务调度：每个更新任务都会被赋予⼀个优先级。当更新任务抵达调度器时，⾼优先级的更新任务（记为 A）会更快地被调度进 Reconciler 层；此时若有新的更新任务（记为 B）抵达调度器，调度器会检查它的优先级，若发现 B 的优先级⾼于当前任务 A，那么当前处于 Reconciler 层的 A 任务就会被中断，调度器会将 B 任务推⼊ Reconciler 层。当 B 任务完成渲染后，新⼀轮的调度开始，之前被中断的 A 任务将会被重新推⼊ Reconciler 层。
   - Reconciler 的工作就是使用 Diff 算法对比 current Fiber 和 React Element ，生成 workInProgress Fiber ，这个阶段是可中断的（中断遍历），Renderer 的工作是把 workInProgress Fiber 转换成真正的 DOM 节点。
-- **总结：React15 的架构是 Reconciler+Renderer，创建和更新渲染时，会对虚拟 DOM 树进行递归（深度优先遍历），找出变动的节点，这个过程没有优先级，所以 React 会占用主线程，无法及时响应优先级更高的任务，渲染超过时间，导致用户感觉卡顿。为了解决不可中断和缺少优先级的痛点，React16 设计了 Fiber 架构，Scheduler+Reconciler+Renderer，使用 Concurrency 并发模式，让这个过程可中断，可恢复，这样能够及时处理优先级更高的任务，将正在执行的中途任务暂存，待完成任务后再去执行。主要的四个设计：**
+- **总结：React15 的架构是 Reconciler+Renderer，创建和更新渲染时，会对虚拟 DOM 树进行递归（深度优先遍历），找出变动的节点，这个过程不可中断，而且没有优先级，所以 React 会占用主线程，无法及时响应优先级更高的任务，渲染超过时间，导致用户感觉卡顿。为了解决不可中断和缺少优先级的痛点，React16 设计了 Fiber 架构，Scheduler+Reconciler+Renderer，使用 Concurrency 并发模式，让这个过程可中断，可恢复，这样能够及时处理优先级更高的任务，将正在执行的中途任务暂存，待完成任务后再去执行。主要的四个设计：**
 
   - **第一是 Scheduler 的时间分片的设计，根据 浏览器的帧率将渲染进程切分为一个个时间分片，如果在一个时间分片内没有完成我们的更新操作，也就是 workLoop 大循环时候的 shouldYield 变量为 true，退出循环，中断更新，保存状态，交出执行权给浏览器进行重绘重排。等到下个分片再恢复执行。**
   - **第二是 Scheduler 的任务调度的设计，React 根据不同场景赋予任务不同优先级，同一时间可能产生不同的任务，放入 taskQueue 队列中，这个队列采用了小顶堆的数据结构，按照任务的过期时间从小到大排列，可以很快找到最早过期或是最高级的任务。**
@@ -67,7 +67,7 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
   - Fiber 会将⼀个⼤的更新任务拆解为许多个⼩任务。每当执⾏完⼀个⼩任务时，渲染任务会交出主线程，看看有没有优先级更⾼的⼯作要处理，空闲后再继续渲染，避免同步渲染带来的卡顿。
 - 流程
   - 数据更新时，执行调度更新函数 **schedulerUpdateOnFiber**，进入 render 阶段，渲染 render 的入口模式。先判断当前是否需要调度，不需要直接同步构造 fiber 树（比如使用了 ReactDOM.render 同步模式）。如果需要调度（比如 ReactDOM.createRoot 并发模式），搭配 Scheduler 处理。注册回调函数分为同步任务构建树（performSyncWorkOnRoot 里面调用 workLoopSync）和异步任务构建树（performConcurrentWorkOnRoot 调用 workLoopConcurrent），异步任务是可中断的。
-  - Scheduler 的 workLoop 会根据当前时间和任务时间判断是否需要中断（shouldYield），中断则退出循环，不需要中断则取出任务队列（expirationTime 过期时间的小顶堆结构）中堆顶的回调函数逐个执行。
+  - Scheduler 的 workLoop 会根据当前时间和任务时间判断是否需要中断（shouldYield），中断则退出循环
   - 同步/异步构建树的 workLoop 大循环 【分同步和异步模式，当 workInProgress 不为空时，异步会多一个 shouldYield（需要让出）的变量决定是否继续执行】
     - performUnitOfWork（while 循环执行这个函数）
       - beginWork【递】（对单个节点工作，返回子节点 next）
@@ -120,10 +120,10 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
   - 可复用的最小代码片段，返回要渲染的元素
 - 不同
   - 编程模式：类组件面向对象，函数组件是函数式编程
-  - 生命周期：类组件可以访问生命周期，函数组件不能
-  - this：类组件可以获取到实例化的 this，函数组件没有 this
   - 灵活性：类组件难拆分和复用，函数组件灵活，可自由选择 Hook 能力
   - 性能优化：类组件用 shouldComponentUpdate 阻止更新，函数组件依靠 React.memo 缓存渲染结果
+  - 生命周期：类组件可以访问生命周期，函数组件不能
+  - this：类组件可以获取到实例化的 this，函数组件没有 this
 
 ### ✨React 事件机制
 
@@ -143,7 +143,7 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
 ### ✨HOC 高阶组件是什么，和普通组件有什么区别
 
 - 概念
-  - 是一个函数，接收组件为参数，返回新的组件。使用了装饰模式
+  - 是一个函数，接收组件为参数，返回新的组件。使用了装饰器模式
 - 优缺点
   - 优点：逻辑复用，不影响被包裹组件的内部逻辑
   - 缺点：
@@ -321,6 +321,7 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
     - 使用 Provider 进行包裹根组件` <Provider value={title: this.state.title, content: this.state.content}> </Provider>`
     - 使用 Consumer 在孙子组件进行读取数据 `<Consumer>{value => <div>{value.title}</div>}</Consumer>`
     - 即便组件的 shouldComponentUpdate 返回 false，它仍然可以“穿透”组件继续向后代组件进⾏传播，进⽽确保了数据⽣产者和数据消费者之间数据的⼀致性。
+    - 缺点：改变数据源的地方未知导致数据流混乱，且容易导致不必要的渲染
 
 - 没有任何关系的组件
   - 发布订阅模式 EventEmitter
@@ -485,7 +486,7 @@ React 16 的⽣命周期被划分为了 render 和 commit 两个阶段，⽽ com
 - 方案汇总
   - React Context
     - createContext、useContext 和 useReducer
-    - 缺点：嵌套 Provider 的写法难受，而且 context 小部分 state 变更导致消费 context 的组件重渲染，需要结合 memo 优化
+    - 缺点：数据流不清晰，而且 context 小部分 state 变更导致消费 context 的组件重渲染，需要结合 memo 优化。
   - Redux
     - 搭配 react-redux
     - 缺点：嵌套模板写法难受，副作用要使用中间件隔离
