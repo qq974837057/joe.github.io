@@ -57,7 +57,7 @@
   - 新 VNode 节点不存在，则将旧 VNode 节点全部移除
   - **旧 VNode 节点和新 VNode 节点都存在且为 sameVnode 时，进行 patchVnode 操作**
 
-  > sameVnode:key、tag、是否注释、有无 data、若为 input 的 type 类型 均一致。
+  > sameVnode 的判断依据:key && （tag && 是否注释 && 有无 data && 若为 input 的 type 类型）
 
   > 因为相对来说，oldVnode 自己对应的 dom 总是已经存在的，新的 vnode 的 dom 是不存在的，直接复用 oldVnode 对应的 dom，比如直接移动 oldVnode。
 
@@ -96,7 +96,8 @@
       ![vue-diff-nokey2](./img/vue-diff-nokey2.png)
     - 用了 key 之后，能准确找到对应的位置，并插入，避免一些隐藏的 bug。
       ![vue-diff-key](./img/vue-diff-key.png)
-
+- 除了key，还有什么判断相同节点
+  - sameVnode 的判断依据:key && （tag && 是否注释 && 有无 data && 若为 input 的 type 类型）
 - 为什么不能使用 index 做 key
   - 使用 index 还是会导致 v-for 结束后仍然是同样的顺序，仍会就地复用旧节点。
 

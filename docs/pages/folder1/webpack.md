@@ -196,12 +196,14 @@ module.exports = {
 
 ## HMR 热更新原理（hot module replacement）✨
 
-> 当你对代码进行修改并保存后，webpack 将对代码重新打包，并将新的模块发送到浏览器端，浏览器通过新的模块替换老的模块，这样在不刷新浏览器的前提下就能够对应用进行更新。
+- [参考](https://zhuanlan.zhihu.com/p/30669007)
+
+  > 当你对代码进行修改并保存后，webpack 将对代码重新打包，并将新的模块发送到浏览器端，浏览器通过新的模块替换老的模块，这样在不刷新浏览器的前提下就能够对应用进行更新。
 
 - 在 webpack 的 watch 模式下，文件系统中某一个文件发生修改，对修改的模块重新编译打包。
 - webpack-dev-middleware 处理打包后的文件存在内存里。
-- webpack-dev-server 和 webpack-dev-server/client（浏览器端）建立 websocket 长连接，利用这个连接，传递修改模块的 hash 和编译打包的状态信息给浏览器。
-- HMR.runtime 收到新模块的 hash(非最新)，Jsonp.runtime 向 webpack-dev-server 服务端发送 ajax 请求，获取模块更新列表的 manifest 描述文件（包含更新模块的最新 hash）再通过 Jsonp 获取最新 hash 对应的模块代码。
+- webpack-dev-server 和 webpack-dev-server/client（浏览器端）建立 websocket 长连接，利用这个连接，传递新模块的 hash 和编译打包的状态信息给浏览器。
+- HMR.runtime 收到新模块的 hash，Jsonp.runtime 向 webpack-dev-server 服务端发送 ajax 请求（携带上一次的 hash，非本次 hash），获取模块更新列表的 manifest.json 描述文件（包含更新模块的最新 hash）再通过 Jsonp 获取最新 hash 对应的模块代码。
 - HotModulePlugin 进行模块对比，替换模块及更新依赖树 modules tree 引用。
 - HMR 失败，通过浏览器刷新整个页面获取最新代码。
   ![webpack-hmr](./img/webpack-hmr.png)
@@ -792,9 +794,9 @@ console.log(1);
 
 - 文件指纹是打包后输出的文件名的后缀。
 
-  - Hash：和整个项目的构建相关，只要项目文件有修改，整个项目构建的 hash 值就会更改
-  - Chunkhash：和 Webpack 打包的 chunk 有关，不同的 entry 会生出不同的 chunkhash，有文件改动就会影响到对应的 chunk
-  - Contenthash：根据文件内容来定义 hash，文件内容不变，则 contenthash 不变
+  - hash：和整个项目的构建相关，每次构建都会使 webpack 计算新的 hash
+  - chunkhash：和 Webpack 打包的 chunk 有关，不同的 entry 会生出不同的 chunkhash，某个文件的改动只会影响与它有关联的 chunk 的 hash 值，不会影响其他文件
+  - contenthash：当文件内容发生变化时，contenthash 发生变化
 
 - vue-cli 的指纹默认设置
   - JS：设置 output 的 filename，用 chunkhash。

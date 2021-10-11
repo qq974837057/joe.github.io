@@ -82,7 +82,7 @@ Fiber 结构本质是链表结构，有三类属性：实例属性（组件类�
 > 优先级有两种，一种是任务优先级，一种是 Fiber 优先级
 
 - Scheduler 任务优先级调度
-  - React 发 起 Task 调 度 的 姿 势 有 两 个 ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务。本质是模拟 requestIdleCallback 这个 API，让任务在一帧的空余时间内执行。
+  - React 发 起 Task 调 度有 两 个方法（中断后的再执行） ： setTimeout 、MessageChannel。在宿主环境不⽀持 MessageChannel 的情况下，会降级到 setTimeout。都是异步任务。本质是模拟 requestIdleCallback 这个 API，让任务在一帧的空余时间内执行。requestIdleCallback 的 FPS 只有 20, 这远远低于页面流畅度的要求！ 这也是 React 需要自己实现 requestIdleCallback 的原因。
   - React 根据不同场景赋予任务不同优先级，同一时间可能产生不同的任务，放入 taskQueue 队列中，这个队列采用了小顶堆的数据结构，按照任务的过期时间从小到大排列，可以很快找到最早过期或是最高级的任务。
   - 过期时间越小，也就是 timeout 越小，代表优先级越高`expirationTime = startTime + timeout` startTime 是当前时间
   - 五种优先级：
