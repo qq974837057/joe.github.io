@@ -659,6 +659,54 @@ module.exports = {
   - 初次打包：20s
   - 二次打包：8s
 
+## sourcemap 和源码对应原理
+
+一般来说 source map 的应用都是在监控系统中，开发者构建完应用后，通过插件将源代码及 source map 上传至平台中。一旦客户端上报错误后，我们就可以还原源代码的报错位置，方便开发者快速定位线上问题。
+
+### 浏览器查找 map 文件
+
+- 开启 source map 选项以后，产物应该为两个文件，分别为 bundle.js 以及 bundle.js.map。
+- sourceMappingURL 表示该文件的 map 地址
+
+```js
+// bundle.js
+console.log(1);
+//# sourceMappingURL=bundle.js.map
+```
+
+### map 文件对应位置原理
+
+```js
+// bundle.js.map
+{
+  version: 3,
+  sources:["webpack://webpack-source-demo/./src/index.js"],
+  names: ['console', 'log'],
+  mappings: 'AACAA,QAAQC,IADE',
+}
+```
+
+- 字段解释
+
+  - version：顾名思义，指代了版本号，目前 source map 标准的版本为 3，也就是说这份 source map 使用的是第三版标准产出的
+  - file：编译后的文件名
+  - sources：多个源文件名
+  - names：一个优化用的字段，后续会在 mappings 中用到
+  - mappings：这是最重要的内容，表示了源代码及编译后代码的关系，但是先略过这块，下文中会详细解释
+
+- 映射原理主要是 mapping 字段，使用 Base 64 VLQ 编码，表示压缩代码的位置和源码的位置，通过 AST 的节点描述定位的。
+
+  - 英文：有特殊映射关系，比如 A 代表 0、C 代表 1
+  - 逗号：分割一行代码中的内容
+  - 分号：换行
+
+- 每串英文的字母代表一个位置
+  - 压缩代码的第几列（压缩代码只有一行）
+  - 哪个源代码文件
+  - 源码第几行
+  - 源码第几列
+  - names 字段里的索引
+
 ## webpack 在 vue cli3 的使用
 
 - 默认 splitChunks 和 minimize
