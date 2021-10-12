@@ -5,6 +5,7 @@
 - 网络和缓存策略
   - HTTP2 二进制分帧、多路复用、头部压缩、服务器推送
   - SplitChunksPlugin 拆包配置+缓存策略（不常变动的设置较长缓存时间，第三方大模块单独打包，更新频率高的集中打包）
+  - CDN 配置
 - 减少体积
   - Tree-Shaking（module：false、sideEffect：false）
   - gzip 压缩（nginx 设置压缩比，也可前端使用插件 compression-webpack-plugin）
@@ -29,10 +30,11 @@
 - 防抖节流
   - 防抖：按钮提交、输入请求
   - 节流：滚动监听、动画场景
-- 长列表
+- 大数据
   - 虚拟列表
   - 时间切片
   - 分页 loading
+  - Web worker
   - diff 优化：加 key
 
 ### 指标

@@ -40,6 +40,17 @@
   - 双重提交 Cookie：用户访问后，返回一个随机字符串注入 cookie，下次请求时取出，添加到 URL 参数上，验证与 cookie 是否一致。
   - 输入验证码：明确当前是本人操作的，用户体验差。
 
+### 使用沙箱安全的执行用户 js 代码
+
+- eval 和 new Function 这两个方法会在当前的 Context 中运行，它们可以访问 cookie 等隐私数据，所以不能使用这两个方法：
+
+```js
+const cookie = eval("document.cookie");
+const getCookie = new Function("return document.cookie");
+```
+
+- 所以，我们要将用户脚本放到**沙箱（Sandbox）中去运行**，同时不能让它们访问任何用户数据，比如 cookie、localStorage、JavaScript 全局变量、DOM 元素等。
+
 ### 网络劫持
 
 - http 劫持（明文修改响应，加广告）：全站 HTTPS，将 HTTP 加密，这使得运营商无法获取明文，就无法劫持你的响应内容
