@@ -413,6 +413,8 @@ module.exports = {
   - Dll 打包：先 DllPlugin 预编译，再用 DllReferencePlugin 加载模块。避免反复编译不常变更的第三方库
   - 优化搜索时间：loader 的 test 和 include/exclude（比如 babel-loader 排除 node_modules）、 resolve 的 module 模块搜索目录/alias 别名/extensions 后缀
   - 提高配置：升级 Webpack 和 Node.js 和机器
+  - 多项目单仓库时按照页面来拆分多 Entry，每次只需启动一个 Entry
+  - Webpack 切换到 Vite
   - vue：关闭生成 sourcemap
 - 提高热更新速度
   - 提高热更新速度，上百页 2000ms 内搞定，10 几页面区别不大
@@ -856,6 +858,9 @@ module.exports = {
 - esbuild
   - esbuild 是一个「JavaScript」Bundler 打包和压缩工具，支持压缩、Tree-shaking、sourcemap。
   - 使用 GO 语言编写，全部实现机器码，性能快，比其他 JS 写的编译工具快几十倍
+- 如何选择
+  - 开发环境使用 Vite 快速调试，生产环境依旧使用 Webpack 打包。
+  - 风险是开发和生产编译产物不一致，这一块需要上线前回归测试避免。
 
 ## 参考阅读
 
