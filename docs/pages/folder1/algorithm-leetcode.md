@@ -833,7 +833,8 @@ var maxProfit = function (prices) {
 从状态转移方程中，我们只关注前一个状态的值，所以不需要开一个数组记录位置所有子序列和，只需要两个变量，currMaxSum 保存前一位的最大和，给数组后面判断是否要加上自身的数值。
 
 - currMaxSum - 累计到当前位置 i 的最大和，因为要保存当前位置的最优状态，所以赋值给 nums[i]
-- maxSum - 全局最大子序列和，如果 currMaxSum 比当前 maxSum 大，赋值给 maxSum。 - currMaxSum(nums[ i ]) = max(currMaxSum(nums[i - 1]) + nums[i], nums[i]) - maxSum = max(currMaxSum, maxSum)
+- maxSum - 全局最大子序列和，如果 currMaxSum 比当前 maxSum 大，赋值给 maxSum。
+- currMaxSum(nums[ i ]) = max(currMaxSum(nums[i - 1]) + nums[i], nums[i]) - maxSum = max(currMaxSum, maxSum)
   ![leetcode53](./img/leetcode-53.png)
 
 - 实现
